@@ -10,22 +10,22 @@ const app = express();
 // Middlewares
 app.use(cors({
   origin: [
-    'https://proyecto-login-production.up.railway.app',
+    'https://extra-earth-production.up.railway.app',  // ← ACTUALIZADO
     'https://czalbert6.github.io',
     'http://localhost:4321'
   ]
 }));
 app.use(express.json());
 
-// Conexión a PostgreSQL - USANDO VARIABLE DE ENTORNO DE RAILWAY
+// Conexión a PostgreSQL - CONEXIÓN DIRECTA (NUEVA)
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: 'postgresql://postgres:qSQioVYBpFGzXkHtZtJKIyAreOsoufIb@gondola.proxy.rlwy.net:19739/railway',
   ssl: { rejectUnauthorized: false }
 });
 
 const JWT_SECRET = process.env.JWT_SECRET || 'mi_secreto_super_seguro_2024';
 
-// Health check para Railway - ENDPOINT CORRECTO
+// Health check para Railway
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'OK' });
 });
@@ -198,7 +198,7 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// Puerto para Railway (SIEMPRE usar process.env.PORT)
+// Puerto para Railway
 const PORT = process.env.PORT || 8080;
 
 app.listen(PORT, '0.0.0.0', () => {
@@ -206,5 +206,6 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
   console.log(`📡 Health check: /health`);
   console.log(`📡 API: /api/register y /api/login`);
+  console.log(`📡 Base de datos: Conectada a Railway`);
   console.log(`=================================`);
 });

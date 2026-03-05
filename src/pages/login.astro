@@ -1,0 +1,85 @@
+---
+import Layout from '../layout/layout.astro';
+const backendUrl = 'https://proyecto-login-production.up.railway.app';
+---
+
+<Layout>
+  <div style="max-width: 400px; margin: 0 auto; background: white; padding: 2rem; border-radius: 10px;">
+    <h2 style="text-align: center; margin-bottom: 2rem;">Iniciar Sesión</h2>
+
+    <form id="loginForm">
+      <div style="margin-bottom: 1rem;">
+        <label style="display: block; margin-bottom: 0.5rem;">Email o Usuario</label>
+        <input type="text" id="loginIdentifier" required style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 5px;">
+      </div>
+
+      <div style="margin-bottom: 1rem;">
+        <label style="display: block; margin-bottom: 0.5rem;">Contraseña</label>
+        <input type="password" id="loginPassword" required style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 5px;">
+      </div>
+
+      <button type="submit" style="width: 100%; padding: 1rem; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">Ingresar</button>
+    </form>
+
+    <div id="message" style="display:none; margin-top: 1rem; padding: 1rem; border-radius: 5px;"></div>
+    
+    <p style="text-align: center; margin-top: 1rem;">
+      ¿No tienes cuenta? <a href="/extra-earth/register">Regístrate</a>
+    </p>
+  </div>
+
+  <script>
+    const API_URL = "https://proyecto-login-production.up.railway.app";
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const identifier = document.getElementById('loginIdentifier').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const messageDiv = document.getElementById('message');
+
+      const isEmail = identifier.includes("@");
+      const loginData = { password };
+
+      if (isEmail) {
+        loginData.email = identifier;
+      } else {
+        loginData.username = identifier;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/api/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(loginData)
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          localStorage.setItem("token", data.token);
+          localStorage.setItem("user", JSON.stringify(data.user));
+          
+          messageDiv.style.display = 'block';
+          messageDiv.style.background = '#d4edda';
+          messageDiv.style.color = '#155724';
+          messageDiv.textContent = '✅ Login exitoso. Redirigiendo...';
+          
+          setTimeout(() => {
+            window.location.href = "/extra-earth/";
+          }, 1500);
+        } else {
+          messageDiv.style.display = 'block';
+          messageDiv.style.background = '#f8d7da';
+          messageDiv.style.color = '#721c24';
+          messageDiv.textContent = data.message || 'Error en login';
+        }
+      } catch (error) {
+        messageDiv.style.display = 'block';
+        messageDiv.style.background = '#f8d7da';
+        messageDiv.style.color = '#721c24';
+        messageDiv.textContent = 'Error de conexión';
+      }
+    });
+  </script>
+</Layout>

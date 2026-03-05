@@ -1,17 +1,14 @@
 ---
-
+import Layout from '../layout/layout.astro';
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<Layout>
+  <section style="text-align: center; padding: 4rem 0;">
+    <h1 style="font-size: 3rem; margin-bottom: 1rem;">Bienvenido</h1>
+    <p style="font-size: 1.2rem; color: #666; margin-bottom: 2rem;">Sistema de autenticación completo</p>
+    <div style="display: flex; gap: 1rem; justify-content: center;">
+      <a href="/extra-earth/login" style="padding: 1rem 2rem; background: #667eea; color: white; text-decoration: none; border-radius: 5px;">Iniciar Sesión</a>
+      <a href="/extra-earth/register" style="padding: 1rem 2rem; background: #48bb78; color: white; text-decoration: none; border-radius: 5px;">Registrarse</a>
+    </div>
+  </section>
+</Layout>

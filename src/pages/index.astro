@@ -2,13 +2,149 @@
 import Layout from '../layout/layout.astro';
 ---
 
-<Layout>
-  <section style="text-align: center; padding: 4rem 0;">
-    <h1 style="font-size: 3rem; margin-bottom: 1rem;">Bienvenido</h1>
-    <p style="font-size: 1.2rem; color: #666; margin-bottom: 2rem;">Sistema de autenticación completo</p>
-    <div style="display: flex; gap: 1rem; justify-content: center;">
-      <a href="/extra-earth/login" style="padding: 1rem 2rem; background: #667eea; color: white; text-decoration: none; border-radius: 5px;">Iniciar Sesión</a>
-      <a href="/extra-earth/register" style="padding: 1rem 2rem; background: #48bb78; color: white; text-decoration: none; border-radius: 5px;">Registrarse</a>
+<Layout title="Bienvenido | Sistema Corporativo">
+  <div class="welcome-container">
+    <div class="hero-section">
+      <div class="icon-box">
+        <i class="fas fa-shield-halved"></i>
+      </div>
+      <h1>Gestión Corporativa 2026</h1>
+      <p>Bienvenido al portal centralizado de administración. Inicie sesión para gestionar permisos, usuarios y módulos del sistema.</p>
+      
+      <div class="actions">
+        <a href="/extra-earth/login" class="btn btn-primary">
+          <i class="fas fa-sign-in-alt"></i> Acceder al Sistema
+        </a>
+        <a href="/extra-earth/register" class="btn btn-outline">
+          <i class="fas fa-user-plus"></i> Crear Cuenta
+        </a>
+      </div>
     </div>
-  </section>
+
+    <div class="feature-grid">
+      <div class="feature-item">
+        <i class="fas fa-lock"></i>
+        <h3>Seguridad JWT</h3>
+        <p>Autenticación robusta basada en tokens.</p>
+      </div>
+      <div class="feature-item">
+        <i class="fas fa-layer-group"></i>
+        <h3>Control de Roles</h3>
+        <p>Gestión granular de permisos por perfil.</p>
+      </div>
+      <div class="feature-item">
+        <i class="fas fa-mobile-screen"></i>
+        <h3>Responsive</h3>
+        <p>Acceso optimizado desde cualquier dispositivo.</p>
+      </div>
+    </div>
+  </div>
 </Layout>
+
+<style>
+  .welcome-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 3rem 0;
+  }
+
+  .hero-section {
+    text-align: center;
+    padding-bottom: 4rem;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .icon-box {
+    font-size: 4rem;
+    color: #3b82f6;
+    margin-bottom: 1.5rem;
+  }
+
+  h1 {
+    font-size: 2.5rem;
+    color: #1e293b;
+    font-weight: 800;
+    margin-bottom: 1rem;
+    letter-spacing: -0.025em;
+  }
+
+  p {
+    font-size: 1.15rem;
+    color: #64748b;
+    line-height: 1.6;
+    margin-bottom: 2.5rem;
+  }
+
+  .actions {
+    display: flex;
+    gap: 1.25rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    padding: 0.8rem 2rem;
+    border-radius: 6px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    font-size: 1rem;
+  }
+
+  .btn-primary {
+    background: #1e293b;
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: #334155;
+    transform: translateY(-2px);
+  }
+
+  .btn-outline {
+    border: 2px solid #e2e8f0;
+    color: #475569;
+  }
+
+  .btn-outline:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+  }
+
+  /* Grid de características */
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 2rem;
+    margin-top: 4rem;
+  }
+
+  .feature-item {
+    text-align: center;
+  }
+
+  .feature-item i {
+    font-size: 1.5rem;
+    color: #94a3b8;
+    margin-bottom: 1rem;
+  }
+
+  .feature-item h3 {
+    font-size: 1rem;
+    color: #1e293b;
+    margin-bottom: 0.5rem;
+  }
+
+  .feature-item p {
+    font-size: 0.9rem;
+    margin-bottom: 0;
+  }
+
+  @media (max-width: 640px) {
+    h1 { font-size: 2rem; }
+    .btn { width: 100%; justify-content: center; }
+  }
+</style>

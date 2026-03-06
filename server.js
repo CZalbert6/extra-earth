@@ -3,209 +3,162 @@ import cors from 'cors';
 import pkg from 'pg';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import fetch from 'node-fetch';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import 'dotenv/config';
 
 const { Pool } = pkg;
 const app = express();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// Middlewares
-app.use(cors({
-  origin: [
-    'https://extra-earth-production.up.railway.app',  // ← ACTUALIZADO
-    'https://czalbert6.github.io',
-    'http://localhost:4321'
-  ]
-}));
-app.use(express.json());
+// --- 1. Middlewares ---
+app.use(cors());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.static(path.join(__dirname, 'dist'))); 
 
-// Conexión a PostgreSQL - CONEXIÓN DIRECTA (NUEVA)
+// --- 2. Conexión a Postgres ---
 const pool = new Pool({
-  connectionString: 'postgresql://postgres:qSQioVYBpFGzXkHtZtJKIyAreOsoufIb@gondola.proxy.rlwy.net:19739/railway',
-  ssl: { rejectUnauthorized: false }
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
 });
 
-const JWT_SECRET = process.env.JWT_SECRET || 'mi_secreto_super_seguro_2024';
+const JWT_SECRET = process.env.JWT_SECRET || 'secreto_super_seguro_2026';
+const H_SECRET = "0x0000000000000000000000000000000000000000"; // hCaptcha prueba
 
-// Health check para Railway
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'OK' });
-});
+// --- 3. Inicialización DB y Administrador ---
+const initDB = async () => {
+    try {
+        // Crear las tablas del proyecto corporativo
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS perfil (
+                id SERIAL PRIMARY KEY,
+                strNombrePerfil VARCHAR(100),
+                bitAdministrador BOOLEAN DEFAULT FALSE
+            );
+            CREATE TABLE IF NOT EXISTS modulo (
+                id SERIAL PRIMARY KEY,
+                strNombreModulo VARCHAR(100)
+            );
+            CREATE TABLE IF NOT EXISTS usuario (
+                id SERIAL PRIMARY KEY,
+                strNombreUsuario VARCHAR(100) UNIQUE,
+                idPerfil INTEGER REFERENCES perfil(id),
+                strPwd VARCHAR(255) NOT NULL,
+                idEstadoUsuario VARCHAR(20) DEFAULT 'activo',
+                strCorreo VARCHAR(255),
+                strNumeroCelular VARCHAR(20),
+                urlImagen TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE IF NOT EXISTS permisos_perfil (
+                id SERIAL PRIMARY KEY,
+                idModulo INTEGER REFERENCES modulo(id),
+                idPerfil INTEGER REFERENCES perfil(id),
+                bitAgregar BOOLEAN DEFAULT FALSE, bitEditar BOOLEAN DEFAULT FALSE,
+                bitConsulta BOOLEAN DEFAULT FALSE, bitEliminar BOOLEAN DEFAULT FALSE,
+                bitDetalle BOOLEAN DEFAULT FALSE
+            );
+            CREATE TABLE IF NOT EXISTS menu (
+                id SERIAL PRIMARY KEY, idMenu VARCHAR(50), idModulo INTEGER REFERENCES modulo(id)
+            );
+        `);
 
-// Crear tabla usuarios
-async function initDB() {
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS usuarios (
-        id SERIAL PRIMARY KEY,
-        email VARCHAR(255) UNIQUE,
-        username VARCHAR(100) UNIQUE,
-        nombre VARCHAR(100),
-        password VARCHAR(255) NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    console.log('✅ Tabla usuarios lista');
-  } catch (error) {
-    console.error('❌ Error creando tabla:', error);
-  }
-}
+        // Insertar Perfil Administrador
+        const perfilRes = await pool.query("SELECT id FROM perfil WHERE strNombrePerfil = 'Administrador'");
+        let adminPerfilId;
+        
+        if (perfilRes.rows.length === 0) {
+            const insPerfil = await pool.query(
+                "INSERT INTO perfil (strNombrePerfil, bitAdministrador) VALUES ('Administrador', TRUE) RETURNING id"
+            );
+            adminPerfilId = insPerfil.rows[0].id;
+            console.log('✅ Perfil Administrador creado');
+        } else {
+            adminPerfilId = perfilRes.rows[0].id;
+        }
+
+        // Insertar Usuario Administrador inicial
+        const userRes = await pool.query("SELECT id FROM usuario WHERE strNombreUsuario = 'admin'");
+        if (userRes.rows.length === 0) {
+            const hashedPwd = await bcrypt.hash('admin123', 10);
+            await pool.query(
+                `INSERT INTO usuario (strNombreUsuario, idPerfil, strPwd, strCorreo, idEstadoUsuario) 
+                 VALUES ('admin', $1, $2, 'admin@correo.com', 'activo')`,
+                [adminPerfilId, hashedPwd]
+            );
+            console.log('⭐ Administrador creado: usuario "admin" / clave "admin123"');
+        }
+
+    } catch (err) {
+        console.error('❌ Error en initDB:', err);
+    }
+};
 initDB();
 
-// REGISTRO
-app.post('/api/register', async (req, res) => {
-  try {
-    const { email, username, nombre, password } = req.body;
-
-    // Validaciones
-    if (!email && !username) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Email o nombre de usuario requerido' 
-      });
-    }
-
-    if (!password || password.length < 6) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'La contraseña debe tener al menos 6 caracteres' 
-      });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    let result;
-    if (email) {
-      result = await pool.query(
-        `INSERT INTO usuarios (email, username, nombre, password) 
-         VALUES ($1, $2, $3, $4) 
-         RETURNING id, email, username, nombre`,
-        [email.toLowerCase(), username || null, nombre || null, hashedPassword]
-      );
-    } else {
-      result = await pool.query(
-        `INSERT INTO usuarios (username, nombre, password) 
-         VALUES ($1, $2, $3) 
-         RETURNING id, username, nombre`,
-        [username, nombre || null, hashedPassword]
-      );
-    }
-
-    const token = jwt.sign(
-      { 
-        id: result.rows[0].id, 
-        email: result.rows[0].email, 
-        username: result.rows[0].username 
-      },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    return res.status(201).json({
-      success: true,
-      message: 'Registro exitoso',
-      token,
-      user: result.rows[0]
-    });
-
-  } catch (error) {
-    console.error('❌ Error en registro:', error);
-    
-    // Código 23505 = unique violation (email o username duplicado)
-    if (error.code === '23505') {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'El email o nombre de usuario ya existe' 
-      });
-    }
-    
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Error interno del servidor' 
-    });
-  }
-});
-
-// LOGIN
+// --- 4. Ruta de Login (JWT + hCaptcha) ---
 app.post('/api/login', async (req, res) => {
-  try {
-    const { email, username, password } = req.body;
-    const identifier = email || username;
+    try {
+        const { username, password, hCaptchaToken } = req.body;
 
-    if (!identifier || !password) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Email/usuario y contraseña son requeridos' 
-      });
+        // Validar hCaptcha
+        const verify = await fetch(`https://hcaptcha.com/siteverify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `response=${hCaptchaToken}&secret=${H_SECRET}`
+        });
+        const captchaData = await verify.json();
+        if (!captchaData.success) return res.status(400).json({ message: 'Captcha inválido' });
+
+        // Validar Usuario y Perfil
+        const result = await pool.query(
+            `SELECT u.*, p.strNombrePerfil 
+             FROM usuario u 
+             JOIN perfil p ON u.idPerfil = p.id 
+             WHERE u.strNombreUsuario = $1`, [username]
+        );
+
+        if (result.rows.length === 0) return res.status(401).json({ message: 'Usuario no encontrado' });
+
+        const user = result.rows[0];
+
+        // Validar Estado Activo
+        if (user.idestadousuario !== 'activo') {
+            return res.status(403).json({ message: 'El usuario se encuentra inactivo' });
+        }
+
+        // Validar Contraseña
+        const match = await bcrypt.compare(password, user.strpwd);
+        if (!match) return res.status(401).json({ message: 'Contraseña incorrecta' });
+
+        // Obtener Permisos para el frontend
+        const permisos = await pool.query(
+            `SELECT m.strNombreModulo, pp.* FROM permisos_perfil pp 
+             JOIN modulo m ON pp.idModulo = m.id 
+             WHERE pp.idPerfil = $1`, [user.idperfil]
+        );
+
+        const token = jwt.sign({ id: user.id, perfil: user.idperfil }, JWT_SECRET, { expiresIn: '8h' });
+
+        res.json({
+            success: true,
+            token,
+            user: { username: user.strnombreusuario, perfil: user.strnombreperfil, foto: user.urlimagen },
+            permisos: permisos.rows
+        });
+
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Error en el servidor' });
     }
-
-    let result;
-    if (email) {
-      result = await pool.query(
-        'SELECT * FROM usuarios WHERE email = $1',
-        [email.toLowerCase()]
-      );
-    } else {
-      result = await pool.query(
-        'SELECT * FROM usuarios WHERE username = $1',
-        [username]
-      );
-    }
-
-    if (result.rows.length === 0) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Credenciales inválidas' 
-      });
-    }
-
-    const user = result.rows[0];
-    const validPassword = await bcrypt.compare(password, user.password);
-
-    if (!validPassword) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Credenciales inválidas' 
-      });
-    }
-
-    const token = jwt.sign(
-      { 
-        id: user.id, 
-        email: user.email, 
-        username: user.username 
-      },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    return res.json({
-      success: true,
-      message: 'Login exitoso',
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        nombre: user.nombre
-      }
-    });
-
-  } catch (error) {
-    console.error('❌ Error en login:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Error interno del servidor' 
-    });
-  }
 });
 
-// Puerto para Railway
-const PORT = process.env.PORT || 8080;
+// --- 5. Hosting y Manejo de Rutas (Breadcrumbs) ---
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
 
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`=================================`);
-  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
-  console.log(`📡 Health check: /health`);
-  console.log(`📡 API: /api/register y /api/login`);
-  console.log(`📡 Base de datos: Conectada a Railway`);
-  console.log(`=================================`);
+    console.log(`🚀 Servidor corporativo ejecutándose en puerto ${PORT}`);
 });

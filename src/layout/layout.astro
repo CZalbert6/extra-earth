@@ -1,30 +1,176 @@
 ---
-// src/layouts/Layout.astro
+interface Props {
+	title?: string;
+}
+
+const { title = "Sistema Corporativo" } = Astro.props;
 ---
 
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mi Proyecto</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-    </style>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>{title}</title>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+	<style is:global>
+		:root {
+			--primary: #1e293b;    /* Azul medianoche */
+			--accent: #3b82f6;     /* Azul corporativo */
+			--bg-main: #f8fafc;    /* Gris muy claro */
+			--text-main: #334155;
+			--sidebar-width: 260px;
+		}
+
+		* { box-sizing: border-box; }
+
+		body {
+			font-family: 'Inter', sans-serif;
+			margin: 0;
+			background-color: var(--bg-main);
+			color: var(--text-main);
+			display: flex;
+			min-height: 100vh;
+		}
+
+		/* Sidebar Estilizado */
+		aside {
+			width: var(--sidebar-width);
+			background-color: var(--primary);
+			color: white;
+			display: flex;
+			flex-direction: column;
+			position: fixed;
+			height: 100vh;
+			transition: all 0.3s ease;
+		}
+
+		.sidebar-header {
+			padding: 1.5rem;
+			font-weight: 600;
+			font-size: 1.2rem;
+			border-bottom: 1px solid rgba(255,255,255,0.1);
+			display: flex;
+			align-items: center;
+			gap: 10px;
+		}
+
+		nav { flex: 1; padding: 1rem 0; }
+
+		nav a {
+			display: flex;
+			align-items: center;
+			padding: 0.8rem 1.5rem;
+			color: #cbd5e1;
+			text-decoration: none;
+			transition: 0.2s;
+			font-size: 0.95rem;
+		}
+
+		nav a:hover, nav a.active {
+			background-color: rgba(255,255,255,0.05);
+			color: white;
+			border-left: 4px solid var(--accent);
+		}
+
+		/* Contenedor Principal */
+		main {
+			margin-left: var(--sidebar-width);
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+		}
+
+		/* Top Navbar */
+		header {
+			background: white;
+			height: 60px;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			padding: 0 2rem;
+			box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+		}
+
+		/* Breadcrumbs */
+		.breadcrumbs {
+			padding: 1rem 2rem;
+			font-size: 0.85rem;
+			color: #64748b;
+		}
+
+		.breadcrumbs span { margin: 0 0.5rem; color: #94a3b8; }
+
+		/* Contenido */
+		.content-wrapper {
+			padding: 0 2rem 2rem 2rem;
+		}
+
+		.card {
+			background: white;
+			border-radius: 8px;
+			padding: 1.5rem;
+			box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+			border: 1px solid #e2e8f0;
+		}
+
+		/* Responsividad */
+		@media (max-width: 768px) {
+			aside { transform: translateX(-100%); }
+			main { margin-left: 0; }
+		}
+	</style>
 </head>
 <body>
-    <div class="container">
-        <slot />
-    </div>
+	<aside id="sidebar">
+		<div class="sidebar-header">
+			<i class="fas fa-building"></i>
+			<span>CORP-DEV 2026</span>
+		</div>
+		<nav id="menu-container">
+			<a href="/dashboard"><i class="fas fa-home" style="width: 25px;"></i> Inicio</a>
+			<div style="padding: 1rem 1.5rem 0.5rem; font-size: 0.7rem; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">Seguridad</div>
+			<a href="/seguridad/usuarios"><i class="fas fa-users" style="width: 25px;"></i> Usuarios</a>
+			<a href="/seguridad/perfiles"><i class="fas fa-user-shield" style="width: 25px;"></i> Perfiles</a>
+		</nav>
+	</aside>
+
+	<main>
+		<header>
+			<div id="page-title" style="font-weight: 600;">Panel de Control</div>
+			<div class="user-info" style="display: flex; align-items: center; gap: 10px;">
+				<span id="user-name" style="font-size: 0.9rem;">Cargando...</span>
+				<div style="width: 35px; height: 35px; background: #e2e8f0; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+					<i class="fas fa-user"></i>
+				</div>
+			</div>
+		</header>
+
+		<div class="breadcrumbs" id="breadcrumbs">
+			Inicio <span>/</span> Dashboard
+		</div>
+
+		<div class="content-wrapper">
+			<div class="card">
+				<slot />
+			</div>
+		</div>
+	</main>
+
+	<script>
+		// Lógica básica para mostrar info del usuario desde localStorage
+		const user = JSON.parse(localStorage.getItem('user'));
+		if (user) {
+			document.getElementById('user-name').textContent = user.username;
+		}
+
+		// Generador simple de breadcrumbs basado en la URL
+		const path = window.location.pathname.split('/').filter(p => p);
+		const breadContainer = document.getElementById('breadcrumbs');
+		if(path.length > 0) {
+			breadContainer.innerHTML = 'Inicio ' + path.map(p => `<span>/</span> ${p.charAt(0).toUpperCase() + p.slice(1)}`).join('');
+		}
+	</script>
 </body>
 </html>

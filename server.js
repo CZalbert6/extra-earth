@@ -18,7 +18,7 @@ app.use(cors({
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true
 }));
-app.use(express.json({ limit: '10mb' })); // Importante para Base64
+app.use(express.json({ limit: '10mb' }));
 
 // --- 2. Conexión a Base de Datos ---
 const pool = new Pool({
@@ -28,198 +28,223 @@ const pool = new Pool({
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secreto_super_seguro_2026';
 
-// --- 3. Inicialización de Tablas (CON ADMIN POR DEFECTO) ---
-const initDB = async () => {
-    try {
-        console.log('🔄 Inicializando base de datos...');
+// --- 3. Health Check endpoints (responden inmediatamente) ---
+app.get('/', (req, res) => {
+    res.status(200).json({ 
+        success: true, 
+        message: 'API Corporativa funcionando',
+        timestamp: new Date().toISOString()
+    });
+});
 
-        // Tabla perfiles
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS perfiles (
-                id SERIAL PRIMARY KEY,
-                strNombrePerfil VARCHAR(100) UNIQUE NOT NULL,
-                bitAdministrador BOOLEAN DEFAULT false,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-        console.log('✅ Tabla perfiles lista');
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
+});
 
-        // Tabla modulos
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS modulos (
-                id SERIAL PRIMARY KEY,
-                strNombreModulo VARCHAR(100) UNIQUE NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-        console.log('✅ Tabla modulos lista');
+// --- 4. Inicialización de Tablas (con reintentos) ---
+const initDB = async (retries = 5) => {
+    for (let i = 0; i < retries; i++) {
+        try {
+            console.log(`🔄 Intento ${i + 1} de inicializar base de datos...`);
+            
+            // Verificar conexión primero
+            await pool.query('SELECT 1');
+            console.log('✅ Conexión a BD exitosa');
 
-        // Tabla usuarios (con strImagen como TEXT para Base64)
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS usuarios (
-                id SERIAL PRIMARY KEY,
-                strNombreUsuario VARCHAR(100) UNIQUE NOT NULL,
-                idPerfil INTEGER REFERENCES perfiles(id),
-                strPwd VARCHAR(255) NOT NULL,
-                idEstadoUsuario INTEGER DEFAULT 1,
-                strCorreo VARCHAR(255) UNIQUE NOT NULL,
-                strNumeroCelular VARCHAR(20),
-                strImagen TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-        console.log('✅ Tabla usuarios lista');
+            // Tabla perfiles
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS perfiles (
+                    id SERIAL PRIMARY KEY,
+                    strNombrePerfil VARCHAR(100) UNIQUE NOT NULL,
+                    bitAdministrador BOOLEAN DEFAULT false,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            `);
+            console.log('✅ Tabla perfiles lista');
 
-        // Tabla permisos_perfil
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS permisos_perfil (
-                id SERIAL PRIMARY KEY,
-                idModulo INTEGER REFERENCES modulos(id) ON DELETE CASCADE,
-                idPerfil INTEGER REFERENCES perfiles(id) ON DELETE CASCADE,
-                bitAgregar BOOLEAN DEFAULT false,
-                bitEditar BOOLEAN DEFAULT false,
-                bitConsulta BOOLEAN DEFAULT false,
-                bitEliminar BOOLEAN DEFAULT false,
-                bitDetalle BOOLEAN DEFAULT false,
-                UNIQUE(idModulo, idPerfil)
-            )
-        `);
-        console.log('✅ Tabla permisos_perfil lista');
+            // Tabla modulos
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS modulos (
+                    id SERIAL PRIMARY KEY,
+                    strNombreModulo VARCHAR(100) UNIQUE NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            `);
+            console.log('✅ Tabla modulos lista');
 
-        // Tabla menu
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS menu (
-                id SERIAL PRIMARY KEY,
-                idMenu INTEGER NOT NULL,
-                idModulo INTEGER REFERENCES modulos(id) ON DELETE CASCADE,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-        console.log('✅ Tabla menu lista');
+            // Tabla usuarios (con strImagen como TEXT para Base64)
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS usuarios (
+                    id SERIAL PRIMARY KEY,
+                    strNombreUsuario VARCHAR(100) UNIQUE NOT NULL,
+                    idPerfil INTEGER REFERENCES perfiles(id),
+                    strPwd VARCHAR(255) NOT NULL,
+                    idEstadoUsuario INTEGER DEFAULT 1,
+                    strCorreo VARCHAR(255) UNIQUE NOT NULL,
+                    strNumeroCelular VARCHAR(20),
+                    strImagen TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            `);
+            console.log('✅ Tabla usuarios lista');
 
-        // Insertar módulos iniciales
-        const modulosIniciales = [
-            'Perfil', 'Módulo', 'Permisos-Perfil', 'Usuario',
-            'Principal 1.1', 'Principal 1.2', 'Principal 2.1', 'Principal 2.2'
-        ];
-        
-        for (const modulo of modulosIniciales) {
-            await pool.query(
-                'INSERT INTO modulos (strNombreModulo) VALUES ($1) ON CONFLICT (strNombreModulo) DO NOTHING',
-                [modulo]
-            );
-        }
-        console.log('✅ Módulos iniciales insertados');
+            // Tabla permisos_perfil
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS permisos_perfil (
+                    id SERIAL PRIMARY KEY,
+                    idModulo INTEGER REFERENCES modulos(id) ON DELETE CASCADE,
+                    idPerfil INTEGER REFERENCES perfiles(id) ON DELETE CASCADE,
+                    bitAgregar BOOLEAN DEFAULT false,
+                    bitEditar BOOLEAN DEFAULT false,
+                    bitConsulta BOOLEAN DEFAULT false,
+                    bitEliminar BOOLEAN DEFAULT false,
+                    bitDetalle BOOLEAN DEFAULT false,
+                    UNIQUE(idModulo, idPerfil)
+                )
+            `);
+            console.log('✅ Tabla permisos_perfil lista');
 
-        // Insertar menú inicial
-        const menuItems = [
-            { idMenu: 1, nombreModulo: 'Perfil' },
-            { idMenu: 1, nombreModulo: 'Módulo' },
-            { idMenu: 1, nombreModulo: 'Permisos-Perfil' },
-            { idMenu: 1, nombreModulo: 'Usuario' },
-            { idMenu: 2, nombreModulo: 'Principal 1.1' },
-            { idMenu: 2, nombreModulo: 'Principal 1.2' },
-            { idMenu: 3, nombreModulo: 'Principal 2.1' },
-            { idMenu: 3, nombreModulo: 'Principal 2.2' }
-        ];
+            // Tabla menu
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS menu (
+                    id SERIAL PRIMARY KEY,
+                    idMenu INTEGER NOT NULL,
+                    idModulo INTEGER REFERENCES modulos(id) ON DELETE CASCADE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            `);
+            console.log('✅ Tabla menu lista');
 
-        for (const item of menuItems) {
-            const modulo = await pool.query('SELECT id FROM modulos WHERE strNombreModulo = $1', [item.nombreModulo]);
-            if (modulo.rows[0]) {
+            // Insertar módulos iniciales
+            const modulosIniciales = [
+                'Perfil', 'Módulo', 'Permisos-Perfil', 'Usuario',
+                'Principal 1.1', 'Principal 1.2', 'Principal 2.1', 'Principal 2.2'
+            ];
+            
+            for (const modulo of modulosIniciales) {
                 await pool.query(
-                    'INSERT INTO menu (idMenu, idModulo) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-                    [item.idMenu, modulo.rows[0].id]
+                    'INSERT INTO modulos (strNombreModulo) VALUES ($1) ON CONFLICT (strNombreModulo) DO NOTHING',
+                    [modulo]
                 );
             }
+            console.log('✅ Módulos iniciales insertados');
+
+            // Insertar menú inicial
+            const menuItems = [
+                { idMenu: 1, nombreModulo: 'Perfil' },
+                { idMenu: 1, nombreModulo: 'Módulo' },
+                { idMenu: 1, nombreModulo: 'Permisos-Perfil' },
+                { idMenu: 1, nombreModulo: 'Usuario' },
+                { idMenu: 2, nombreModulo: 'Principal 1.1' },
+                { idMenu: 2, nombreModulo: 'Principal 1.2' },
+                { idMenu: 3, nombreModulo: 'Principal 2.1' },
+                { idMenu: 3, nombreModulo: 'Principal 2.2' }
+            ];
+
+            for (const item of menuItems) {
+                const modulo = await pool.query('SELECT id FROM modulos WHERE strNombreModulo = $1', [item.nombreModulo]);
+                if (modulo.rows[0]) {
+                    await pool.query(
+                        'INSERT INTO menu (idMenu, idModulo) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                        [item.idMenu, modulo.rows[0].id]
+                    );
+                }
+            }
+            console.log('✅ Menú inicial insertado');
+
+            // --- CREAR ADMINISTRADOR POR DEFECTO ---
+            try {
+                console.log('👤 Verificando/Creando perfil administrador...');
+                
+                // Crear perfil administrador si no existe
+                const perfilAdmin = await pool.query(
+                    `INSERT INTO perfiles (strNombrePerfil, bitAdministrador) 
+                     VALUES ('Administrador', true) 
+                     ON CONFLICT (strNombrePerfil) DO UPDATE SET bitAdministrador = true
+                     RETURNING id`
+                );
+                
+                const adminPerfilId = perfilAdmin.rows[0].id;
+                console.log(`✅ Perfil administrador ID: ${adminPerfilId}`);
+
+                // Crear usuario admin por defecto (si no existe)
+                const adminExiste = await pool.query(
+                    "SELECT id FROM usuarios WHERE strNombreUsuario = 'admin'"
+                );
+
+                if (adminExiste.rows.length === 0) {
+                    const hashedPassword = await bcrypt.hash('Admin123', 10);
+                    
+                    await pool.query(`
+                        INSERT INTO usuarios (
+                            strNombreUsuario, 
+                            strCorreo, 
+                            strPwd, 
+                            idPerfil, 
+                            idEstadoUsuario,
+                            strNumeroCelular
+                        ) VALUES (
+                            'admin', 
+                            'admin@sistema.com', 
+                            $1, 
+                            $2, 
+                            1,
+                            '555-0101'
+                        )
+                    `, [hashedPassword, adminPerfilId]);
+                    
+                    console.log('✅ Usuario ADMIN creado');
+                }
+
+                // Crear permisos para admin (todos los módulos con todos los permisos)
+                const modulos = await pool.query('SELECT id FROM modulos');
+                
+                for (const modulo of modulos.rows) {
+                    await pool.query(`
+                        INSERT INTO permisos_perfil (
+                            idModulo, idPerfil, bitAgregar, bitEditar, bitConsulta, bitEliminar, bitDetalle
+                        ) VALUES ($1, $2, true, true, true, true, true)
+                        ON CONFLICT (idModulo, idPerfil) DO UPDATE SET
+                            bitAgregar = true,
+                            bitEditar = true,
+                            bitConsulta = true,
+                            bitEliminar = true,
+                            bitDetalle = true
+                    `, [modulo.id, adminPerfilId]);
+                }
+                
+                console.log('✅ Permisos de administrador configurados');
+            } catch (adminError) {
+                console.error('⚠️ Error al crear admin (no crítico):', adminError.message);
+                // Continuamos aunque falle la creación del admin
+            }
+
+            console.log('✅ Base de datos inicializada completamente');
+            return true;
+
+        } catch (err) {
+            console.error(`❌ Error en intento ${i + 1}:`, err.message);
+            if (i < retries - 1) {
+                console.log(`⏳ Esperando 3 segundos antes de reintentar...`);
+                await new Promise(resolve => setTimeout(resolve, 3000));
+            } else {
+                console.error('❌ No se pudo inicializar la base de datos después de varios intentos');
+                return false;
+            }
         }
-        console.log('✅ Menú inicial insertado');
-
-        // ============================================
-        // 🔥 CREAR ADMINISTRADOR POR DEFECTO
-        // ============================================
-        console.log('👤 Verificando/Creando perfil administrador...');
-        
-        // Crear perfil administrador si no existe
-        const perfilAdmin = await pool.query(
-            `INSERT INTO perfiles (strNombrePerfil, bitAdministrador) 
-             VALUES ('Administrador', true) 
-             ON CONFLICT (strNombrePerfil) DO UPDATE SET bitAdministrador = true
-             RETURNING id`
-        );
-        
-        const adminPerfilId = perfilAdmin.rows[0].id;
-        console.log(`✅ Perfil administrador ID: ${adminPerfilId}`);
-
-        // Crear usuario admin por defecto (si no existe)
-        const adminExiste = await pool.query(
-            "SELECT id FROM usuarios WHERE strNombreUsuario = 'admin'"
-        );
-
-        if (adminExiste.rows.length === 0) {
-            // Contraseña: Admin123 (hasheada con bcrypt)
-            const hashedPassword = await bcrypt.hash('Admin123', 10);
-            
-            await pool.query(`
-                INSERT INTO usuarios (
-                    strNombreUsuario, 
-                    strCorreo, 
-                    strPwd, 
-                    idPerfil, 
-                    idEstadoUsuario,
-                    strNumeroCelular
-                ) VALUES (
-                    'admin', 
-                    'admin@sistema.com', 
-                    $1, 
-                    $2, 
-                    1,
-                    '555-0101'
-                )
-            `, [hashedPassword, adminPerfilId]);
-            
-            console.log('✅ Usuario ADMIN creado:');
-            console.log('   👤 Usuario: admin');
-            console.log('   🔑 Contraseña: Admin123');
-            console.log('   📧 Email: admin@sistema.com');
-        } else {
-            console.log('✅ Usuario admin ya existe');
-        }
-
-        // ============================================
-        // 🔥 CREAR PERMISOS PARA ADMIN (todos los módulos con todos los permisos)
-        // ============================================
-        console.log('🔐 Verificando permisos para administrador...');
-        
-        // Obtener todos los módulos
-        const modulos = await pool.query('SELECT id FROM modulos');
-        
-        // Para cada módulo, crear permiso con todos los bits en true
-        for (const modulo of modulos.rows) {
-            await pool.query(`
-                INSERT INTO permisos_perfil (
-                    idModulo, idPerfil, bitAgregar, bitEditar, bitConsulta, bitEliminar, bitDetalle
-                ) VALUES ($1, $2, true, true, true, true, true)
-                ON CONFLICT (idModulo, idPerfil) DO UPDATE SET
-                    bitAgregar = true,
-                    bitEditar = true,
-                    bitConsulta = true,
-                    bitEliminar = true,
-                    bitDetalle = true
-            `, [modulo.id, adminPerfilId]);
-        }
-        
-        console.log('✅ Permisos de administrador configurados');
-        console.log('✅ Base de datos inicializada completamente con ADMIN');
-
-    } catch (err) {
-        console.error('❌ Error iniciando DB:', err);
     }
 };
 
-// Ejecutar inicialización
-initDB();
+// Iniciar inicialización de BD (no bloqueante)
+initDB().then(success => {
+    if (success) {
+        console.log('✅ Base de datos lista');
+    } else {
+        console.warn('⚠️ Servidor iniciado pero con problemas en BD');
+    }
+});
 
-// --- 4. Middleware de autenticación ---
+// --- 5. Middleware de autenticación ---
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -233,7 +258,7 @@ const authenticateToken = (req, res, next) => {
     });
 };
 
-// --- 5. Rutas de Autenticación ---
+// --- 6. Rutas de Autenticación ---
 app.post('/api/register', async (req, res) => {
     try {
         const { strNombreUsuario, strCorreo, strPwd, strNumeroCelular } = req.body;
@@ -309,7 +334,7 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-// --- 6. CRUD Perfiles ---
+// --- 7. CRUD Perfiles ---
 app.get('/api/perfiles', authenticateToken, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -409,7 +434,7 @@ app.delete('/api/perfiles/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// --- 7. CRUD Módulos ---
+// --- 8. CRUD Módulos ---
 app.get('/api/modulos', authenticateToken, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -509,7 +534,7 @@ app.delete('/api/modulos/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// --- 8. CRUD Usuarios (con imagen Base64) ---
+// --- 9. CRUD Usuarios (con imagen Base64) ---
 app.get('/api/usuarios', authenticateToken, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -644,7 +669,7 @@ app.delete('/api/usuarios/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// --- 9. CRUD Permisos-Perfil ---
+// --- 10. CRUD Permisos-Perfil ---
 app.get('/api/permisos-perfil', authenticateToken, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -753,7 +778,7 @@ app.delete('/api/permisos-perfil/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// --- 10. Endpoint para menú dinámico ---
+// --- 11. Endpoint para menú dinámico ---
 app.get('/api/menu', authenticateToken, async (req, res) => {
     try {
         const userResult = await pool.query('SELECT idPerfil FROM usuarios WHERE id = $1', [req.userId]);
@@ -804,7 +829,7 @@ app.get('/api/menu', authenticateToken, async (req, res) => {
     }
 });
 
-// --- 11. Endpoints para selects ---
+// --- 12. Endpoints para selects ---
 app.get('/api/perfiles-lista', authenticateToken, async (req, res) => {
     try {
         const result = await pool.query('SELECT id, strNombrePerfil FROM perfiles ORDER BY strNombrePerfil');
@@ -825,19 +850,20 @@ app.get('/api/modulos-lista', authenticateToken, async (req, res) => {
     }
 });
 
-// --- 12. Health Check ---
-app.get('/health', (req, res) => res.status(200).send('OK'));
-
 // --- 13. Manejo de errores 404 ---
 app.use('*', (req, res) => {
     res.status(404).json({ success: false, message: 'Ruta no encontrada' });
 });
 
+// --- 14. Iniciar servidor ---
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Servidor ejecutándose en puerto ${PORT}`);
     console.log('='.repeat(50));
-    console.log('📝 CREDENCIALES DE ADMIN:');
+    console.log(`✅ SERVIDOR INICIADO CORRECTAMENTE`);
+    console.log(`📡 Puerto: ${PORT}`);
+    console.log(`🌐 Health check: / o /health`);
+    console.log('='.repeat(50));
+    console.log('📝 CREDENCIALES DE ADMIN (si se crearon):');
     console.log('   Usuario: admin');
     console.log('   Contraseña: Admin123');
     console.log('   Email: admin@sistema.com');

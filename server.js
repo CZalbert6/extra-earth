@@ -28,9 +28,11 @@ const pool = new Pool({
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secreto_super_seguro_2026';
 
-// --- 3. Inicialización de Tablas ---
+// --- 3. Inicialización de Tablas (CON ADMIN POR DEFECTO) ---
 const initDB = async () => {
     try {
+        console.log('🔄 Inicializando base de datos...');
+
         // Tabla perfiles
         await pool.query(`
             CREATE TABLE IF NOT EXISTS perfiles (
@@ -40,6 +42,7 @@ const initDB = async () => {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
+        console.log('✅ Tabla perfiles lista');
 
         // Tabla modulos
         await pool.query(`
@@ -49,6 +52,7 @@ const initDB = async () => {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
+        console.log('✅ Tabla modulos lista');
 
         // Tabla usuarios (con strImagen como TEXT para Base64)
         await pool.query(`
@@ -64,6 +68,7 @@ const initDB = async () => {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
+        console.log('✅ Tabla usuarios lista');
 
         // Tabla permisos_perfil
         await pool.query(`
@@ -79,6 +84,7 @@ const initDB = async () => {
                 UNIQUE(idModulo, idPerfil)
             )
         `);
+        console.log('✅ Tabla permisos_perfil lista');
 
         // Tabla menu
         await pool.query(`
@@ -89,6 +95,7 @@ const initDB = async () => {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
+        console.log('✅ Tabla menu lista');
 
         // Insertar módulos iniciales
         const modulosIniciales = [
@@ -102,6 +109,7 @@ const initDB = async () => {
                 [modulo]
             );
         }
+        console.log('✅ Módulos iniciales insertados');
 
         // Insertar menú inicial
         const menuItems = [
@@ -124,12 +132,91 @@ const initDB = async () => {
                 );
             }
         }
+        console.log('✅ Menú inicial insertado');
 
-        console.log('✅ Base de datos inicializada');
+        // ============================================
+        // 🔥 CREAR ADMINISTRADOR POR DEFECTO
+        // ============================================
+        console.log('👤 Verificando/Creando perfil administrador...');
+        
+        // Crear perfil administrador si no existe
+        const perfilAdmin = await pool.query(
+            `INSERT INTO perfiles (strNombrePerfil, bitAdministrador) 
+             VALUES ('Administrador', true) 
+             ON CONFLICT (strNombrePerfil) DO UPDATE SET bitAdministrador = true
+             RETURNING id`
+        );
+        
+        const adminPerfilId = perfilAdmin.rows[0].id;
+        console.log(`✅ Perfil administrador ID: ${adminPerfilId}`);
+
+        // Crear usuario admin por defecto (si no existe)
+        const adminExiste = await pool.query(
+            "SELECT id FROM usuarios WHERE strNombreUsuario = 'admin'"
+        );
+
+        if (adminExiste.rows.length === 0) {
+            // Contraseña: Admin123 (hasheada con bcrypt)
+            const hashedPassword = await bcrypt.hash('Admin123', 10);
+            
+            await pool.query(`
+                INSERT INTO usuarios (
+                    strNombreUsuario, 
+                    strCorreo, 
+                    strPwd, 
+                    idPerfil, 
+                    idEstadoUsuario,
+                    strNumeroCelular
+                ) VALUES (
+                    'admin', 
+                    'admin@sistema.com', 
+                    $1, 
+                    $2, 
+                    1,
+                    '555-0101'
+                )
+            `, [hashedPassword, adminPerfilId]);
+            
+            console.log('✅ Usuario ADMIN creado:');
+            console.log('   👤 Usuario: admin');
+            console.log('   🔑 Contraseña: Admin123');
+            console.log('   📧 Email: admin@sistema.com');
+        } else {
+            console.log('✅ Usuario admin ya existe');
+        }
+
+        // ============================================
+        // 🔥 CREAR PERMISOS PARA ADMIN (todos los módulos con todos los permisos)
+        // ============================================
+        console.log('🔐 Verificando permisos para administrador...');
+        
+        // Obtener todos los módulos
+        const modulos = await pool.query('SELECT id FROM modulos');
+        
+        // Para cada módulo, crear permiso con todos los bits en true
+        for (const modulo of modulos.rows) {
+            await pool.query(`
+                INSERT INTO permisos_perfil (
+                    idModulo, idPerfil, bitAgregar, bitEditar, bitConsulta, bitEliminar, bitDetalle
+                ) VALUES ($1, $2, true, true, true, true, true)
+                ON CONFLICT (idModulo, idPerfil) DO UPDATE SET
+                    bitAgregar = true,
+                    bitEditar = true,
+                    bitConsulta = true,
+                    bitEliminar = true,
+                    bitDetalle = true
+            `, [modulo.id, adminPerfilId]);
+        }
+        
+        console.log('✅ Permisos de administrador configurados');
+        console.log('✅ Base de datos inicializada completamente con ADMIN');
+
     } catch (err) {
         console.error('❌ Error iniciando DB:', err);
     }
 };
+
+// Ejecutar inicialización
 initDB();
 
 // --- 4. Middleware de autenticación ---
@@ -167,6 +254,7 @@ app.post('/api/register', async (req, res) => {
         if (err.code === '23505') {
             return res.status(400).json({ success: false, message: 'El email o usuario ya existe' });
         }
+        console.error('Error en registro:', err);
         res.status(500).json({ success: false, message: 'Error interno del servidor' });
     }
 });
@@ -216,6 +304,7 @@ app.post('/api/login', async (req, res) => {
             permisos: permisos.rows
         });
     } catch (err) {
+        console.error('Error en login:', err);
         res.status(500).json({ success: false, message: 'Error interno del servidor' });
     }
 });
@@ -246,6 +335,7 @@ app.get('/api/perfiles', authenticateToken, async (req, res) => {
             }
         });
     } catch (err) {
+        console.error('Error al obtener perfiles:', err);
         res.status(500).json({ success: false, message: 'Error al obtener perfiles' });
     }
 });
@@ -258,6 +348,7 @@ app.get('/api/perfiles/:id', authenticateToken, async (req, res) => {
         }
         res.json({ success: true, data: result.rows[0] });
     } catch (err) {
+        console.error('Error al obtener perfil:', err);
         res.status(500).json({ success: false, message: 'Error al obtener perfil' });
     }
 });
@@ -265,6 +356,10 @@ app.get('/api/perfiles/:id', authenticateToken, async (req, res) => {
 app.post('/api/perfiles', authenticateToken, async (req, res) => {
     try {
         const { strNombrePerfil, bitAdministrador } = req.body;
+        
+        if (!strNombrePerfil || strNombrePerfil.trim() === '') {
+            return res.status(400).json({ success: false, message: 'El nombre del perfil es requerido' });
+        }
         
         const result = await pool.query(
             'INSERT INTO perfiles (strNombrePerfil, bitAdministrador) VALUES ($1, $2) RETURNING *',
@@ -276,6 +371,7 @@ app.post('/api/perfiles', authenticateToken, async (req, res) => {
         if (err.code === '23505') {
             return res.status(400).json({ success: false, message: 'El nombre del perfil ya existe' });
         }
+        console.error('Error al crear perfil:', err);
         res.status(500).json({ success: false, message: 'Error al crear perfil' });
     }
 });
@@ -295,6 +391,7 @@ app.put('/api/perfiles/:id', authenticateToken, async (req, res) => {
         
         res.json({ success: true, message: 'Perfil actualizado', data: result.rows[0] });
     } catch (err) {
+        console.error('Error al actualizar perfil:', err);
         res.status(500).json({ success: false, message: 'Error al actualizar perfil' });
     }
 });
@@ -307,6 +404,7 @@ app.delete('/api/perfiles/:id', authenticateToken, async (req, res) => {
         }
         res.json({ success: true, message: 'Perfil eliminado' });
     } catch (err) {
+        console.error('Error al eliminar perfil:', err);
         res.status(500).json({ success: false, message: 'Error al eliminar perfil' });
     }
 });
@@ -337,6 +435,7 @@ app.get('/api/modulos', authenticateToken, async (req, res) => {
             }
         });
     } catch (err) {
+        console.error('Error al obtener módulos:', err);
         res.status(500).json({ success: false, message: 'Error al obtener módulos' });
     }
 });
@@ -349,6 +448,7 @@ app.get('/api/modulos/:id', authenticateToken, async (req, res) => {
         }
         res.json({ success: true, data: result.rows[0] });
     } catch (err) {
+        console.error('Error al obtener módulo:', err);
         res.status(500).json({ success: false, message: 'Error al obtener módulo' });
     }
 });
@@ -356,6 +456,10 @@ app.get('/api/modulos/:id', authenticateToken, async (req, res) => {
 app.post('/api/modulos', authenticateToken, async (req, res) => {
     try {
         const { strNombreModulo } = req.body;
+        
+        if (!strNombreModulo || strNombreModulo.trim() === '') {
+            return res.status(400).json({ success: false, message: 'El nombre del módulo es requerido' });
+        }
         
         const result = await pool.query(
             'INSERT INTO modulos (strNombreModulo) VALUES ($1) RETURNING *',
@@ -367,6 +471,7 @@ app.post('/api/modulos', authenticateToken, async (req, res) => {
         if (err.code === '23505') {
             return res.status(400).json({ success: false, message: 'El nombre del módulo ya existe' });
         }
+        console.error('Error al crear módulo:', err);
         res.status(500).json({ success: false, message: 'Error al crear módulo' });
     }
 });
@@ -386,6 +491,7 @@ app.put('/api/modulos/:id', authenticateToken, async (req, res) => {
         
         res.json({ success: true, message: 'Módulo actualizado', data: result.rows[0] });
     } catch (err) {
+        console.error('Error al actualizar módulo:', err);
         res.status(500).json({ success: false, message: 'Error al actualizar módulo' });
     }
 });
@@ -398,6 +504,7 @@ app.delete('/api/modulos/:id', authenticateToken, async (req, res) => {
         }
         res.json({ success: true, message: 'Módulo eliminado' });
     } catch (err) {
+        console.error('Error al eliminar módulo:', err);
         res.status(500).json({ success: false, message: 'Error al eliminar módulo' });
     }
 });
@@ -431,6 +538,7 @@ app.get('/api/usuarios', authenticateToken, async (req, res) => {
             }
         });
     } catch (err) {
+        console.error('Error al obtener usuarios:', err);
         res.status(500).json({ success: false, message: 'Error al obtener usuarios' });
     }
 });
@@ -449,6 +557,7 @@ app.get('/api/usuarios/:id', authenticateToken, async (req, res) => {
         }
         res.json({ success: true, data: result.rows[0] });
     } catch (err) {
+        console.error('Error al obtener usuario:', err);
         res.status(500).json({ success: false, message: 'Error al obtener usuario' });
     }
 });
@@ -482,6 +591,7 @@ app.post('/api/usuarios', authenticateToken, async (req, res) => {
         if (err.code === '23505') {
             return res.status(400).json({ success: false, message: 'El email o usuario ya existe' });
         }
+        console.error('Error al crear usuario:', err);
         res.status(500).json({ success: false, message: 'Error al crear usuario' });
     }
 });
@@ -516,6 +626,7 @@ app.put('/api/usuarios/:id', authenticateToken, async (req, res) => {
         
         res.json({ success: true, message: 'Usuario actualizado', data: result.rows[0] });
     } catch (err) {
+        console.error('Error al actualizar usuario:', err);
         res.status(500).json({ success: false, message: 'Error al actualizar usuario' });
     }
 });
@@ -528,6 +639,7 @@ app.delete('/api/usuarios/:id', authenticateToken, async (req, res) => {
         }
         res.json({ success: true, message: 'Usuario eliminado' });
     } catch (err) {
+        console.error('Error al eliminar usuario:', err);
         res.status(500).json({ success: false, message: 'Error al eliminar usuario' });
     }
 });
@@ -562,6 +674,7 @@ app.get('/api/permisos-perfil', authenticateToken, async (req, res) => {
             }
         });
     } catch (err) {
+        console.error('Error al obtener permisos:', err);
         res.status(500).json({ success: false, message: 'Error al obtener permisos' });
     }
 });
@@ -581,6 +694,7 @@ app.get('/api/permisos-perfil/:id', authenticateToken, async (req, res) => {
         }
         res.json({ success: true, data: result.rows[0] });
     } catch (err) {
+        console.error('Error al obtener permiso:', err);
         res.status(500).json({ success: false, message: 'Error al obtener permiso' });
     }
 });
@@ -600,6 +714,7 @@ app.post('/api/permisos-perfil', authenticateToken, async (req, res) => {
         if (err.code === '23505') {
             return res.status(400).json({ success: false, message: 'Ya existe un permiso para este módulo y perfil' });
         }
+        console.error('Error al crear permiso:', err);
         res.status(500).json({ success: false, message: 'Error al crear permiso' });
     }
 });
@@ -620,6 +735,7 @@ app.put('/api/permisos-perfil/:id', authenticateToken, async (req, res) => {
         
         res.json({ success: true, message: 'Permiso actualizado', data: result.rows[0] });
     } catch (err) {
+        console.error('Error al actualizar permiso:', err);
         res.status(500).json({ success: false, message: 'Error al actualizar permiso' });
     }
 });
@@ -632,6 +748,7 @@ app.delete('/api/permisos-perfil/:id', authenticateToken, async (req, res) => {
         }
         res.json({ success: true, message: 'Permiso eliminado' });
     } catch (err) {
+        console.error('Error al eliminar permiso:', err);
         res.status(500).json({ success: false, message: 'Error al eliminar permiso' });
     }
 });
@@ -682,6 +799,7 @@ app.get('/api/menu', authenticateToken, async (req, res) => {
         
         res.json({ success: true, data: menuOrganizado });
     } catch (err) {
+        console.error('Error al obtener menú:', err);
         res.status(500).json({ success: false, message: 'Error al obtener menú' });
     }
 });
@@ -692,6 +810,7 @@ app.get('/api/perfiles-lista', authenticateToken, async (req, res) => {
         const result = await pool.query('SELECT id, strNombrePerfil FROM perfiles ORDER BY strNombrePerfil');
         res.json({ success: true, data: result.rows });
     } catch (err) {
+        console.error('Error al obtener perfiles lista:', err);
         res.status(500).json({ success: false, message: 'Error al obtener perfiles' });
     }
 });
@@ -701,6 +820,7 @@ app.get('/api/modulos-lista', authenticateToken, async (req, res) => {
         const result = await pool.query('SELECT id, strNombreModulo FROM modulos ORDER BY strNombreModulo');
         res.json({ success: true, data: result.rows });
     } catch (err) {
+        console.error('Error al obtener módulos lista:', err);
         res.status(500).json({ success: false, message: 'Error al obtener módulos' });
     }
 });
@@ -708,7 +828,18 @@ app.get('/api/modulos-lista', authenticateToken, async (req, res) => {
 // --- 12. Health Check ---
 app.get('/health', (req, res) => res.status(200).send('OK'));
 
+// --- 13. Manejo de errores 404 ---
+app.use('*', (req, res) => {
+    res.status(404).json({ success: false, message: 'Ruta no encontrada' });
+});
+
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Servidor ejecutándose en puerto ${PORT}`);
+    console.log('='.repeat(50));
+    console.log('📝 CREDENCIALES DE ADMIN:');
+    console.log('   Usuario: admin');
+    console.log('   Contraseña: Admin123');
+    console.log('   Email: admin@sistema.com');
+    console.log('='.repeat(50));
 });

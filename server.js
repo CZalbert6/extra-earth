@@ -28,154 +28,115 @@ const pool = new Pool({
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secreto_super_seguro_2026';
 
-// --- 3. Health Check endpoints (responden inmediatamente) ---
-app.get('/', (req, res) => {
-    res.status(200).json({ 
-        success: true, 
-        message: 'API Corporativa funcionando',
-        timestamp: new Date().toISOString()
-    });
-});
+// --- 3. Health Check ---
+app.get('/', (req, res) => res.status(200).send('OK'));
+app.get('/health', (req, res) => res.status(200).send('OK'));
 
-app.get('/health', (req, res) => {
-    res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
-});
+// --- 4. Inicialización de Tablas (SIMPLE, como la que funciona) ---
+const initDB = async () => {
+    try {
+        // Tabla perfiles
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS perfiles (
+                id SERIAL PRIMARY KEY,
+                strNombrePerfil VARCHAR(100) UNIQUE NOT NULL,
+                bitAdministrador BOOLEAN DEFAULT false,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
 
-// --- 4. Inicialización de Tablas (SIN ADMIN AUTOMÁTICO) ---
-const initDB = async (retries = 5) => {
-    for (let i = 0; i < retries; i++) {
-        try {
-            console.log(`🔄 Intento ${i + 1} de inicializar base de datos...`);
-            
-            // Verificar conexión primero
-            await pool.query('SELECT 1');
-            console.log('✅ Conexión a BD exitosa');
+        // Tabla modulos
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS modulos (
+                id SERIAL PRIMARY KEY,
+                strNombreModulo VARCHAR(100) UNIQUE NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
 
-            // Tabla perfiles
-            await pool.query(`
-                CREATE TABLE IF NOT EXISTS perfiles (
-                    id SERIAL PRIMARY KEY,
-                    strNombrePerfil VARCHAR(100) UNIQUE NOT NULL,
-                    bitAdministrador BOOLEAN DEFAULT false,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            `);
-            console.log('✅ Tabla perfiles lista');
+        // Tabla usuarios
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS usuarios (
+                id SERIAL PRIMARY KEY,
+                strNombreUsuario VARCHAR(100) UNIQUE NOT NULL,
+                idPerfil INTEGER REFERENCES perfiles(id),
+                strPwd VARCHAR(255) NOT NULL,
+                idEstadoUsuario INTEGER DEFAULT 1,
+                strCorreo VARCHAR(255) UNIQUE NOT NULL,
+                strNumeroCelular VARCHAR(20),
+                strImagen TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
 
-            // Tabla modulos
-            await pool.query(`
-                CREATE TABLE IF NOT EXISTS modulos (
-                    id SERIAL PRIMARY KEY,
-                    strNombreModulo VARCHAR(100) UNIQUE NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            `);
-            console.log('✅ Tabla modulos lista');
+        // Tabla permisos_perfil
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS permisos_perfil (
+                id SERIAL PRIMARY KEY,
+                idModulo INTEGER REFERENCES modulos(id) ON DELETE CASCADE,
+                idPerfil INTEGER REFERENCES perfiles(id) ON DELETE CASCADE,
+                bitAgregar BOOLEAN DEFAULT false,
+                bitEditar BOOLEAN DEFAULT false,
+                bitConsulta BOOLEAN DEFAULT false,
+                bitEliminar BOOLEAN DEFAULT false,
+                bitDetalle BOOLEAN DEFAULT false,
+                UNIQUE(idModulo, idPerfil)
+            )
+        `);
 
-            // Tabla usuarios (con strImagen como TEXT para Base64)
-            await pool.query(`
-                CREATE TABLE IF NOT EXISTS usuarios (
-                    id SERIAL PRIMARY KEY,
-                    strNombreUsuario VARCHAR(100) UNIQUE NOT NULL,
-                    idPerfil INTEGER REFERENCES perfiles(id),
-                    strPwd VARCHAR(255) NOT NULL,
-                    idEstadoUsuario INTEGER DEFAULT 1,
-                    strCorreo VARCHAR(255) UNIQUE NOT NULL,
-                    strNumeroCelular VARCHAR(20),
-                    strImagen TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            `);
-            console.log('✅ Tabla usuarios lista');
+        // Tabla menu
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS menu (
+                id SERIAL PRIMARY KEY,
+                idMenu INTEGER NOT NULL,
+                idModulo INTEGER REFERENCES modulos(id) ON DELETE CASCADE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
 
-            // Tabla permisos_perfil
-            await pool.query(`
-                CREATE TABLE IF NOT EXISTS permisos_perfil (
-                    id SERIAL PRIMARY KEY,
-                    idModulo INTEGER REFERENCES modulos(id) ON DELETE CASCADE,
-                    idPerfil INTEGER REFERENCES perfiles(id) ON DELETE CASCADE,
-                    bitAgregar BOOLEAN DEFAULT false,
-                    bitEditar BOOLEAN DEFAULT false,
-                    bitConsulta BOOLEAN DEFAULT false,
-                    bitEliminar BOOLEAN DEFAULT false,
-                    bitDetalle BOOLEAN DEFAULT false,
-                    UNIQUE(idModulo, idPerfil)
-                )
-            `);
-            console.log('✅ Tabla permisos_perfil lista');
+        // Insertar módulos iniciales
+        const modulosIniciales = [
+            'Perfil', 'Módulo', 'Permisos-Perfil', 'Usuario',
+            'Principal 1.1', 'Principal 1.2', 'Principal 2.1', 'Principal 2.2'
+        ];
+        
+        for (const modulo of modulosIniciales) {
+            await pool.query(
+                'INSERT INTO modulos (strNombreModulo) VALUES ($1) ON CONFLICT (strNombreModulo) DO NOTHING',
+                [modulo]
+            );
+        }
 
-            // Tabla menu
-            await pool.query(`
-                CREATE TABLE IF NOT EXISTS menu (
-                    id SERIAL PRIMARY KEY,
-                    idMenu INTEGER NOT NULL,
-                    idModulo INTEGER REFERENCES modulos(id) ON DELETE CASCADE,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            `);
-            console.log('✅ Tabla menu lista');
+        // Insertar menú inicial
+        const menuItems = [
+            { idMenu: 1, nombreModulo: 'Perfil' },
+            { idMenu: 1, nombreModulo: 'Módulo' },
+            { idMenu: 1, nombreModulo: 'Permisos-Perfil' },
+            { idMenu: 1, nombreModulo: 'Usuario' },
+            { idMenu: 2, nombreModulo: 'Principal 1.1' },
+            { idMenu: 2, nombreModulo: 'Principal 1.2' },
+            { idMenu: 3, nombreModulo: 'Principal 2.1' },
+            { idMenu: 3, nombreModulo: 'Principal 2.2' }
+        ];
 
-            // Insertar módulos iniciales
-            const modulosIniciales = [
-                'Perfil', 'Módulo', 'Permisos-Perfil', 'Usuario',
-                'Principal 1.1', 'Principal 1.2', 'Principal 2.1', 'Principal 2.2'
-            ];
-            
-            for (const modulo of modulosIniciales) {
+        for (const item of menuItems) {
+            const modulo = await pool.query('SELECT id FROM modulos WHERE strNombreModulo = $1', [item.nombreModulo]);
+            if (modulo.rows[0]) {
                 await pool.query(
-                    'INSERT INTO modulos (strNombreModulo) VALUES ($1) ON CONFLICT (strNombreModulo) DO NOTHING',
-                    [modulo]
+                    'INSERT INTO menu (idMenu, idModulo) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                    [item.idMenu, modulo.rows[0].id]
                 );
             }
-            console.log('✅ Módulos iniciales insertados');
-
-            // Insertar menú inicial
-            const menuItems = [
-                { idMenu: 1, nombreModulo: 'Perfil' },
-                { idMenu: 1, nombreModulo: 'Módulo' },
-                { idMenu: 1, nombreModulo: 'Permisos-Perfil' },
-                { idMenu: 1, nombreModulo: 'Usuario' },
-                { idMenu: 2, nombreModulo: 'Principal 1.1' },
-                { idMenu: 2, nombreModulo: 'Principal 1.2' },
-                { idMenu: 3, nombreModulo: 'Principal 2.1' },
-                { idMenu: 3, nombreModulo: 'Principal 2.2' }
-            ];
-
-            for (const item of menuItems) {
-                const modulo = await pool.query('SELECT id FROM modulos WHERE strNombreModulo = $1', [item.nombreModulo]);
-                if (modulo.rows[0]) {
-                    await pool.query(
-                        'INSERT INTO menu (idMenu, idModulo) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-                        [item.idMenu, modulo.rows[0].id]
-                    );
-                }
-            }
-            console.log('✅ Menú inicial insertado');
-
-            console.log('✅ Base de datos inicializada completamente (SIN ADMIN AUTOMÁTICO)');
-            return true;
-
-        } catch (err) {
-            console.error(`❌ Error en intento ${i + 1}:`, err.message);
-            if (i < retries - 1) {
-                console.log(`⏳ Esperando 3 segundos antes de reintentar...`);
-                await new Promise(resolve => setTimeout(resolve, 3000));
-            } else {
-                console.error('❌ No se pudo inicializar la base de datos después de varios intentos');
-                return false;
-            }
         }
+
+        console.log('✅ Base de datos inicializada');
+    } catch (err) {
+        console.error('❌ Error iniciando DB:', err);
     }
 };
 
-// Iniciar inicialización de BD (no bloqueante)
-initDB().then(success => {
-    if (success) {
-        console.log('✅ Base de datos lista');
-    } else {
-        console.warn('⚠️ Servidor iniciado pero con problemas en BD');
-    }
-});
+// Ejecutar initDB (sin await, sin promesas complejas)
+initDB();
 
 // --- 5. Middleware de autenticación ---
 const authenticateToken = (req, res, next) => {
@@ -191,7 +152,7 @@ const authenticateToken = (req, res, next) => {
     });
 };
 
-// --- 6. Rutas de Autenticación ---
+// --- 6. Rutas de Autenticación (MODIFICADA para que el primer usuario sea admin) ---
 app.post('/api/register', async (req, res) => {
     try {
         const { strNombreUsuario, strCorreo, strPwd, strNumeroCelular } = req.body;
@@ -202,14 +163,14 @@ app.post('/api/register', async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(strPwd, 10);
         
-        // Verificar si es el primer usuario (será admin)
+        // Verificar si es el primer usuario
         const userCount = await pool.query('SELECT COUNT(*) FROM usuarios');
         const esPrimerUsuario = parseInt(userCount.rows[0].count) === 0;
         
         let idPerfil = null;
         
         if (esPrimerUsuario) {
-            console.log('👑 Primer usuario registrado - será administrador');
+            console.log('👑 Primer usuario - será administrador');
             
             // Crear perfil administrador
             const perfilResult = await pool.query(
@@ -220,7 +181,7 @@ app.post('/api/register', async (req, res) => {
             );
             idPerfil = perfilResult.rows[0].id;
             
-            // Crear permisos para el admin en todos los módulos
+            // Crear permisos para todos los módulos
             const modulos = await pool.query('SELECT id FROM modulos');
             for (const modulo of modulos.rows) {
                 await pool.query(`
@@ -239,8 +200,7 @@ app.post('/api/register', async (req, res) => {
         res.status(201).json({ 
             success: true, 
             message: esPrimerUsuario ? 'Usuario administrador creado' : 'Usuario registrado', 
-            user: result.rows[0],
-            esAdmin: esPrimerUsuario
+            user: result.rows[0] 
         });
     } catch (err) {
         if (err.code === '23505') {
@@ -301,7 +261,7 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-// --- 7. CRUD Perfiles ---
+// --- 7. CRUD Perfiles (todos igual que antes) ---
 app.get('/api/perfiles', authenticateToken, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -327,7 +287,6 @@ app.get('/api/perfiles', authenticateToken, async (req, res) => {
             }
         });
     } catch (err) {
-        console.error('Error al obtener perfiles:', err);
         res.status(500).json({ success: false, message: 'Error al obtener perfiles' });
     }
 });
@@ -340,7 +299,6 @@ app.get('/api/perfiles/:id', authenticateToken, async (req, res) => {
         }
         res.json({ success: true, data: result.rows[0] });
     } catch (err) {
-        console.error('Error al obtener perfil:', err);
         res.status(500).json({ success: false, message: 'Error al obtener perfil' });
     }
 });
@@ -348,10 +306,6 @@ app.get('/api/perfiles/:id', authenticateToken, async (req, res) => {
 app.post('/api/perfiles', authenticateToken, async (req, res) => {
     try {
         const { strNombrePerfil, bitAdministrador } = req.body;
-        
-        if (!strNombrePerfil || strNombrePerfil.trim() === '') {
-            return res.status(400).json({ success: false, message: 'El nombre del perfil es requerido' });
-        }
         
         const result = await pool.query(
             'INSERT INTO perfiles (strNombrePerfil, bitAdministrador) VALUES ($1, $2) RETURNING *',
@@ -363,7 +317,6 @@ app.post('/api/perfiles', authenticateToken, async (req, res) => {
         if (err.code === '23505') {
             return res.status(400).json({ success: false, message: 'El nombre del perfil ya existe' });
         }
-        console.error('Error al crear perfil:', err);
         res.status(500).json({ success: false, message: 'Error al crear perfil' });
     }
 });
@@ -383,7 +336,6 @@ app.put('/api/perfiles/:id', authenticateToken, async (req, res) => {
         
         res.json({ success: true, message: 'Perfil actualizado', data: result.rows[0] });
     } catch (err) {
-        console.error('Error al actualizar perfil:', err);
         res.status(500).json({ success: false, message: 'Error al actualizar perfil' });
     }
 });
@@ -396,12 +348,11 @@ app.delete('/api/perfiles/:id', authenticateToken, async (req, res) => {
         }
         res.json({ success: true, message: 'Perfil eliminado' });
     } catch (err) {
-        console.error('Error al eliminar perfil:', err);
         res.status(500).json({ success: false, message: 'Error al eliminar perfil' });
     }
 });
 
-// --- 8. CRUD Módulos ---
+// --- 8. CRUD Módulos (todos igual) ---
 app.get('/api/modulos', authenticateToken, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -427,7 +378,6 @@ app.get('/api/modulos', authenticateToken, async (req, res) => {
             }
         });
     } catch (err) {
-        console.error('Error al obtener módulos:', err);
         res.status(500).json({ success: false, message: 'Error al obtener módulos' });
     }
 });
@@ -440,7 +390,6 @@ app.get('/api/modulos/:id', authenticateToken, async (req, res) => {
         }
         res.json({ success: true, data: result.rows[0] });
     } catch (err) {
-        console.error('Error al obtener módulo:', err);
         res.status(500).json({ success: false, message: 'Error al obtener módulo' });
     }
 });
@@ -448,10 +397,6 @@ app.get('/api/modulos/:id', authenticateToken, async (req, res) => {
 app.post('/api/modulos', authenticateToken, async (req, res) => {
     try {
         const { strNombreModulo } = req.body;
-        
-        if (!strNombreModulo || strNombreModulo.trim() === '') {
-            return res.status(400).json({ success: false, message: 'El nombre del módulo es requerido' });
-        }
         
         const result = await pool.query(
             'INSERT INTO modulos (strNombreModulo) VALUES ($1) RETURNING *',
@@ -463,7 +408,6 @@ app.post('/api/modulos', authenticateToken, async (req, res) => {
         if (err.code === '23505') {
             return res.status(400).json({ success: false, message: 'El nombre del módulo ya existe' });
         }
-        console.error('Error al crear módulo:', err);
         res.status(500).json({ success: false, message: 'Error al crear módulo' });
     }
 });
@@ -483,7 +427,6 @@ app.put('/api/modulos/:id', authenticateToken, async (req, res) => {
         
         res.json({ success: true, message: 'Módulo actualizado', data: result.rows[0] });
     } catch (err) {
-        console.error('Error al actualizar módulo:', err);
         res.status(500).json({ success: false, message: 'Error al actualizar módulo' });
     }
 });
@@ -496,7 +439,6 @@ app.delete('/api/modulos/:id', authenticateToken, async (req, res) => {
         }
         res.json({ success: true, message: 'Módulo eliminado' });
     } catch (err) {
-        console.error('Error al eliminar módulo:', err);
         res.status(500).json({ success: false, message: 'Error al eliminar módulo' });
     }
 });
@@ -530,7 +472,6 @@ app.get('/api/usuarios', authenticateToken, async (req, res) => {
             }
         });
     } catch (err) {
-        console.error('Error al obtener usuarios:', err);
         res.status(500).json({ success: false, message: 'Error al obtener usuarios' });
     }
 });
@@ -549,7 +490,6 @@ app.get('/api/usuarios/:id', authenticateToken, async (req, res) => {
         }
         res.json({ success: true, data: result.rows[0] });
     } catch (err) {
-        console.error('Error al obtener usuario:', err);
         res.status(500).json({ success: false, message: 'Error al obtener usuario' });
     }
 });
@@ -583,7 +523,6 @@ app.post('/api/usuarios', authenticateToken, async (req, res) => {
         if (err.code === '23505') {
             return res.status(400).json({ success: false, message: 'El email o usuario ya existe' });
         }
-        console.error('Error al crear usuario:', err);
         res.status(500).json({ success: false, message: 'Error al crear usuario' });
     }
 });
@@ -618,7 +557,6 @@ app.put('/api/usuarios/:id', authenticateToken, async (req, res) => {
         
         res.json({ success: true, message: 'Usuario actualizado', data: result.rows[0] });
     } catch (err) {
-        console.error('Error al actualizar usuario:', err);
         res.status(500).json({ success: false, message: 'Error al actualizar usuario' });
     }
 });
@@ -631,7 +569,6 @@ app.delete('/api/usuarios/:id', authenticateToken, async (req, res) => {
         }
         res.json({ success: true, message: 'Usuario eliminado' });
     } catch (err) {
-        console.error('Error al eliminar usuario:', err);
         res.status(500).json({ success: false, message: 'Error al eliminar usuario' });
     }
 });
@@ -666,7 +603,6 @@ app.get('/api/permisos-perfil', authenticateToken, async (req, res) => {
             }
         });
     } catch (err) {
-        console.error('Error al obtener permisos:', err);
         res.status(500).json({ success: false, message: 'Error al obtener permisos' });
     }
 });
@@ -686,7 +622,6 @@ app.get('/api/permisos-perfil/:id', authenticateToken, async (req, res) => {
         }
         res.json({ success: true, data: result.rows[0] });
     } catch (err) {
-        console.error('Error al obtener permiso:', err);
         res.status(500).json({ success: false, message: 'Error al obtener permiso' });
     }
 });
@@ -706,7 +641,6 @@ app.post('/api/permisos-perfil', authenticateToken, async (req, res) => {
         if (err.code === '23505') {
             return res.status(400).json({ success: false, message: 'Ya existe un permiso para este módulo y perfil' });
         }
-        console.error('Error al crear permiso:', err);
         res.status(500).json({ success: false, message: 'Error al crear permiso' });
     }
 });
@@ -727,7 +661,6 @@ app.put('/api/permisos-perfil/:id', authenticateToken, async (req, res) => {
         
         res.json({ success: true, message: 'Permiso actualizado', data: result.rows[0] });
     } catch (err) {
-        console.error('Error al actualizar permiso:', err);
         res.status(500).json({ success: false, message: 'Error al actualizar permiso' });
     }
 });
@@ -740,7 +673,6 @@ app.delete('/api/permisos-perfil/:id', authenticateToken, async (req, res) => {
         }
         res.json({ success: true, message: 'Permiso eliminado' });
     } catch (err) {
-        console.error('Error al eliminar permiso:', err);
         res.status(500).json({ success: false, message: 'Error al eliminar permiso' });
     }
 });
@@ -791,7 +723,6 @@ app.get('/api/menu', authenticateToken, async (req, res) => {
         
         res.json({ success: true, data: menuOrganizado });
     } catch (err) {
-        console.error('Error al obtener menú:', err);
         res.status(500).json({ success: false, message: 'Error al obtener menú' });
     }
 });
@@ -802,7 +733,6 @@ app.get('/api/perfiles-lista', authenticateToken, async (req, res) => {
         const result = await pool.query('SELECT id, strNombrePerfil FROM perfiles ORDER BY strNombrePerfil');
         res.json({ success: true, data: result.rows });
     } catch (err) {
-        console.error('Error al obtener perfiles lista:', err);
         res.status(500).json({ success: false, message: 'Error al obtener perfiles' });
     }
 });
@@ -812,26 +742,19 @@ app.get('/api/modulos-lista', authenticateToken, async (req, res) => {
         const result = await pool.query('SELECT id, strNombreModulo FROM modulos ORDER BY strNombreModulo');
         res.json({ success: true, data: result.rows });
     } catch (err) {
-        console.error('Error al obtener módulos lista:', err);
         res.status(500).json({ success: false, message: 'Error al obtener módulos' });
     }
 });
 
-// --- 13. Manejo de errores 404 ---
-app.use('*', (req, res) => {
-    res.status(404).json({ success: false, message: 'Ruta no encontrada' });
-});
-
-// --- 14. Iniciar servidor ---
+// --- 13. Iniciar servidor ---
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, '0.0.0.0', () => {
     console.log('='.repeat(50));
     console.log(`✅ SERVIDOR INICIADO CORRECTAMENTE`);
     console.log(`📡 Puerto: ${PORT}`);
-    console.log(`🌐 Health check: / o /health`);
     console.log('='.repeat(50));
     console.log('📝 IMPORTANTE:');
-    console.log('   El primer usuario registrado será ADMINISTRADOR');
+    console.log('   El PRIMER usuario registrado será ADMINISTRADOR');
     console.log('   con todos los permisos automáticamente');
     console.log('='.repeat(50));
 });

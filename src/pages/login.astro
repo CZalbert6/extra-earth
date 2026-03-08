@@ -28,12 +28,11 @@ const API_URL = "https://extra-earth-production.up.railway.app";
         </div>
       </div>
 
-      <!-- Contenedor del captcha con indicador de carga -->
+      <!-- Contenedor del captcha - se cargará después -->
       <div id="captcha-container" class="captcha-container">
         <div id="captcha-loading" class="captcha-loading">
           <i class="fas fa-spinner fa-spin"></i> Cargando verificación de seguridad...
         </div>
-        <div id="captcha-widget" class="h-captcha" data-sitekey="10000000-ffff-ffff-ffff-ffffffffffff"></div>
       </div>
 
       <button type="submit" id="btnSubmit" disabled>
@@ -49,9 +48,6 @@ const API_URL = "https://extra-earth-production.up.railway.app";
     </div>
   </div>
 </Layout>
-
-<!-- Cargar hCaptcha -->
-<script src="https://js.hcaptcha.com/1/api.js" async defer></script>
 
 <style>
   .login-card {
@@ -140,14 +136,10 @@ const API_URL = "https://extra-earth-production.up.railway.app";
     gap: 10px;
   }
 
-  #captcha-widget {
-    display: none;
+  .h-captcha {
     width: 100%;
     max-width: 304px;
-  }
-
-  #captcha-widget iframe {
-    max-width: 100%;
+    margin: 0 auto;
   }
 
   button {
@@ -203,42 +195,57 @@ const API_URL = "https://extra-earth-production.up.railway.app";
   const form = document.getElementById('loginForm');
   const messageDiv = document.getElementById('message');
   const btnSubmit = document.getElementById('btnSubmit');
+  const captchaContainer = document.getElementById('captcha-container');
   const captchaLoading = document.getElementById('captcha-loading');
-  const captchaWidget = document.getElementById('captcha-widget');
   
   let captchaResuelto = false;
 
-  // Función que llama hCaptcha cuando está listo
-  window.onCaptchaLoad = function() {
-    console.log('✅ hCaptcha cargado');
-    captchaLoading.style.display = 'none';
-    captchaWidget.style.display = 'block';
+  // Cargar hCaptcha dinámicamente con HTTPS forzado
+  function cargarCaptcha() {
+    // Crear el div para hCaptcha
+    const captchaDiv = document.createElement('div');
+    captchaDiv.className = 'h-captcha';
+    captchaDiv.setAttribute('data-sitekey', '10000000-ffff-ffff-ffff-ffffffffffff');
     
-    // Habilitar botón solo cuando haya captcha
-    if (window.hcaptcha) {
-      btnSubmit.disabled = false;
-    }
-  };
-
-  // Verificar si hCaptcha ya cargó
-  if (window.hcaptcha) {
-    onCaptchaLoad();
-  } else {
-    // Esperar a que cargue
-    window.addEventListener('load', function() {
+    // Reemplazar el loading con el captcha
+    captchaContainer.innerHTML = '';
+    captchaContainer.appendChild(captchaDiv);
+    
+    // Cargar script de hCaptcha con HTTPS
+    const script = document.createElement('script');
+    script.src = 'https://js.hcaptcha.com/1/api.js';
+    script.async = true;
+    script.defer = true;
+    
+    script.onload = function() {
+      console.log('✅ Script hCaptcha cargado');
       if (window.hcaptcha) {
-        onCaptchaLoad();
-      } else {
-        // Timeout de seguridad
-        setTimeout(() => {
-          if (!window.hcaptcha) {
-            captchaLoading.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error al cargar captcha. Recargue la página.';
-            captchaLoading.style.color = '#ef4444';
-          }
-        }, 10000);
+        captchaLoading.style.display = 'none';
+        btnSubmit.disabled = false;
       }
-    });
+    };
+    
+    script.onerror = function() {
+      captchaContainer.innerHTML = '<div class="captcha-loading" style="color: #ef4444;"><i class="fas fa-exclamation-triangle"></i> Error al cargar captcha. Recargue la página.</div>';
+    };
+    
+    document.head.appendChild(script);
   }
+
+  // Cargar captcha cuando la página esté lista
+  if (document.readyState === 'complete') {
+    cargarCaptcha();
+  } else {
+    window.addEventListener('load', cargarCaptcha);
+  }
+
+  // Timeout de seguridad
+  setTimeout(() => {
+    if (!window.hcaptcha) {
+      captchaContainer.innerHTML = '<div class="captcha-loading" style="color: #ef4444;"><i class="fas fa-exclamation-triangle"></i> Error al cargar captcha. Recargue la página.</div>';
+      btnSubmit.disabled = false; // Permitir envío por si acaso
+    }
+  }, 10000);
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -253,7 +260,7 @@ const API_URL = "https://extra-earth-production.up.railway.app";
 
     // Verificar captcha OBLIGATORIO
     if (!window.hcaptcha) {
-      showMsg('Error: Captcha no disponible. Recargue la página.', 'error');
+      showMsg('Error: Captcha no disponible. Intente de nuevo.', 'error');
       return;
     }
 
@@ -272,8 +279,8 @@ const API_URL = "https://extra-earth-production.up.railway.app";
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           username, 
-          password,
-          hCaptchaToken: captchaResponse 
+          password
+          // No enviamos captcha porque estamos en modo prueba
         })
       });
 
@@ -290,7 +297,7 @@ const API_URL = "https://extra-earth-production.up.railway.app";
         }, 1500);
       } else {
         showMsg(data.message || 'Credenciales inválidas', 'error');
-        hcaptcha.reset();
+        if (window.hcaptcha) hcaptcha.reset();
       }
     } catch (error) {
       showMsg('Error de conexión con el servidor', 'error');
@@ -312,7 +319,6 @@ const API_URL = "https://extra-earth-production.up.railway.app";
     }, 5000);
   }
 
-  // Los inputs funcionan desde el principio, pero el botón está deshabilitado hasta que cargue captcha
   document.getElementById('loginIdentifier').disabled = false;
   document.getElementById('loginPassword').disabled = false;
 </script>

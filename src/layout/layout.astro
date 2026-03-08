@@ -249,6 +249,9 @@ const { title = "Sistema Corporativo" } = Astro.props;
 		const menuToggle = document.getElementById('menuToggle');
 		const sidebar = document.getElementById('sidebar');
 
+		// Variable para evitar múltiples redirecciones
+		let redirigiendo = false;
+
 		// Toggle menú en móvil
 		menuToggle?.addEventListener('click', () => {
 			sidebar.classList.toggle('open');
@@ -265,40 +268,53 @@ const { title = "Sistema Corporativo" } = Astro.props;
 
 		// Cargar información del usuario
 		function cargarInfoUsuario() {
-			const user = JSON.parse(localStorage.getItem('user'));
-			if (user) {
-				userNameSpan.textContent = user.username || user.nombre || 'Usuario';
-				
-				// Si hay imagen de perfil, mostrarla
-				if (user.strImagen) {
-					userAvatar.innerHTML = `<img src="${API_URL}${user.strImagen}" alt="Avatar">`;
+			try {
+				const user = JSON.parse(localStorage.getItem('user'));
+				if (user) {
+					userNameSpan.textContent = user.username || 'Usuario';
+					
+					// Si hay imagen de perfil, mostrarla
+					if (user.strImagen) {
+						userAvatar.innerHTML = `<img src="${user.strImagen}" alt="Avatar">`;
+					}
 				}
+			} catch (e) {
+				console.error('Error cargando info de usuario:', e);
 			}
 		}
 
 		// Cargar menú dinámico
 		async function cargarMenu() {
-			try {
-				const token = localStorage.getItem('token');
-				if (!token) {
-					window.location.href = '/extra-earth/login';
-					return;
-				}
+			// Si no hay token, no intentar cargar menú
+			const token = localStorage.getItem('token');
+			if (!token) {
+				menuContainer.innerHTML = `
+					<a href="/extra-earth/"><i class="fas fa-home"></i> Inicio</a>
+					<div style="padding: 1rem; color: #94a3b8; text-align: center;">
+						<i class="fas fa-lock"></i> Inicie sesión para ver el menú
+					</div>
+				`;
+				return;
+			}
 
+			try {
 				const response = await fetch(`${API_URL}/api/menu`, {
 					headers: { 'Authorization': `Bearer ${token}` }
 				});
+				
+				if (!response.ok) {
+					throw new Error('Error en la respuesta del servidor');
+				}
+				
 				const data = await response.json();
 
 				if (data.success) {
 					renderMenu(data.data);
 				} else {
-					// Si hay error, mostrar menú por defecto o redirigir
-					window.location.href = '/extra-earth/login';
+					renderMenuError();
 				}
 			} catch (error) {
 				console.error('Error cargando menú:', error);
-				// Mostrar menú mínimo en caso de error
 				renderMenuError();
 			}
 		}
@@ -395,14 +411,18 @@ const { title = "Sistema Corporativo" } = Astro.props;
 
 		// Actualizar breadcrumbs
 		function actualizarBreadcrumbs() {
-			const path = window.location.pathname.split('/').filter(p => p && p !== 'extra-earth');
-			const breadContainer = document.getElementById('breadcrumbs');
-			
-			if (path.length === 0) {
-				breadContainer.innerHTML = 'Inicio';
-			} else {
-				const breadItems = ['Inicio', ...path.map(p => p.charAt(0).toUpperCase() + p.slice(1))];
-				breadContainer.innerHTML = breadItems.join(' <span>/</span> ');
+			try {
+				const path = window.location.pathname.split('/').filter(p => p && p !== 'extra-earth');
+				const breadContainer = document.getElementById('breadcrumbs');
+				
+				if (path.length === 0 || (path.length === 1 && path[0] === '')) {
+					breadContainer.innerHTML = 'Inicio';
+				} else {
+					const breadItems = ['Inicio', ...path.map(p => p.charAt(0).toUpperCase() + p.slice(1))];
+					breadContainer.innerHTML = breadItems.join(' <span>/</span> ');
+				}
+			} catch (e) {
+				console.error('Error actualizando breadcrumbs:', e);
 			}
 		}
 
@@ -414,27 +434,40 @@ const { title = "Sistema Corporativo" } = Astro.props;
 			window.location.href = '/extra-earth/login';
 		});
 
-		// Verificar autenticación en cada página (excepto login y register)
+		// Verificar autenticación (CORREGIDO)
 		function verificarAuth() {
+			// Evitar redirecciones múltiples
+			if (redirigiendo) return;
+			
 			const token = localStorage.getItem('token');
 			const currentPath = window.location.pathname;
-			const publicPaths = ['/extra-earth/login', '/extra-earth/register', '/extra-earth/'];
 			
-			if (!token && !publicPaths.includes(currentPath)) {
+			// Rutas que NO requieren autenticación
+			const publicPaths = [
+				'/extra-earth/login',
+				'/extra-earth/register',
+				'/extra-earth/',
+				'/extra-earth'
+			];
+			
+			// Si está en ruta pública, no hacer nada
+			if (publicPaths.includes(currentPath)) {
+				return;
+			}
+			
+			// Si no hay token y no es ruta pública, redirigir a login
+			if (!token) {
+				redirigiendo = true;
 				window.location.href = '/extra-earth/login';
 			}
 		}
 
-		// Inicializar
+		// Inicializar cuando el DOM esté listo
 		document.addEventListener('DOMContentLoaded', () => {
 			verificarAuth();
 			cargarInfoUsuario();
 			actualizarBreadcrumbs();
-			
-			const token = localStorage.getItem('token');
-			if (token) {
-				cargarMenu();
-			}
+			cargarMenu(); // Siempre cargar menú (maneja internamente si hay token)
 		});
 	</script>
 </body>

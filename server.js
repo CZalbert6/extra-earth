@@ -41,7 +41,7 @@ app.get('/health', (req, res) => {
     res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// --- 4. Inicialización de Tablas (con reintentos) ---
+// --- 4. Inicialización de Tablas (SIN ADMIN AUTOMÁTICO) ---
 const initDB = async (retries = 5) => {
     for (let i = 0; i < retries; i++) {
         try {
@@ -152,74 +152,7 @@ const initDB = async (retries = 5) => {
             }
             console.log('✅ Menú inicial insertado');
 
-            // --- CREAR ADMINISTRADOR POR DEFECTO ---
-            try {
-                console.log('👤 Verificando/Creando perfil administrador...');
-                
-                // Crear perfil administrador si no existe
-                const perfilAdmin = await pool.query(
-                    `INSERT INTO perfiles (strNombrePerfil, bitAdministrador) 
-                     VALUES ('Administrador', true) 
-                     ON CONFLICT (strNombrePerfil) DO UPDATE SET bitAdministrador = true
-                     RETURNING id`
-                );
-                
-                const adminPerfilId = perfilAdmin.rows[0].id;
-                console.log(`✅ Perfil administrador ID: ${adminPerfilId}`);
-
-                // Crear usuario admin por defecto (si no existe)
-                const adminExiste = await pool.query(
-                    "SELECT id FROM usuarios WHERE strNombreUsuario = 'admin'"
-                );
-
-                if (adminExiste.rows.length === 0) {
-                    const hashedPassword = await bcrypt.hash('Admin123', 10);
-                    
-                    await pool.query(`
-                        INSERT INTO usuarios (
-                            strNombreUsuario, 
-                            strCorreo, 
-                            strPwd, 
-                            idPerfil, 
-                            idEstadoUsuario,
-                            strNumeroCelular
-                        ) VALUES (
-                            'admin', 
-                            'admin@sistema.com', 
-                            $1, 
-                            $2, 
-                            1,
-                            '555-0101'
-                        )
-                    `, [hashedPassword, adminPerfilId]);
-                    
-                    console.log('✅ Usuario ADMIN creado');
-                }
-
-                // Crear permisos para admin (todos los módulos con todos los permisos)
-                const modulos = await pool.query('SELECT id FROM modulos');
-                
-                for (const modulo of modulos.rows) {
-                    await pool.query(`
-                        INSERT INTO permisos_perfil (
-                            idModulo, idPerfil, bitAgregar, bitEditar, bitConsulta, bitEliminar, bitDetalle
-                        ) VALUES ($1, $2, true, true, true, true, true)
-                        ON CONFLICT (idModulo, idPerfil) DO UPDATE SET
-                            bitAgregar = true,
-                            bitEditar = true,
-                            bitConsulta = true,
-                            bitEliminar = true,
-                            bitDetalle = true
-                    `, [modulo.id, adminPerfilId]);
-                }
-                
-                console.log('✅ Permisos de administrador configurados');
-            } catch (adminError) {
-                console.error('⚠️ Error al crear admin (no crítico):', adminError.message);
-                // Continuamos aunque falle la creación del admin
-            }
-
-            console.log('✅ Base de datos inicializada completamente');
+            console.log('✅ Base de datos inicializada completamente (SIN ADMIN AUTOMÁTICO)');
             return true;
 
         } catch (err) {
@@ -269,12 +202,46 @@ app.post('/api/register', async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(strPwd, 10);
         
+        // Verificar si es el primer usuario (será admin)
+        const userCount = await pool.query('SELECT COUNT(*) FROM usuarios');
+        const esPrimerUsuario = parseInt(userCount.rows[0].count) === 0;
+        
+        let idPerfil = null;
+        
+        if (esPrimerUsuario) {
+            console.log('👑 Primer usuario registrado - será administrador');
+            
+            // Crear perfil administrador
+            const perfilResult = await pool.query(
+                `INSERT INTO perfiles (strNombrePerfil, bitAdministrador) 
+                 VALUES ('Administrador', true) 
+                 ON CONFLICT (strNombrePerfil) DO UPDATE SET bitAdministrador = true
+                 RETURNING id`
+            );
+            idPerfil = perfilResult.rows[0].id;
+            
+            // Crear permisos para el admin en todos los módulos
+            const modulos = await pool.query('SELECT id FROM modulos');
+            for (const modulo of modulos.rows) {
+                await pool.query(`
+                    INSERT INTO permisos_perfil (idModulo, idPerfil, bitAgregar, bitEditar, bitConsulta, bitEliminar, bitDetalle)
+                    VALUES ($1, $2, true, true, true, true, true)
+                    ON CONFLICT (idModulo, idPerfil) DO NOTHING
+                `, [modulo.id, idPerfil]);
+            }
+        }
+
         const result = await pool.query(
-            'INSERT INTO usuarios (strNombreUsuario, strCorreo, strPwd, strNumeroCelular, idEstadoUsuario) VALUES ($1, $2, $3, $4, 1) RETURNING id, strNombreUsuario, strCorreo',
-            [strNombreUsuario, strCorreo.toLowerCase(), hashedPassword, strNumeroCelular]
+            'INSERT INTO usuarios (strNombreUsuario, strCorreo, strPwd, strNumeroCelular, idEstadoUsuario, idPerfil) VALUES ($1, $2, $3, $4, 1, $5) RETURNING id, strNombreUsuario, strCorreo',
+            [strNombreUsuario, strCorreo.toLowerCase(), hashedPassword, strNumeroCelular, idPerfil]
         );
 
-        res.status(201).json({ success: true, message: 'Usuario registrado', user: result.rows[0] });
+        res.status(201).json({ 
+            success: true, 
+            message: esPrimerUsuario ? 'Usuario administrador creado' : 'Usuario registrado', 
+            user: result.rows[0],
+            esAdmin: esPrimerUsuario
+        });
     } catch (err) {
         if (err.code === '23505') {
             return res.status(400).json({ success: false, message: 'El email o usuario ya existe' });
@@ -863,9 +830,8 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`📡 Puerto: ${PORT}`);
     console.log(`🌐 Health check: / o /health`);
     console.log('='.repeat(50));
-    console.log('📝 CREDENCIALES DE ADMIN (si se crearon):');
-    console.log('   Usuario: admin');
-    console.log('   Contraseña: Admin123');
-    console.log('   Email: admin@sistema.com');
+    console.log('📝 IMPORTANTE:');
+    console.log('   El primer usuario registrado será ADMINISTRADOR');
+    console.log('   con todos los permisos automáticamente');
     console.log('='.repeat(50));
 });

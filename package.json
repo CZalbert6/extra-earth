@@ -6,9 +6,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro",
-    "start": "node server.js",
-    "railway": "node server.js"
+    "astro": "astro"
   },
   "dependencies": {
     "astro": "^5.17.1",

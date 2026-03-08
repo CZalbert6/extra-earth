@@ -1,0 +1,553 @@
+---
+import Layout from '../../layout/layout.astro';
+const API_URL = "https://extra-earth-production.up.railway.app";
+const pageTitle = "Gestión de Módulos";
+---
+
+<Layout title={`${pageTitle} | Sistema Corporativo`}>
+  <div class="page-header">
+    <h1><i class="fas fa-puzzle-piece"></i> {pageTitle}</h1>
+    <button class="btn-add" onclick="abrirModalNuevo()">
+      <i class="fas fa-plus"></i> Nuevo Módulo
+    </button>
+  </div>
+
+  <!-- Modal -->
+  <div id="modalModulo" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalTitulo">Nuevo Módulo</h3>
+        <button class="close-btn" onclick="cerrarModal()">&times;</button>
+      </div>
+      
+      <form id="moduloForm" onsubmit="event.preventDefault(); guardarModulo();">
+        <input type="hidden" id="moduloId">
+        
+        <div class="form-group">
+          <label for="strNombreModulo">Nombre del Módulo *</label>
+          <input type="text" id="strNombreModulo" required maxlength="100">
+        </div>
+        
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
+          <button type="submit" class="btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Tabla -->
+  <div id="loading" style="display: none; text-align: center;">
+    <i class="fas fa-spinner fa-spin"></i> Cargando...
+  </div>
+  
+  <div class="table-responsive">
+    <table class="crud-table" id="tablaModulos">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nombre</th>
+          <th>Fecha Creación</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tablaBody">
+        <tr>
+          <td colspan="4" class="no-data">Cargando módulos...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  
+  <div id="pagination" class="pagination"></div>
+  <div id="message" class="status-message"></div>
+</Layout>
+
+<script define:vars={{ API_URL }}>
+  let currentPage = 1;
+  let currentItem = null;
+  let isEditing = false;
+
+  async function cargarModulos(page = 1) {
+    document.getElementById('loading').style.display = 'block';
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/api/modulos?page=${page}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        renderizarTabla(data.data);
+        renderizarPaginacion(data.pagination);
+      }
+    } catch (error) {
+      showMsg('Error al cargar módulos', 'error');
+    } finally {
+      document.getElementById('loading').style.display = 'none';
+    }
+  }
+
+  function renderizarTabla(modulos) {
+    const tbody = document.getElementById('tablaBody');
+    
+    if (modulos.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" class="no-data">No hay módulos registrados</td></tr>';
+      return;
+    }
+    
+    tbody.innerHTML = modulos.map(m => `
+      <tr>
+        <td>${m.id}</td>
+        <td>${m.strnombremodulo}</td>
+        <td>${new Date(m.created_at).toLocaleDateString()}</td>
+        <td class="actions-cell">
+          <button class="btn-icon view" onclick="verDetalle(${m.id})" title="Ver detalle">
+            <i class="fas fa-eye"></i>
+          </button>
+          <button class="btn-icon edit" onclick="editarModulo(${m.id})" title="Editar">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button class="btn-icon delete" onclick="eliminarModulo(${m.id})" title="Eliminar">
+            <i class="fas fa-trash"></i>
+          </button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function renderizarPaginacion(pagination) {
+    const paginationDiv = document.getElementById('pagination');
+    if (pagination.totalPages <= 1) {
+      paginationDiv.innerHTML = '';
+      return;
+    }
+    
+    let html = '<div class="pagination">';
+    html += `<button ${pagination.page === 1 ? 'disabled' : ''} onclick="cargarModulos(${pagination.page - 1})">
+      <i class="fas fa-chevron-left"></i>
+    </button>`;
+    
+    for (let i = 1; i <= pagination.totalPages; i++) {
+      html += `<button class="${i === pagination.page ? 'active' : ''}" onclick="cargarModulos(${i})">${i}</button>`;
+    }
+    
+    html += `<button ${pagination.page === pagination.totalPages ? 'disabled' : ''} onclick="cargarModulos(${pagination.page + 1})">
+      <i class="fas fa-chevron-right"></i>
+    </button>`;
+    html += '</div>';
+    
+    paginationDiv.innerHTML = html;
+  }
+
+  window.abrirModalNuevo = () => {
+    isEditing = false;
+    currentItem = null;
+    document.getElementById('modalTitulo').textContent = 'Nuevo Módulo';
+    document.getElementById('moduloForm').reset();
+    document.getElementById('moduloId').value = '';
+    document.getElementById('modalModulo').style.display = 'flex';
+  };
+
+  window.cerrarModal = () => {
+    document.getElementById('modalModulo').style.display = 'none';
+  };
+
+  window.editarModulo = async (id) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/api/modulos/${id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        const modulo = data.data;
+        isEditing = true;
+        currentItem = modulo;
+        
+        document.getElementById('modalTitulo').textContent = 'Editar Módulo';
+        document.getElementById('moduloId').value = modulo.id;
+        document.getElementById('strNombreModulo').value = modulo.strnombremodulo;
+        
+        document.getElementById('modalModulo').style.display = 'flex';
+      }
+    } catch (error) {
+      showMsg('Error al cargar módulo', 'error');
+    }
+  };
+
+  window.verDetalle = async (id) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/api/modulos/${id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        const modulo = data.data;
+        alert(`
+          ID: ${modulo.id}
+          Nombre: ${modulo.strnombremodulo}
+          Fecha Creación: ${new Date(modulo.created_at).toLocaleString()}
+        `);
+      }
+    } catch (error) {
+      showMsg('Error al cargar detalle', 'error');
+    }
+  };
+
+  window.guardarModulo = async () => {
+    const nombre = document.getElementById('strNombreModulo').value.trim();
+    const moduloId = document.getElementById('moduloId').value;
+    
+    if (!nombre) {
+      showMsg('El nombre del módulo es requerido', 'error');
+      return;
+    }
+    
+    try {
+      const token = localStorage.getItem('token');
+      const url = moduloId ? `${API_URL}/api/modulos/${moduloId}` : `${API_URL}/api/modulos`;
+      const method = moduloId ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ strNombreModulo: nombre })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        showMsg(moduloId ? 'Módulo actualizado' : 'Módulo creado', 'success');
+        cerrarModal();
+        cargarModulos(currentPage);
+      } else {
+        showMsg(data.message, 'error');
+      }
+    } catch (error) {
+      showMsg('Error al guardar módulo', 'error');
+    }
+  };
+
+  window.eliminarModulo = async (id) => {
+    if (!confirm('¿Está seguro de eliminar este módulo?')) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/api/modulos/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        showMsg('Módulo eliminado', 'success');
+        cargarModulos(currentPage);
+      } else {
+        showMsg(data.message, 'error');
+      }
+    } catch (error) {
+      showMsg('Error al eliminar módulo', 'error');
+    }
+  };
+
+  function showMsg(text, type) {
+    const msgDiv = document.getElementById('message');
+    msgDiv.style.display = 'block';
+    msgDiv.style.background = type === 'success' ? '#dcfce7' : '#fee2e2';
+    msgDiv.style.color = type === 'success' ? '#166534' : '#991b1b';
+    msgDiv.textContent = text;
+    
+    setTimeout(() => {
+      msgDiv.style.display = 'none';
+    }, 3000);
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    cargarModulos();
+  });
+</script>
+
+<style>
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .page-header h1 {
+    margin: 0;
+    font-size: 1.75rem;
+    color: #1e293b;
+  }
+
+  .page-header h1 i {
+    margin-right: 0.5rem;
+    color: #3b82f6;
+  }
+
+  .btn-add {
+    background: #059669;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    font-size: 1rem;
+  }
+
+  .btn-add:hover {
+    background: #047857;
+  }
+
+  .modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+  }
+
+  .modal-content {
+    background: white;
+    border-radius: 8px;
+    max-width: 500px;
+    width: 100%;
+  }
+
+  .modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .modal-header h3 {
+    margin: 0;
+    color: #1e293b;
+  }
+
+  .close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #64748b;
+  }
+
+  .form-group {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .form-group label {
+    font-weight: 600;
+    color: #475569;
+  }
+
+  .form-group input {
+    padding: 0.75rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 1rem;
+  }
+
+  .form-group input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .form-actions {
+    padding: 1.5rem;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+  }
+
+  .btn-primary, .btn-secondary {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+  }
+
+  .btn-primary {
+    background: #1e293b;
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: #334155;
+  }
+
+  .btn-secondary {
+    background: #f1f5f9;
+    color: #475569;
+  }
+
+  .btn-secondary:hover {
+    background: #e2e8f0;
+  }
+
+  .table-responsive {
+    overflow-x: auto;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+  }
+
+  .crud-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .crud-table th {
+    text-align: left;
+    padding: 1rem;
+    background: #f8fafc;
+    border-bottom: 2px solid #e2e8f0;
+    color: #475569;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  .crud-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+    color: #334155;
+  }
+
+  .crud-table tr:hover {
+    background: #f8fafc;
+  }
+
+  .actions-cell {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .btn-icon {
+    background: none;
+    border: none;
+    padding: 0.5rem;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+  }
+
+  .btn-icon.view {
+    color: #3b82f6;
+  }
+  
+  .btn-icon.edit {
+    color: #f59e0b;
+  }
+  
+  .btn-icon.delete {
+    color: #ef4444;
+  }
+
+  .btn-icon:hover {
+    background: #f1f5f9;
+    transform: scale(1.1);
+  }
+
+  .no-data {
+    text-align: center;
+    color: #94a3b8;
+    padding: 2rem;
+  }
+
+  .pagination {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+  }
+
+  .pagination button {
+    padding: 0.5rem 1rem;
+    border: 1px solid #e2e8f0;
+    background: white;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .pagination button:hover:not(:disabled) {
+    background: #f8fafc;
+    border-color: #94a3b8;
+  }
+
+  .pagination button.active {
+    background: #1e293b;
+    color: white;
+    border-color: #1e293b;
+  }
+
+  .pagination button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .status-message {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    padding: 1rem;
+    border-radius: 6px;
+    display: none;
+    z-index: 1100;
+    animation: slideInRight 0.3s ease;
+  }
+
+  @keyframes slideInRight {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .page-header {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .status-message {
+      bottom: 1rem;
+      right: 1rem;
+      left: 1rem;
+    }
+  }
+</style>

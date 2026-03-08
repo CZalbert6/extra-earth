@@ -1,0 +1,116 @@
+---
+interface Props {
+  title: string;
+  isOpen: boolean;
+  onClose?: string;
+  size?: 'small' | 'medium' | 'large';
+}
+
+const { title, isOpen, onClose, size = 'medium' } = Astro.props;
+const sizeClass = `modal-${size}`;
+---
+
+{isOpen && (
+  <div class="modal-overlay" id="modalOverlay">
+    <div class={`modal-container ${sizeClass}`}>
+      <div class="modal-header">
+        <h3>{title}</h3>
+        <button class="close-btn" onclick={onClose}>
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <slot name="form" />
+      </div>
+    </div>
+  </div>
+)}
+
+<style>
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+  }
+
+  .modal-container {
+    background: white;
+    border-radius: 8px;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slideIn 0.3s ease;
+  }
+
+  .modal-small {
+    width: 400px;
+  }
+
+  .modal-medium {
+    width: 600px;
+  }
+
+  .modal-large {
+    width: 800px;
+  }
+
+  .modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 1;
+  }
+
+  .modal-header h3 {
+    margin: 0;
+    color: #1e293b;
+  }
+
+  .close-btn {
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+    color: #64748b;
+    padding: 0.5rem;
+    border-radius: 4px;
+  }
+
+  .close-btn:hover {
+    background: #f1f5f9;
+    color: #1e293b;
+  }
+
+  .modal-body {
+    padding: 1.5rem;
+  }
+
+  @keyframes slideIn {
+    from {
+      transform: translateY(-20px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .modal-small, .modal-medium, .modal-large {
+      width: 100%;
+    }
+  }
+</style>

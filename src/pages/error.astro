@@ -1,0 +1,106 @@
+---
+import Layout from '../layout/layout.astro';
+
+interface Props {
+  code?: number;
+  message?: string;
+}
+
+const { code = 404, message = 'Página no encontrada' } = Astro.props;
+---
+
+<Layout title={`Error ${code} | Sistema Corporativo`}>
+  <div class="error-container">
+    <div class="error-code">{code}</div>
+    <h1>{message}</h1>
+    <p>Lo sentimos, ha ocurrido un error inesperado.</p>
+    
+    <div class="error-actions">
+      <a href="/extra-earth/" class="btn btn-primary">
+        <i class="fas fa-home"></i> Volver al Inicio
+      </a>
+      <button class="btn btn-outline" onclick="window.history.back()">
+        <i class="fas fa-arrow-left"></i> Regresar
+      </button>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .error-container {
+    text-align: center;
+    padding: 3rem 1rem;
+    max-width: 500px;
+    margin: 0 auto;
+  }
+
+  .error-code {
+    font-size: 6rem;
+    font-weight: 800;
+    color: #1e293b;
+    line-height: 1;
+    margin-bottom: 1rem;
+    text-shadow: 4px 4px 0 #e2e8f0;
+  }
+
+  h1 {
+    font-size: 1.75rem;
+    color: #334155;
+    margin-bottom: 1rem;
+  }
+
+  p {
+    color: #64748b;
+    margin-bottom: 2rem;
+  }
+
+  .error-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+  }
+
+  .btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+  }
+
+  .btn-primary {
+    background: #1e293b;
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: #334155;
+  }
+
+  .btn-outline {
+    background: white;
+    border: 1px solid #e2e8f0;
+    color: #334155;
+  }
+
+  .btn-outline:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+  }
+
+  @media (max-width: 640px) {
+    .error-actions {
+      flex-direction: column;
+    }
+    
+    .error-code {
+      font-size: 4rem;
+    }
+  }
+</style>

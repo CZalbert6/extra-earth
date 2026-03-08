@@ -41,7 +41,7 @@ const API_URL = "https://extra-earth-production.up.railway.app";
     <div id="message" class="status-message"></div>
     
     <div class="login-footer">
-      ¿Problemas de acceso? <a href="/extra-earth/register">Contacte al administrador</a>
+      ¿No tiene cuenta? <a href="/extra-earth/register">Regístrese aquí</a>
     </div>
   </div>
 </Layout>
@@ -178,7 +178,11 @@ const API_URL = "https://extra-earth-production.up.railway.app";
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    // Obtener token de hCaptcha
+    if (typeof hcaptcha === 'undefined') {
+      showMsg('Error cargando captcha. Recargue la página.', 'error');
+      return;
+    }
+
     const captchaResponse = hcaptcha.getResponse();
     if (!captchaResponse) {
       showMsg('Por favor, complete el captcha', 'error');
@@ -188,6 +192,11 @@ const API_URL = "https://extra-earth-production.up.railway.app";
     const username = document.getElementById('loginIdentifier').value.trim();
     const password = document.getElementById('loginPassword').value;
 
+    if (!username || !password) {
+      showMsg('Por favor, complete todos los campos', 'error');
+      return;
+    }
+
     btnSubmit.disabled = true;
     btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Validando...';
 
@@ -195,11 +204,7 @@ const API_URL = "https://extra-earth-production.up.railway.app";
       const response = await fetch(`${API_URL}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          username, 
-          password, 
-          hCaptchaToken: captchaResponse 
-        })
+        body: JSON.stringify({ username, password })
       });
 
       const data = await response.json();
@@ -208,14 +213,14 @@ const API_URL = "https://extra-earth-production.up.railway.app";
         showMsg('✅ Acceso concedido. Iniciando sesión...', 'success');
         localStorage.setItem("token", data.token);
         localStorage.setItem("user", JSON.stringify(data.user));
-        localStorage.setItem("permisos", JSON.stringify(data.permisos));
+        localStorage.setItem("permisos", JSON.stringify(data.permisos || []));
         
         setTimeout(() => {
           window.location.href = "/extra-earth/";
         }, 1500);
       } else {
         showMsg(data.message || 'Credenciales inválidas', 'error');
-        hcaptcha.reset(); // Resetear captcha tras error
+        hcaptcha.reset();
       }
     } catch (error) {
       showMsg('Error de conexión con el servidor', 'error');
@@ -230,5 +235,9 @@ const API_URL = "https://extra-earth-production.up.railway.app";
     messageDiv.style.background = type === 'success' ? '#dcfce7' : '#fee2e2';
     messageDiv.style.color = type === 'success' ? '#166534' : '#991b1b';
     messageDiv.textContent = text;
+    
+    setTimeout(() => {
+      messageDiv.style.display = 'none';
+    }, 5000);
   }
 </script>

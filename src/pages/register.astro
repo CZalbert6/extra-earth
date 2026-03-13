@@ -34,6 +34,14 @@ const API_URL = "https://extra-earth-production.up.railway.app";
       </div>
 
       <div class="input-group">
+        <label for="nombre">Nombre Completo *</label>
+        <div class="input-wrapper">
+          <i class="fas fa-user-tag"></i>
+          <input type="text" id="nombre" placeholder="Juan Pérez" required>
+        </div>
+      </div>
+
+      <div class="input-group">
         <label for="email">Correo Electrónico *</label>
         <div class="input-wrapper">
           <i class="fas fa-envelope"></i>
@@ -208,93 +216,80 @@ font-weight:600;
 </style>
 
 <script is:inline define:vars={{ API_URL }}>
-
 const form = document.getElementById('registerForm');
 const messageDiv = document.getElementById('message');
 const btnRegister = document.getElementById('btnRegister');
 
 form.addEventListener('submit', async (e) => {
+  e.preventDefault();
 
-e.preventDefault();
+  const username = document.getElementById('username').value.trim();
+  const nombre = document.getElementById('nombre').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const telefono = document.getElementById('telefono').value.trim();
+  const password = document.getElementById('password').value;
+  const confirmPwd = document.getElementById('confirmPwd').value;
 
-const username = document.getElementById('username').value.trim();
-const email = document.getElementById('email').value.trim();
-const telefono = document.getElementById('telefono').value.trim();
-const password = document.getElementById('password').value;
-const confirmPwd = document.getElementById('confirmPwd').value;
+  // Validaciones
+  if (!username || !nombre || !email || !password) {
+    showMsg('Todos los campos marcados con * son requeridos', 'error');
+    return;
+  }
 
-if(!username || !email || !password){
-showMsg('Todos los campos marcados con * son requeridos','error');
-return;
-}
+  if (password.length < 6) {
+    showMsg('La contraseña debe tener al menos 6 caracteres', 'error');
+    return;
+  }
 
-if(password.length < 6){
-showMsg('La contraseña debe tener al menos 6 caracteres','error');
-return;
-}
+  if (password !== confirmPwd) {
+    showMsg('Las contraseñas no coinciden', 'error');
+    return;
+  }
 
-if(password !== confirmPwd){
-showMsg('Las contraseñas no coinciden','error');
-return;
-}
+  btnRegister.disabled = true;
+  btnRegister.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Procesando...';
 
-btnRegister.disabled = true;
-btnRegister.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Procesando...';
+  try {
+    const response = await fetch(`${API_URL}/api/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: username,
+        email: email,
+        nombre: nombre,  // ← Ahora usamos el campo nombre correctamente
+        sername: "",      // ← Apellido (puedes agregar un campo si quieres)
+        password: password,
+        strNumeroCelular: telefono || null
+      })
+    });
 
-try{
+    const data = await response.json();
 
-const response = await fetch(`${API_URL}/api/register`,{
-method:'POST',
-headers:{'Content-Type':'application/json'},
-body:JSON.stringify({
-username:username,
-email:email,
-nombre:username,
-sername:"",
-password:password,
-strNumeroCelular:telefono || null
-})
+    if (data.success) {
+      showMsg('✅ Registro exitoso. Redirigiendo al login...', 'success');
+      setTimeout(() => {
+        window.location.href = "/extra-earth/login";
+      }, 2000);
+    } else {
+      showMsg(data.message || 'Error al registrar', 'error');
+    }
+  } catch (err) {
+    console.error('Error:', err);
+    showMsg('Error de conexión con el servidor', 'error');
+  } finally {
+    btnRegister.disabled = false;
+    btnRegister.innerHTML = '<span>Finalizar Registro</span> <i class="fas fa-check-circle"></i>';
+  }
 });
 
-const data = await response.json();
+function showMsg(text, type) {
+  messageDiv.style.display = 'block';
+  messageDiv.style.background = type === 'success' ? '#dcfce7' : '#fee2e2';
+  messageDiv.style.color = type === 'success' ? '#166534' : '#991b1b';
+  messageDiv.textContent = text;
 
-if(data.success){
-
-showMsg('✅ Registro exitoso. Redirigiendo al login...','success');
-
-setTimeout(()=>{
-window.location.href="/extra-earth/login";
-},2000);
-
-}else{
-showMsg(data.message || 'Error al registrar','error');
+  setTimeout(() => {
+    messageDiv.style.display = 'none';
+  }, 5000);
 }
-
-}catch(err){
-
-console.error(err);
-showMsg('Error de conexión con el servidor','error');
-
-}finally{
-
-btnRegister.disabled=false;
-btnRegister.innerHTML='<span>Finalizar Registro</span> <i class="fas fa-check-circle"></i>';
-
-}
-
-});
-
-function showMsg(text,type){
-
-messageDiv.style.display='block';
-messageDiv.style.background= type==='success' ? '#dcfce7' : '#fee2e2';
-messageDiv.style.color= type==='success' ? '#166534' : '#991b1b';
-messageDiv.textContent=text;
-
-setTimeout(()=>{
-messageDiv.style.display='none';
-},5000);
-
-}
-
 </script>

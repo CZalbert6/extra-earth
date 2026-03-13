@@ -32,22 +32,9 @@ const JWT_SECRET = process.env.JWT_SECRET || 'secreto_super_seguro_2026';
 app.get('/', (req, res) => res.status(200).send('OK'));
 app.get('/health', (req, res) => res.status(200).send('OK'));
 
-// --- 4. Inicialización de Tablas CON RESETEO ---
+// --- 4. Inicialización de Tablas ---
 const initDB = async () => {
     try {
-        console.log('🔄 Iniciando reseteo de base de datos...');
-        
-        // --- ⚠️ CÓDIGO TEMPORAL DE RESETEO ⚠️ ---
-        await pool.query(`
-            DROP TABLE IF EXISTS permisos_perfil CASCADE;
-            DROP TABLE IF EXISTS menu CASCADE;
-            DROP TABLE IF EXISTS usuarios CASCADE;
-            DROP TABLE IF EXISTS perfiles CASCADE;
-            DROP TABLE IF EXISTS modulos CASCADE;
-        `);
-        console.log('🗑️ Tablas antiguas eliminadas correctamente.');
-        // ----------------------------------------
-
         // Tabla perfiles
         await pool.query(`
             CREATE TABLE IF NOT EXISTS perfiles (
@@ -57,7 +44,6 @@ const initDB = async () => {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
-        console.log('✅ Tabla perfiles creada');
 
         // Tabla modulos
         await pool.query(`
@@ -67,23 +53,23 @@ const initDB = async () => {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
-        console.log('✅ Tabla modulos creada');
 
-        // Tabla usuarios
+        // Tabla usuarios1 - NUEVA TABLA PARA EVITAR CONFLICTOS
         await pool.query(`
-            CREATE TABLE IF NOT EXISTS usuarios (
+            CREATE TABLE IF NOT EXISTS usuarios1 (
                 id SERIAL PRIMARY KEY,
-                strNombreUsuario VARCHAR(100) UNIQUE NOT NULL,
+                username VARCHAR(100) UNIQUE NOT NULL,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                nombre VARCHAR(100) NOT NULL,
+                sername VARCHAR(100),
+                password VARCHAR(255) NOT NULL,
                 idPerfil INTEGER REFERENCES perfiles(id),
-                strPwd VARCHAR(255) NOT NULL,
                 idEstadoUsuario INTEGER DEFAULT 1,
-                strCorreo VARCHAR(255) UNIQUE NOT NULL,
                 strNumeroCelular VARCHAR(20),
                 strImagen TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
-        console.log('✅ Tabla usuarios creada');
 
         // Tabla permisos_perfil
         await pool.query(`
@@ -99,7 +85,6 @@ const initDB = async () => {
                 UNIQUE(idModulo, idPerfil)
             )
         `);
-        console.log('✅ Tabla permisos_perfil creada');
 
         // Tabla menu
         await pool.query(`
@@ -110,7 +95,6 @@ const initDB = async () => {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
-        console.log('✅ Tabla menu creada');
 
         // Insertar módulos iniciales
         const modulosIniciales = [
@@ -124,7 +108,6 @@ const initDB = async () => {
                 [modulo]
             );
         }
-        console.log('✅ Módulos iniciales insertados');
 
         // Insertar menú inicial
         const menuItems = [
@@ -147,9 +130,8 @@ const initDB = async () => {
                 );
             }
         }
-        console.log('✅ Menú inicial insertado');
 
-        console.log('✅ Base de datos inicializada completamente');
+        console.log('✅ Base de datos inicializada con usuarios1');
     } catch (err) {
         console.error('❌ Error iniciando DB:', err);
     }
@@ -174,16 +156,27 @@ const authenticateToken = (req, res, next) => {
 // --- 6. Rutas de Autenticación ---
 app.post('/api/register', async (req, res) => {
     try {
-        const { strNombreUsuario, strCorreo, strPwd, strNumeroCelular } = req.body;
+        const { username, email, nombre, sername, password } = req.body;
         
-        if (!strPwd || strPwd.length < 6) {
-            return res.status(400).json({ success: false, message: 'La contraseña debe tener al menos 6 caracteres' });
+        // Validaciones
+        if (!username || !email || !nombre || !password) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Faltan campos requeridos: username, email, nombre y password son obligatorios' 
+            });
+        }
+        
+        if (password.length < 6) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'La contraseña debe tener al menos 6 caracteres' 
+            });
         }
 
-        const hashedPassword = await bcrypt.hash(strPwd, 10);
+        const hashedPassword = await bcrypt.hash(password, 10);
         
-        // Verificar si es el primer usuario
-        const userCount = await pool.query('SELECT COUNT(*) FROM usuarios');
+        // Verificar si es el primer usuario en usuarios1
+        const userCount = await pool.query('SELECT COUNT(*) FROM usuarios1');
         const esPrimerUsuario = parseInt(userCount.rows[0].count) === 0;
         
         let idPerfil = null;
@@ -209,9 +202,12 @@ app.post('/api/register', async (req, res) => {
             }
         }
 
+        // Insertar en usuarios1
         const result = await pool.query(
-            'INSERT INTO usuarios (strNombreUsuario, strCorreo, strPwd, strNumeroCelular, idEstadoUsuario, idPerfil) VALUES ($1, $2, $3, $4, 1, $5) RETURNING id, strNombreUsuario, strCorreo',
-            [strNombreUsuario, strCorreo.toLowerCase(), hashedPassword, strNumeroCelular, idPerfil]
+            `INSERT INTO usuarios1 (username, email, nombre, sername, password, idPerfil, idEstadoUsuario) 
+             VALUES ($1, $2, $3, $4, $5, $6, 1) 
+             RETURNING id, username, email, nombre, sername`,
+            [username.toLowerCase(), email.toLowerCase(), nombre, sername || null, hashedPassword, idPerfil]
         );
 
         res.status(201).json({ 
@@ -221,6 +217,12 @@ app.post('/api/register', async (req, res) => {
         });
     } catch (err) {
         if (err.code === '23505') {
+            // Actualizado para las restricciones de usuarios1
+            if (err.constraint === 'usuarios1_username_key') {
+                return res.status(400).json({ success: false, message: 'El nombre de usuario ya existe' });
+            } else if (err.constraint === 'usuarios1_email_key') {
+                return res.status(400).json({ success: false, message: 'El email ya existe' });
+            }
             return res.status(400).json({ success: false, message: 'El email o usuario ya existe' });
         }
         console.error('Error en registro:', err);
@@ -232,27 +234,32 @@ app.post('/api/login', async (req, res) => {
     try {
         const { username, password } = req.body;
         
+        // Consultar en usuarios1
         const result = await pool.query(
             `SELECT u.*, p.strNombrePerfil, p.bitAdministrador 
-             FROM usuarios u 
+             FROM usuarios1 u 
              LEFT JOIN perfiles p ON u.idPerfil = p.id 
-             WHERE u.strNombreUsuario = $1 OR u.strCorreo = $1`,
-            [username.toLowerCase()]
+             WHERE LOWER(u.username) = LOWER($1) OR LOWER(u.email) = LOWER($1)`,
+            [username]
         );
 
-        if (result.rows.length === 0 || !(await bcrypt.compare(password, result.rows[0].strpwd))) {
+        if (result.rows.length === 0) {
             return res.status(401).json({ success: false, message: 'Credenciales incorrectas' });
         }
 
         const user = result.rows[0];
+        
+        const passwordMatch = await bcrypt.compare(password, user.password);
+        if (!passwordMatch) {
+            return res.status(401).json({ success: false, message: 'Credenciales incorrectas' });
+        }
         
         if (user.idestadousuario !== 1) {
             return res.status(401).json({ success: false, message: 'Usuario inactivo' });
         }
 
         const permisos = await pool.query(
-            `SELECT m.strNombreModulo, pp.* 
-             FROM permisos_perfil pp
+            `SELECT m.strNombreModulo, pp.* FROM permisos_perfil pp
              JOIN modulos m ON pp.idModulo = m.id
              WHERE pp.idPerfil = $1`,
             [user.idperfil]
@@ -265,7 +272,10 @@ app.post('/api/login', async (req, res) => {
             token, 
             user: { 
                 id: user.id, 
-                username: user.strnombreusuario,
+                username: user.username,
+                email: user.email,
+                nombre: user.nombre,
+                sername: user.sername,
                 idPerfil: user.idperfil,
                 esAdmin: user.bitadministrador,
                 strImagen: user.strimagen
@@ -460,19 +470,22 @@ app.delete('/api/modulos/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// --- 9. CRUD Usuarios ---
+// --- 9. CRUD Usuarios1 ---
 app.get('/api/usuarios', authenticateToken, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = 5;
         const offset = (page - 1) * limit;
         
-        const totalResult = await pool.query('SELECT COUNT(*) FROM usuarios');
+        const totalResult = await pool.query('SELECT COUNT(*) FROM usuarios1');
         const total = parseInt(totalResult.rows[0].count);
         
         const result = await pool.query(
-            `SELECT u.*, p.strNombrePerfil 
-             FROM usuarios u
+            `SELECT u.id, u.username, u.email, u.nombre, u.sername, 
+                    u.idPerfil, u.idEstadoUsuario, u.strNumeroCelular, 
+                    u.strImagen, u.created_at,
+                    p.strNombrePerfil 
+             FROM usuarios1 u
              LEFT JOIN perfiles p ON u.idPerfil = p.id
              ORDER BY u.id LIMIT $1 OFFSET $2`,
             [limit, offset]
@@ -489,6 +502,7 @@ app.get('/api/usuarios', authenticateToken, async (req, res) => {
             }
         });
     } catch (err) {
+        console.error('Error al obtener usuarios:', err);
         res.status(500).json({ success: false, message: 'Error al obtener usuarios' });
     }
 });
@@ -496,8 +510,11 @@ app.get('/api/usuarios', authenticateToken, async (req, res) => {
 app.get('/api/usuarios/:id', authenticateToken, async (req, res) => {
     try {
         const result = await pool.query(
-            `SELECT u.*, p.strNombrePerfil 
-             FROM usuarios u
+            `SELECT u.id, u.username, u.email, u.nombre, u.sername, 
+                    u.idPerfil, u.idEstadoUsuario, u.strNumeroCelular, 
+                    u.strImagen, u.created_at,
+                    p.strNombrePerfil 
+             FROM usuarios1 u
              LEFT JOIN perfiles p ON u.idPerfil = p.id
              WHERE u.id = $1`,
             [req.params.id]
@@ -514,32 +531,39 @@ app.get('/api/usuarios/:id', authenticateToken, async (req, res) => {
 app.post('/api/usuarios', authenticateToken, async (req, res) => {
     try {
         const { 
-            strNombreUsuario, 
-            idPerfil, 
-            strPwd, 
-            idEstadoUsuario, 
-            strCorreo, 
-            strNumeroCelular,
-            strImagenBase64 
+            username, email, nombre, sername, password, 
+            idPerfil, idEstadoUsuario, strNumeroCelular, strImagenBase64 
         } = req.body;
         
-        if (!strNombreUsuario || !strCorreo || !strPwd) {
-            return res.status(400).json({ success: false, message: 'Campos requeridos incompletos' });
+        if (!username || !email || !nombre || !password) {
+            return res.status(400).json({ 
+                success: false, message: 'Campos requeridos: username, email, nombre y password' 
+            });
         }
         
-        const hashedPassword = await bcrypt.hash(strPwd, 10);
+        const hashedPassword = await bcrypt.hash(password, 10);
         
         const result = await pool.query(
-            `INSERT INTO usuarios (strNombreUsuario, idPerfil, strPwd, idEstadoUsuario, strCorreo, strNumeroCelular, strImagen) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-            [strNombreUsuario, idPerfil || null, hashedPassword, idEstadoUsuario || 1, strCorreo.toLowerCase(), strNumeroCelular, strImagenBase64 || null]
+            `INSERT INTO usuarios1 (username, email, nombre, sername, password, idPerfil, idEstadoUsuario, strNumeroCelular, strImagen) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
+             RETURNING id, username, email, nombre, sername`,
+            [
+                username.toLowerCase(), email.toLowerCase(), nombre, sername || null, 
+                hashedPassword, idPerfil || null, idEstadoUsuario || 1, 
+                strNumeroCelular || null, strImagenBase64 || null
+            ]
         );
         
         res.status(201).json({ success: true, message: 'Usuario creado', data: result.rows[0] });
     } catch (err) {
         if (err.code === '23505') {
-            return res.status(400).json({ success: false, message: 'El email o usuario ya existe' });
+            if (err.constraint === 'usuarios1_username_key') {
+                return res.status(400).json({ success: false, message: 'El nombre de usuario ya existe' });
+            } else if (err.constraint === 'usuarios1_email_key') {
+                return res.status(400).json({ success: false, message: 'El email ya existe' });
+            }
         }
+        console.error('Error al crear usuario:', err);
         res.status(500).json({ success: false, message: 'Error al crear usuario' });
     }
 });
@@ -547,23 +571,22 @@ app.post('/api/usuarios', authenticateToken, async (req, res) => {
 app.put('/api/usuarios/:id', authenticateToken, async (req, res) => {
     try {
         const { 
-            strNombreUsuario, 
-            idPerfil, 
-            idEstadoUsuario, 
-            strCorreo, 
-            strNumeroCelular,
-            strImagenBase64 
+            username, email, nombre, sername, 
+            idPerfil, idEstadoUsuario, strNumeroCelular, strImagenBase64 
         } = req.body;
         
-        let query = 'UPDATE usuarios SET strNombreUsuario = $1, idPerfil = $2, idEstadoUsuario = $3, strCorreo = $4, strNumeroCelular = $5';
-        const params = [strNombreUsuario, idPerfil, idEstadoUsuario, strCorreo.toLowerCase(), strNumeroCelular];
+        let query = 'UPDATE usuarios1 SET username = $1, email = $2, nombre = $3, sername = $4, idPerfil = $5, idEstadoUsuario = $6, strNumeroCelular = $7';
+        const params = [username.toLowerCase(), email.toLowerCase(), nombre, sername, idPerfil, idEstadoUsuario, strNumeroCelular];
+        
+        let paramIndex = 8;
         
         if (strImagenBase64) {
-            query += ', strImagen = $6';
+            query += ', strImagen = $' + paramIndex;
             params.push(strImagenBase64);
+            paramIndex++;
         }
         
-        query += ' WHERE id = $' + (params.length + 1) + ' RETURNING *';
+        query += ' WHERE id = $' + paramIndex + ' RETURNING id, username, email, nombre, sername';
         params.push(req.params.id);
         
         const result = await pool.query(query, params);
@@ -574,19 +597,53 @@ app.put('/api/usuarios/:id', authenticateToken, async (req, res) => {
         
         res.json({ success: true, message: 'Usuario actualizado', data: result.rows[0] });
     } catch (err) {
+        if (err.code === '23505') {
+            if (err.constraint === 'usuarios1_username_key') {
+                return res.status(400).json({ success: false, message: 'El nombre de usuario ya existe' });
+            } else if (err.constraint === 'usuarios1_email_key') {
+                return res.status(400).json({ success: false, message: 'El email ya existe' });
+            }
+        }
+        console.error('Error al actualizar usuario:', err);
         res.status(500).json({ success: false, message: 'Error al actualizar usuario' });
     }
 });
 
 app.delete('/api/usuarios/:id', authenticateToken, async (req, res) => {
     try {
-        const result = await pool.query('DELETE FROM usuarios WHERE id = $1 RETURNING id', [req.params.id]);
+        const result = await pool.query('DELETE FROM usuarios1 WHERE id = $1 RETURNING id', [req.params.id]);
         if (result.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
         }
         res.json({ success: true, message: 'Usuario eliminado' });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Error al eliminar usuario' });
+    }
+});
+
+// Endpoint para cambiar contraseña
+app.put('/api/usuarios/:id/password', authenticateToken, async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        
+        const userResult = await pool.query('SELECT password FROM usuarios1 WHERE id = $1', [req.params.id]);
+        
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+        }
+        
+        const passwordMatch = await bcrypt.compare(currentPassword, userResult.rows[0].password);
+        if (!passwordMatch) {
+            return res.status(401).json({ success: false, message: 'Contraseña actual incorrecta' });
+        }
+        
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await pool.query('UPDATE usuarios1 SET password = $1 WHERE id = $2', [hashedPassword, req.params.id]);
+        
+        res.json({ success: true, message: 'Contraseña actualizada' });
+    } catch (err) {
+        console.error('Error al cambiar contraseña:', err);
+        res.status(500).json({ success: false, message: 'Error al cambiar contraseña' });
     }
 });
 
@@ -697,7 +754,7 @@ app.delete('/api/permisos-perfil/:id', authenticateToken, async (req, res) => {
 // --- 11. Endpoint para menú dinámico ---
 app.get('/api/menu', authenticateToken, async (req, res) => {
     try {
-        const userResult = await pool.query('SELECT idPerfil FROM usuarios WHERE id = $1', [req.userId]);
+        const userResult = await pool.query('SELECT idPerfil FROM usuarios1 WHERE id = $1', [req.userId]);
         if (userResult.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
         }
@@ -770,7 +827,16 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ SERVIDOR INICIADO CORRECTAMENTE`);
     console.log(`📡 Puerto: ${PORT}`);
     console.log('='.repeat(50));
-    console.log('🗑️ RESETEO COMPLETADO - Tablas recreadas');
+    console.log('📝 ESTRUCTURA DE USUARIOS:');
+    console.log('   - username: nombre de usuario');
+    console.log('   - email: correo electrónico');
+    console.log('   - nombre: nombre real');
+    console.log('   - sername: apellido (opcional)');
+    console.log('   - password: contraseña encriptada');
+    console.log('='.repeat(50));
     console.log('👑 El PRIMER usuario registrado será ADMINISTRADOR');
+    console.log('   con todos los permisos automáticamente');
+    console.log('='.repeat(50));
+    console.log('🔐 LOGIN: Case-insensitive para username y email');
     console.log('='.repeat(50));
 });

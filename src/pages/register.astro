@@ -21,6 +21,14 @@ const API_URL = "https://extra-earth-production.up.railway.app";
       </div>
 
       <div class="input-group">
+        <label for="nombre">Nombre Completo *</label>
+        <div class="input-wrapper">
+          <i class="fas fa-user-tag"></i>
+          <input type="text" id="nombre" name="nombre" placeholder="Juan Pérez" required>
+        </div>
+      </div>
+
+      <div class="input-group">
         <label for="email">Correo Electrónico *</label>
         <div class="input-wrapper">
           <i class="fas fa-envelope"></i>
@@ -101,38 +109,48 @@ button:disabled { background: #94a3b8; cursor: not-allowed; }
     form.onsubmit = async (e) => {
       e.preventDefault();
 
+      // 1. Extraemos todos los valores, incluyendo el nombre
       const username = (document.getElementById('username') as HTMLInputElement).value.trim();
+      const nombre = (document.getElementById('nombre') as HTMLInputElement).value.trim();
       const email = (document.getElementById('email') as HTMLInputElement).value.trim();
       const password = (document.getElementById('password') as HTMLInputElement).value;
       const confirmPwd = (document.getElementById('confirmPwd') as HTMLInputElement).value;
 
-      if (!username || !email || !password) {
-        showMsg('Todos los campos son obligatorios', 'error'); return;
+      // 2. Validamos que ninguno esté vacío
+      if (!username || !nombre || !email || !password) {
+        showMsg('Todos los campos son obligatorios', 'error'); 
+        return;
       }
+      
       if (password.length < 6) {
-        showMsg('La contraseña debe tener al menos 6 caracteres', 'error'); return;
+        showMsg('La contraseña debe tener al menos 6 caracteres', 'error'); 
+        return;
       }
+      
       if (password !== confirmPwd) {
-        showMsg('Las contraseñas no coinciden', 'error'); return;
+        showMsg('Las contraseñas no coinciden', 'error'); 
+        return;
       }
 
       btnRegister.disabled = true;
       btnRegister.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Procesando...';
 
       try {
+        // 3. Enviamos el JSON exactamente como lo espera el server.js
         const response = await fetch(`${apiUrl}/api/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            strNombreUsuario: username,
-            strCorreo: email,
-            strPwd: password,
-            strNumeroCelular: "" 
+            username: username,
+            email: email,
+            nombre: nombre,
+            password: password
           })
         });
 
         const data = await response.json();
 
+        // 4. Si el servidor dice success = true
         if (response.ok && data.success) {
           showMsg('✅ Registro exitoso. Redirigiendo al login...', 'success');
           setTimeout(() => { window.location.href = "/extra-earth/login"; }, 2000);

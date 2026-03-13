@@ -2,17 +2,30 @@
 import { defineConfig } from 'astro/config';
 
 export default defineConfig({
-  // URL de tu sitio en GitHub Pages
+
+  /* URL de tu sitio en GitHub Pages */
   site: 'https://CZalbert6.github.io',
-  
-  // Nombre exacto de tu repositorio para que las rutas funcionen
+
+  /* Nombre EXACTO del repositorio */
   base: '/extra-earth',
-  
-  // Fuerza a Astro a generar archivos estáticos
+
+  /* Genera sitio estático para GitHub Pages */
   output: 'static',
-  
+
+  /* Configuración del servidor de desarrollo */
   server: {
     port: 4321,
     host: true
+  },
+
+  /* Build */
+  build: {
+    format: 'directory'
+  },
+
+  /* Prefetch opcional (mejora navegación) */
+  prefetch: {
+    prefetchAll: true
   }
+
 });

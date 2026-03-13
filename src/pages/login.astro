@@ -1,260 +1,171 @@
 ---
 import Layout from '../layout/layout.astro';
+// URL de tu API en Railway
 const API_URL = "https://extra-earth-production.up.railway.app";
 ---
 
 <Layout title="Acceso al Sistema | ERP">
+  <div class="login-card">
+    <div class="login-header">
+      <i class="fas fa-user-circle"></i>
+      <h2>Iniciar Sesión</h2>
+      <p>Ingrese sus credenciales corporativas</p>
+    </div>
 
-<div class="login-card">
+    <form id="loginForm" data-api-url={API_URL}>
+      
+      <div class="input-group">
+        <label for="loginIdentifier">Usuario o Email</label>
+        <div class="input-wrapper">
+          <i class="fas fa-user"></i>
+          <input type="text" id="loginIdentifier" name="username" placeholder="Ej: admin" required>
+        </div>
+      </div>
 
-<div class="login-header">
-<i class="fas fa-user-circle"></i>
-<h2>Iniciar Sesión</h2>
-<p>Ingrese sus credenciales corporativas</p>
-</div>
+      <div class="input-group">
+        <label for="loginPassword">Contraseña</label>
+        <div class="input-wrapper">
+          <i class="fas fa-lock"></i>
+          <input type="password" id="loginPassword" name="password" placeholder="••••••••" required>
+        </div>
+      </div>
 
-<form id="loginForm">
+      <div class="input-group captcha-container" style="text-align: center; margin-bottom: 1rem; padding: 10px; border: 1px dashed #cbd5e1; background: #f8fafc;">
+         <label style="display:inline; margin-right: 10px;">[ ] No soy un robot (Simulador Captcha)</label>
+         <input type="checkbox" id="captchaSimulado" required title="Por favor, marca esta casilla">
+      </div>
 
-<div class="input-group">
-<label for="loginIdentifier">Usuario o Email</label>
+      <button type="submit" id="btnSubmit">
+        <span>Ingresar al Sistema</span>
+        <i class="fas fa-arrow-right"></i>
+      </button>
 
-<div class="input-wrapper">
-<i class="fas fa-user"></i>
-<input type="text" id="loginIdentifier" placeholder="Ej: admin" required>
-</div>
+    </form>
 
-</div>
+    <div id="message" class="status-message"></div>
 
-<div class="input-group">
-<label for="loginPassword">Contraseña</label>
-
-<div class="input-wrapper">
-<i class="fas fa-lock"></i>
-<input type="password" id="loginPassword" placeholder="••••••••" required>
-</div>
-
-</div>
-
-<button type="submit" id="btnSubmit">
-<span>Ingresar al Sistema</span>
-<i class="fas fa-arrow-right"></i>
-</button>
-
-</form>
-
-<div id="message" class="status-message"></div>
-
-<div class="login-footer">
-¿No tiene cuenta? 
-<a href="/extra-earth/register">Regístrese aquí</a>
-</div>
-
-</div>
-
+    <div class="login-footer">
+      ¿No tiene cuenta? <a href="/extra-earth/register">Regístrese aquí</a>
+    </div>
+  </div>
 </Layout>
 
 <style>
-
-.login-card{
-max-width:420px;
-margin:2rem auto;
-padding:1rem;
-}
-
-.login-header{
-text-align:center;
-margin-bottom:2rem;
-}
-
-.login-header i{
-font-size:3.5rem;
-color:#3b82f6;
-margin-bottom:1rem;
-}
-
-.login-header h2{
-font-size:1.75rem;
-color:#1e293b;
-margin:0;
-}
-
-.login-header p{
-color:#64748b;
-font-size:0.9rem;
-}
-
-.input-group{
-margin-bottom:1.25rem;
-}
-
-.input-group label{
-display:block;
-font-size:0.85rem;
-font-weight:600;
-margin-bottom:0.5rem;
-color:#475569;
-}
-
-.input-wrapper{
-position:relative;
-display:flex;
-align-items:center;
-}
-
-.input-wrapper i{
-position:absolute;
-left:1rem;
-color:#94a3b8;
-}
-
-.input-wrapper input{
-width:100%;
-padding:0.75rem 1rem 0.75rem 2.5rem;
-border:1px solid #e2e8f0;
-border-radius:8px;
-font-size:1rem;
-transition:all .2s;
-}
-
-.input-wrapper input:focus{
-outline:none;
-border-color:#3b82f6;
-box-shadow:0 0 0 3px rgba(59,130,246,.1);
-}
-
-button{
-width:100%;
-padding:0.8rem;
-background:#1e293b;
-color:white;
-border:none;
-border-radius:8px;
-font-weight:600;
-cursor:pointer;
-display:flex;
-justify-content:center;
-align-items:center;
-gap:10px;
-}
-
-button:hover{
-background:#334155;
-}
-
-button:disabled{
-background:#94a3b8;
-cursor:not-allowed;
-}
-
-.status-message{
-margin-top:1.5rem;
-padding:0.8rem;
-border-radius:6px;
-font-size:0.9rem;
-display:none;
-text-align:center;
-}
-
-.login-footer{
-text-align:center;
-margin-top:2rem;
-font-size:0.85rem;
-color:#64748b;
-}
-
-.login-footer a{
-color:#3b82f6;
-text-decoration:none;
-font-weight:600;
-}
-
+.login-card { max-width: 420px; margin: 2rem auto; padding: 1rem; }
+.login-header { text-align: center; margin-bottom: 2rem; }
+.login-header i { font-size: 3.5rem; color: #3b82f6; margin-bottom: 1rem; }
+.login-header h2 { font-size: 1.75rem; color: #1e293b; margin: 0; }
+.login-header p { color: #64748b; font-size: 0.9rem; }
+.input-group { margin-bottom: 1.25rem; }
+.input-group label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; color: #475569; }
+.input-wrapper { position: relative; display: flex; align-items: center; }
+.input-wrapper i { position: absolute; left: 1rem; color: #94a3b8; }
+.input-wrapper input { width: 100%; padding: 0.75rem 1rem 0.75rem 2.5rem; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 1rem; transition: all .2s; }
+.input-wrapper input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, .1); }
+button { width: 100%; padding: 0.8rem; background: #1e293b; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px; }
+button:hover { background: #334155; }
+button:disabled { background: #94a3b8; cursor: not-allowed; }
+.status-message { margin-top: 1.5rem; padding: 0.8rem; border-radius: 6px; font-size: 0.9rem; display: none; text-align: center; }
+.login-footer { text-align: center; margin-top: 2rem; font-size: 0.85rem; color: #64748b; }
+.login-footer a { color: #3b82f6; text-decoration: none; font-weight: 600; }
 </style>
 
-<script is:inline define:vars={{ API_URL }}>
+<script>
+  // Envolvemos la lógica para asegurar que el DOM cargó
+  const setupLoginForm = () => {
+    const form = document.getElementById("loginForm") as HTMLFormElement;
+    
+    // Salida rápida si el formulario no está en la vista actual
+    if (!form) return;
 
-const form = document.getElementById("loginForm");
-const messageDiv = document.getElementById("message");
-const btnSubmit = document.getElementById("btnSubmit");
+    const messageDiv = document.getElementById("message");
+    const btnSubmit = document.getElementById("btnSubmit") as HTMLButtonElement;
+    
+    // Recuperamos la API URL del data-attribute
+    const apiUrl = form.dataset.apiUrl;
 
-form.addEventListener("submit", async (e)=>{
+    const showMsg = (text, type) => {
+      if (!messageDiv) return;
+      messageDiv.style.display = "block";
+      messageDiv.style.background = type === "success" ? "#dcfce7" : "#fee2e2";
+      messageDiv.style.color = type === "success" ? "#166534" : "#991b1b";
+      messageDiv.textContent = text;
 
-e.preventDefault();
+      setTimeout(() => {
+        messageDiv.style.display = "none";
+      }, 5000);
+    };
 
-const username = document.getElementById("loginIdentifier").value.trim();
-const password = document.getElementById("loginPassword").value;
+    form.onsubmit = async (e) => {
+      e.preventDefault();
 
-if(!username || !password){
-showMsg("Complete todos los campos","error");
-return;
-}
+      const usernameInput = document.getElementById("loginIdentifier") as HTMLInputElement;
+      const passwordInput = document.getElementById("loginPassword") as HTMLInputElement;
+      const captchaInput = document.getElementById("captchaSimulado") as HTMLInputElement;
 
-btnSubmit.disabled=true;
-btnSubmit.innerHTML='<i class="fas fa-spinner fa-spin"></i> Validando...';
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value;
 
-try{
+      // Validación de Captcha (Requisito 22)
+      if (captchaInput && !captchaInput.checked) {
+          showMsg("Por favor, resuelva el captcha", "error");
+          return;
+      }
 
-const response = await fetch(`${API_URL}/api/login`,{
+      if (!username || !password) {
+        showMsg("Complete todos los campos", "error");
+        return;
+      }
 
-method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Validando...';
 
-body:JSON.stringify({
-username:username,
-password:password
-})
+      try {
+        const response = await fetch(`${apiUrl}/api/login`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            username: username,
+            password: password
+          })
+        });
 
-});
+        const data = await response.json();
 
-const data = await response.json();
+        if (data.success) {
+          showMsg("Acceso concedido", "success");
 
-if(data.success){
+          // Guardamos en localStorage. 
+          // Si implementaste el utils/permisos.js, podrías usar authStore.setToken() aquí.
+          localStorage.setItem("token", data.token);
+          localStorage.setItem("user", JSON.stringify(data.user));
+          localStorage.setItem("permisos", JSON.stringify(data.permisos || []));
 
-showMsg("Acceso concedido","success");
+          // Redirección. Asegúrate de que esta ruta base sea correcta según tu estructura
+          setTimeout(() => {
+            window.location.href = "/extra-earth/principal1/estatico1"; // Redirigir a una ruta válida post-login
+          }, 1200);
 
-localStorage.setItem("token",data.token);
-localStorage.setItem("user",JSON.stringify(data.user));
-localStorage.setItem("permisos",JSON.stringify(data.permisos || []));
+        } else {
+          // El backend ya maneja el estado inactivo (Requisito 21)
+          showMsg(data.message || "Credenciales incorrectas", "error");
+          btnSubmit.disabled = false;
+          btnSubmit.innerHTML = '<span>Ingresar al Sistema</span><i class="fas fa-arrow-right"></i>';
+        }
 
-setTimeout(()=>{
-window.location.href="/extra-earth/";
-},1200);
+      } catch (err) {
+        console.error("Error en fetch login:", err);
+        showMsg("Error de conexión con el servidor", "error");
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = '<span>Ingresar al Sistema</span><i class="fas fa-arrow-right"></i>';
+      }
+    };
+  };
 
-}else{
-
-showMsg(data.message || "Credenciales incorrectas","error");
-
-}
-
-}catch(err){
-
-console.error(err);
-showMsg("Error de conexión con el servidor","error");
-
-}
-
-btnSubmit.disabled=false;
-btnSubmit.innerHTML='<span>Ingresar al Sistema</span><i class="fas fa-arrow-right"></i>';
-
-});
-
-function showMsg(text,type){
-
-messageDiv.style.display="block";
-
-messageDiv.style.background=
-type==="success" ? "#dcfce7" : "#fee2e2";
-
-messageDiv.style.color=
-type==="success" ? "#166534" : "#991b1b";
-
-messageDiv.textContent=text;
-
-setTimeout(()=>{
-messageDiv.style.display="none";
-},5000);
-
-}
-
+  // Inicializar cuando el DOM esté listo
+  document.addEventListener('DOMContentLoaded', setupLoginForm);
+  // Soporte para Astro View Transitions
+  document.addEventListener('astro:page-load', setupLoginForm);
 </script>

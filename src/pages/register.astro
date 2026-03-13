@@ -1,5 +1,7 @@
 ---
 import Layout from '../layout/layout.astro';
+// En producción, lo ideal es usar import.meta.env.PUBLIC_API_URL
+// Pero mantendremos tu constante para no romper tu flujo actual.
 const API_URL = "https://extra-earth-production.up.railway.app";
 ---
 
@@ -11,51 +13,46 @@ const API_URL = "https://extra-earth-production.up.railway.app";
       <p>Regístrese para acceder a la plataforma</p>
     </div>
 
-    <form id="registerForm">
+    <form id="registerForm" data-api-url={API_URL}>
 
-      <!-- Usuario -->
       <div class="input-group">
         <label for="username">Usuario *</label>
         <div class="input-wrapper">
           <i class="fas fa-at"></i>
-          <input type="text" id="username" placeholder="usuario123" required maxlength="100">
+          <input type="text" id="username" name="username" placeholder="usuario123" required maxlength="100">
         </div>
       </div>
 
-      <!-- Nombre -->
       <div class="input-group">
         <label for="nombre">Nombre Completo *</label>
         <div class="input-wrapper">
           <i class="fas fa-user-tag"></i>
-          <input type="text" id="nombre" placeholder="Juan Pérez" required>
+          <input type="text" id="nombre" name="nombre" placeholder="Juan Pérez" required>
         </div>
       </div>
 
-      <!-- Email -->
       <div class="input-group">
         <label for="email">Correo Electrónico *</label>
         <div class="input-wrapper">
           <i class="fas fa-envelope"></i>
-          <input type="email" id="email" placeholder="correo@corporativo.com" required>
+          <input type="email" id="email" name="email" placeholder="correo@corporativo.com" required>
         </div>
       </div>
 
-      <!-- Password -->
       <div class="input-group">
         <label for="password">Contraseña *</label>
         <div class="input-wrapper">
           <i class="fas fa-lock"></i>
-          <input type="password" id="password" placeholder="Mínimo 6 caracteres" required minlength="6">
+          <input type="password" id="password" name="password" placeholder="Mínimo 6 caracteres" required minlength="6">
         </div>
         <small class="field-hint">Mínimo 6 caracteres</small>
       </div>
 
-      <!-- Confirmar -->
       <div class="input-group">
         <label for="confirmPwd">Confirmar Contraseña *</label>
         <div class="input-wrapper">
           <i class="fas fa-lock"></i>
-          <input type="password" id="confirmPwd" placeholder="Repita su contraseña" required>
+          <input type="password" id="confirmPwd" name="confirmPwd" placeholder="Repita su contraseña" required>
         </div>
       </div>
 
@@ -75,211 +72,121 @@ const API_URL = "https://extra-earth-production.up.railway.app";
 </Layout>
 
 <style>
-.register-card {
-  max-width: 500px;
-  margin: 2rem auto;
-  padding: 1rem;
-}
-
-.register-header {
-  text-align: center;
-  margin-bottom: 2rem;
-}
-
-.register-header i {
-  font-size: 3rem;
-  color: #10b981;
-  margin-bottom: 1rem;
-}
-
-.register-header h2 {
-  font-size: 1.75rem;
-  color: #1e293b;
-  margin: 0;
-}
-
-.register-header p {
-  color: #64748b;
-  font-size: 0.9rem;
-}
-
-.input-group {
-  margin-bottom: 1.25rem;
-}
-
-.input-group label {
-  display: block;
-  font-size: 0.85rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-  color: #475569;
-}
-
-.field-hint {
-  display: block;
-  font-size: 0.75rem;
-  color: #94a3b8;
-  margin-top: 0.25rem;
-}
-
-.input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.input-wrapper i {
-  position: absolute;
-  left: 1rem;
-  color: #94a3b8;
-}
-
-.input-wrapper input {
-  width: 100%;
-  padding: 0.75rem 1rem 0.75rem 2.5rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 0.95rem;
-  transition: all .2s;
-}
-
-.input-wrapper input:focus {
-  outline: none;
-  border-color: #10b981;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, .1);
-}
-
-button {
-  width: 100%;
-  padding: 0.9rem;
-  background: #059669;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 10px;
-  margin-top: 1rem;
-}
-
-button:hover {
-  background: #047857;
-}
-
-button:disabled {
-  background: #94a3b8;
-  cursor: not-allowed;
-}
-
-.status-message {
-  margin-top: 1.5rem;
-  padding: 0.8rem;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  display: none;
-  text-align: center;
-}
-
-.register-footer {
-  text-align: center;
-  margin-top: 2rem;
-  font-size: 0.85rem;
-  color: #64748b;
-}
-
-.register-footer a {
-  color: #059669;
-  text-decoration: none;
-  font-weight: 600;
-}
+.register-card { max-width: 500px; margin: 2rem auto; padding: 1rem; }
+.register-header { text-align: center; margin-bottom: 2rem; }
+.register-header i { font-size: 3rem; color: #10b981; margin-bottom: 1rem; }
+.register-header h2 { font-size: 1.75rem; color: #1e293b; margin: 0; }
+.register-header p { color: #64748b; font-size: 0.9rem; }
+.input-group { margin-bottom: 1.25rem; }
+.input-group label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; color: #475569; }
+.field-hint { display: block; font-size: 0.75rem; color: #94a3b8; margin-top: 0.25rem; }
+.input-wrapper { position: relative; display: flex; align-items: center; }
+.input-wrapper i { position: absolute; left: 1rem; color: #94a3b8; }
+.input-wrapper input { width: 100%; padding: 0.75rem 1rem 0.75rem 2.5rem; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.95rem; transition: all .2s; }
+.input-wrapper input:focus { outline: none; border-color: #10b981; box-shadow: 0 0 0 3px rgba(16, 185, 129, .1); }
+button { width: 100%; padding: 0.9rem; background: #059669; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 1rem; }
+button:hover { background: #047857; }
+button:disabled { background: #94a3b8; cursor: not-allowed; }
+.status-message { margin-top: 1.5rem; padding: 0.8rem; border-radius: 6px; font-size: 0.9rem; display: none; text-align: center; }
+.register-footer { text-align: center; margin-top: 2rem; font-size: 0.85rem; color: #64748b; }
+.register-footer a { color: #059669; text-decoration: none; font-weight: 600; }
 </style>
 
-<script is:inline define:vars={{ API_URL }}>
-const form = document.getElementById('registerForm');
-const messageDiv = document.getElementById('message');
-const btnRegister = document.getElementById('btnRegister');
+<script>
+  // Astro v5: Usamos el tag script normal. Astro lo procesará, minificará y agrupará.
+  // Envolvemos todo en una función para asegurar que el DOM esté listo
+  const setupRegisterForm = () => {
+    const form = document.getElementById('registerForm') as HTMLFormElement;
+    
+    // Si el formulario no está en la página actual (útil si usas ViewTransitions), salimos
+    if (!form) return;
 
-form.addEventListener('submit', async (e) => {
-  e.preventDefault();
+    const messageDiv = document.getElementById('message');
+    const btnRegister = document.getElementById('btnRegister') as HTMLButtonElement;
+    
+    // Recuperamos la URL que inyectamos desde Astro
+    const apiUrl = form.dataset.apiUrl;
 
-  const username = document.getElementById('username').value.trim();
-  const nombre = document.getElementById('nombre').value.trim();
-  const email = document.getElementById('email').value.trim();
-  const password = document.getElementById('password').value;
-  const confirmPwd = document.getElementById('confirmPwd').value;
+    // Función auxiliar para mensajes
+    const showMsg = (text, type) => {
+      if (!messageDiv) return;
+      messageDiv.style.display = 'block';
+      messageDiv.style.background = type === 'success' ? '#dcfce7' : '#fee2e2';
+      messageDiv.style.color = type === 'success' ? '#166534' : '#991b1b';
+      messageDiv.textContent = text;
 
-  if (!username || !nombre || !email || !password) {
-    showMsg('Todos los campos son obligatorios', 'error');
-    return;
-  }
+      setTimeout(() => {
+        messageDiv.style.display = 'none';
+      }, 5000);
+    };
 
-  if (password.length < 6) {
-    showMsg('La contraseña debe tener al menos 6 caracteres', 'error');
-    return;
-  }
+    // Usamos onsubmit en lugar de addEventListener para evitar duplicaciones
+    // si la página se recarga o se navega por cliente
+    form.onsubmit = async (e) => {
+      e.preventDefault();
 
-  if (password !== confirmPwd) {
-    showMsg('Las contraseñas no coinciden', 'error');
-    return;
-  }
+      const username = (document.getElementById('username') as HTMLInputElement).value.trim();
+      const nombre = (document.getElementById('nombre') as HTMLInputElement).value.trim();
+      const email = (document.getElementById('email') as HTMLInputElement).value.trim();
+      const password = (document.getElementById('password') as HTMLInputElement).value;
+      const confirmPwd = (document.getElementById('confirmPwd') as HTMLInputElement).value;
 
-  btnRegister.disabled = true;
-  btnRegister.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Procesando...';
+      if (!username || !nombre || !email || !password) {
+        showMsg('Todos los campos son obligatorios', 'error');
+        return;
+      }
 
-  try {
+      if (password.length < 6) {
+        showMsg('La contraseña debe tener al menos 6 caracteres', 'error');
+        return;
+      }
 
-    const response = await fetch(`${API_URL}/api/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username,
-        email,
-        nombre,
-        password
-      })
-    });
+      if (password !== confirmPwd) {
+        showMsg('Las contraseñas no coinciden', 'error');
+        return;
+      }
 
-    const data = await response.json();
+      btnRegister.disabled = true;
+      btnRegister.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Procesando...';
 
-    if (data.success) {
+      try {
+        const response = await fetch(`${apiUrl}/api/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username,
+            email,
+            nombre,
+            password
+          })
+        });
 
-      showMsg('✅ Registro exitoso. Redirigiendo al login...', 'success');
+        const data = await response.json();
 
-      setTimeout(()=>{
-        window.location.href="/extra-earth/login";
-      },2000);
+        if (data.success) {
+          showMsg('✅ Registro exitoso. Redirigiendo al login...', 'success');
+          // Redirección segura
+          setTimeout(() => {
+            window.location.href = "/extra-earth/login";
+          }, 2000);
+        } else {
+          showMsg(data.message || 'Error al registrar', 'error');
+          // Restauramos el botón solo si hubo error
+          btnRegister.disabled = false;
+          btnRegister.innerHTML = '<span>Finalizar Registro</span><i class="fas fa-check-circle"></i>';
+        }
+      } catch (err) {
+        console.error('Fetch error:', err);
+        showMsg('Error de conexión con el servidor', 'error');
+        btnRegister.disabled = false;
+        btnRegister.innerHTML = '<span>Finalizar Registro</span><i class="fas fa-check-circle"></i>';
+      }
+    };
+  };
 
-    } else {
-
-      showMsg(data.message || 'Error al registrar', 'error');
-
-    }
-
-  } catch (err) {
-
-    console.error(err);
-    showMsg('Error de conexión con el servidor', 'error');
-
-  }
-
-  btnRegister.disabled = false;
-  btnRegister.innerHTML = '<span>Finalizar Registro</span><i class="fas fa-check-circle"></i>';
-
-});
-
-function showMsg(text,type){
-
-  messageDiv.style.display='block';
-  messageDiv.style.background = type==='success' ? '#dcfce7' : '#fee2e2';
-  messageDiv.style.color = type==='success' ? '#166534' : '#991b1b';
-  messageDiv.textContent=text;
-
-  setTimeout(()=>{
-    messageDiv.style.display='none';
-  },5000);
-
-}
+  // Inicialización estándar
+  document.addEventListener('DOMContentLoaded', setupRegisterForm);
+  
+  // Soporte para Astro View Transitions (si decides usarlas)
+  document.addEventListener('astro:page-load', setupRegisterForm);
 </script>

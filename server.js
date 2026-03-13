@@ -32,7 +32,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'secreto_super_seguro_2026';
 app.get('/', (req, res) => res.status(200).send('OK'));
 app.get('/health', (req, res) => res.status(200).send('OK'));
 
-// --- 4. Inicialización de Tablas (SIMPLE, como la que funciona) ---
+// --- 4. Inicialización de Tablas ---
 const initDB = async () => {
     try {
         // Tabla perfiles
@@ -54,15 +54,17 @@ const initDB = async () => {
             )
         `);
 
-        // Tabla usuarios
+        // Tabla usuarios - MODIFICADA para tu estructura
         await pool.query(`
             CREATE TABLE IF NOT EXISTS usuarios (
                 id SERIAL PRIMARY KEY,
-                strNombreUsuario VARCHAR(100) UNIQUE NOT NULL,
+                username VARCHAR(100) UNIQUE NOT NULL,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                nombre VARCHAR(100) NOT NULL,
+                sername VARCHAR(100),
+                password VARCHAR(255) NOT NULL,
                 idPerfil INTEGER REFERENCES perfiles(id),
-                strPwd VARCHAR(255) NOT NULL,
                 idEstadoUsuario INTEGER DEFAULT 1,
-                strCorreo VARCHAR(255) UNIQUE NOT NULL,
                 strNumeroCelular VARCHAR(20),
                 strImagen TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -135,7 +137,6 @@ const initDB = async () => {
     }
 };
 
-// Ejecutar initDB (sin await, sin promesas complejas)
 initDB();
 
 // --- 5. Middleware de autenticación ---
@@ -152,16 +153,27 @@ const authenticateToken = (req, res, next) => {
     });
 };
 
-// --- 6. Rutas de Autenticación (MODIFICADA para que el primer usuario sea admin) ---
+// --- 6. Rutas de Autenticación (CORREGIDO) ---
 app.post('/api/register', async (req, res) => {
     try {
-        const { strNombreUsuario, strCorreo, strPwd, strNumeroCelular } = req.body;
+        const { username, email, nombre, sername, password } = req.body;
         
-        if (!strPwd || strPwd.length < 6) {
-            return res.status(400).json({ success: false, message: 'La contraseña debe tener al menos 6 caracteres' });
+        // Validaciones
+        if (!username || !email || !nombre || !password) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Faltan campos requeridos: username, email, nombre y password son obligatorios' 
+            });
+        }
+        
+        if (password.length < 6) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'La contraseña debe tener al menos 6 caracteres' 
+            });
         }
 
-        const hashedPassword = await bcrypt.hash(strPwd, 10);
+        const hashedPassword = await bcrypt.hash(password, 10);
         
         // Verificar si es el primer usuario
         const userCount = await pool.query('SELECT COUNT(*) FROM usuarios');
@@ -192,9 +204,12 @@ app.post('/api/register', async (req, res) => {
             }
         }
 
+        // Guardar username y email en minúsculas para consistencia
         const result = await pool.query(
-            'INSERT INTO usuarios (strNombreUsuario, strCorreo, strPwd, strNumeroCelular, idEstadoUsuario, idPerfil) VALUES ($1, $2, $3, $4, 1, $5) RETURNING id, strNombreUsuario, strCorreo',
-            [strNombreUsuario, strCorreo.toLowerCase(), hashedPassword, strNumeroCelular, idPerfil]
+            `INSERT INTO usuarios (username, email, nombre, sername, password, idPerfil, idEstadoUsuario) 
+             VALUES ($1, $2, $3, $4, $5, $6, 1) 
+             RETURNING id, username, email, nombre, sername`,
+            [username.toLowerCase(), email.toLowerCase(), nombre, sername || null, hashedPassword, idPerfil]
         );
 
         res.status(201).json({ 
@@ -204,6 +219,12 @@ app.post('/api/register', async (req, res) => {
         });
     } catch (err) {
         if (err.code === '23505') {
+            // Determinar qué campo causó la duplicación
+            if (err.constraint === 'usuarios_username_key') {
+                return res.status(400).json({ success: false, message: 'El nombre de usuario ya existe' });
+            } else if (err.constraint === 'usuarios_email_key') {
+                return res.status(400).json({ success: false, message: 'El email ya existe' });
+            }
             return res.status(400).json({ success: false, message: 'El email o usuario ya existe' });
         }
         console.error('Error en registro:', err);
@@ -215,19 +236,27 @@ app.post('/api/login', async (req, res) => {
     try {
         const { username, password } = req.body;
         
+        // CORRECCIÓN: Usar LOWER() en ambos lados de la comparación
+        // para que sea case-insensitive
         const result = await pool.query(
             `SELECT u.*, p.strNombrePerfil, p.bitAdministrador 
              FROM usuarios u 
              LEFT JOIN perfiles p ON u.idPerfil = p.id 
-             WHERE u.strNombreUsuario = $1 OR u.strCorreo = $1`,
-            [username.toLowerCase()]
+             WHERE LOWER(u.username) = LOWER($1) OR LOWER(u.email) = LOWER($1)`,
+            [username]
         );
 
-        if (result.rows.length === 0 || !(await bcrypt.compare(password, result.rows[0].strpwd))) {
+        if (result.rows.length === 0) {
             return res.status(401).json({ success: false, message: 'Credenciales incorrectas' });
         }
 
         const user = result.rows[0];
+        
+        // Verificar contraseña
+        const passwordMatch = await bcrypt.compare(password, user.password);
+        if (!passwordMatch) {
+            return res.status(401).json({ success: false, message: 'Credenciales incorrectas' });
+        }
         
         if (user.idestadousuario !== 1) {
             return res.status(401).json({ success: false, message: 'Usuario inactivo' });
@@ -248,7 +277,10 @@ app.post('/api/login', async (req, res) => {
             token, 
             user: { 
                 id: user.id, 
-                username: user.strnombreusuario,
+                username: user.username,
+                email: user.email,
+                nombre: user.nombre,
+                sername: user.sername,
                 idPerfil: user.idperfil,
                 esAdmin: user.bitadministrador,
                 strImagen: user.strimagen
@@ -261,7 +293,7 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-// --- 7. CRUD Perfiles (todos igual que antes) ---
+// --- 7. CRUD Perfiles ---
 app.get('/api/perfiles', authenticateToken, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -352,7 +384,7 @@ app.delete('/api/perfiles/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// --- 8. CRUD Módulos (todos igual) ---
+// --- 8. CRUD Módulos ---
 app.get('/api/modulos', authenticateToken, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -443,7 +475,7 @@ app.delete('/api/modulos/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// --- 9. CRUD Usuarios (con imagen Base64) ---
+// --- 9. CRUD Usuarios (MODIFICADO para tu estructura) ---
 app.get('/api/usuarios', authenticateToken, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -454,7 +486,10 @@ app.get('/api/usuarios', authenticateToken, async (req, res) => {
         const total = parseInt(totalResult.rows[0].count);
         
         const result = await pool.query(
-            `SELECT u.*, p.strNombrePerfil 
+            `SELECT u.id, u.username, u.email, u.nombre, u.sername, 
+                    u.idPerfil, u.idEstadoUsuario, u.strNumeroCelular, 
+                    u.strImagen, u.created_at,
+                    p.strNombrePerfil 
              FROM usuarios u
              LEFT JOIN perfiles p ON u.idPerfil = p.id
              ORDER BY u.id LIMIT $1 OFFSET $2`,
@@ -472,6 +507,7 @@ app.get('/api/usuarios', authenticateToken, async (req, res) => {
             }
         });
     } catch (err) {
+        console.error('Error al obtener usuarios:', err);
         res.status(500).json({ success: false, message: 'Error al obtener usuarios' });
     }
 });
@@ -479,7 +515,10 @@ app.get('/api/usuarios', authenticateToken, async (req, res) => {
 app.get('/api/usuarios/:id', authenticateToken, async (req, res) => {
     try {
         const result = await pool.query(
-            `SELECT u.*, p.strNombrePerfil 
+            `SELECT u.id, u.username, u.email, u.nombre, u.sername, 
+                    u.idPerfil, u.idEstadoUsuario, u.strNumeroCelular, 
+                    u.strImagen, u.created_at,
+                    p.strNombrePerfil 
              FROM usuarios u
              LEFT JOIN perfiles p ON u.idPerfil = p.id
              WHERE u.id = $1`,
@@ -497,32 +536,54 @@ app.get('/api/usuarios/:id', authenticateToken, async (req, res) => {
 app.post('/api/usuarios', authenticateToken, async (req, res) => {
     try {
         const { 
-            strNombreUsuario, 
-            idPerfil, 
-            strPwd, 
-            idEstadoUsuario, 
-            strCorreo, 
+            username,
+            email,
+            nombre,
+            sername,
+            password,
+            idPerfil,
+            idEstadoUsuario,
             strNumeroCelular,
             strImagenBase64 
         } = req.body;
         
-        if (!strNombreUsuario || !strCorreo || !strPwd) {
-            return res.status(400).json({ success: false, message: 'Campos requeridos incompletos' });
+        // Validaciones
+        if (!username || !email || !nombre || !password) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Campos requeridos: username, email, nombre y password' 
+            });
         }
         
-        const hashedPassword = await bcrypt.hash(strPwd, 10);
+        const hashedPassword = await bcrypt.hash(password, 10);
         
         const result = await pool.query(
-            `INSERT INTO usuarios (strNombreUsuario, idPerfil, strPwd, idEstadoUsuario, strCorreo, strNumeroCelular, strImagen) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-            [strNombreUsuario, idPerfil || null, hashedPassword, idEstadoUsuario || 1, strCorreo.toLowerCase(), strNumeroCelular, strImagenBase64 || null]
+            `INSERT INTO usuarios (username, email, nombre, sername, password, idPerfil, idEstadoUsuario, strNumeroCelular, strImagen) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
+             RETURNING id, username, email, nombre, sername`,
+            [
+                username.toLowerCase(), 
+                email.toLowerCase(), 
+                nombre, 
+                sername || null, 
+                hashedPassword, 
+                idPerfil || null, 
+                idEstadoUsuario || 1, 
+                strNumeroCelular || null, 
+                strImagenBase64 || null
+            ]
         );
         
         res.status(201).json({ success: true, message: 'Usuario creado', data: result.rows[0] });
     } catch (err) {
         if (err.code === '23505') {
-            return res.status(400).json({ success: false, message: 'El email o usuario ya existe' });
+            if (err.constraint === 'usuarios_username_key') {
+                return res.status(400).json({ success: false, message: 'El nombre de usuario ya existe' });
+            } else if (err.constraint === 'usuarios_email_key') {
+                return res.status(400).json({ success: false, message: 'El email ya existe' });
+            }
         }
+        console.error('Error al crear usuario:', err);
         res.status(500).json({ success: false, message: 'Error al crear usuario' });
     }
 });
@@ -530,23 +591,29 @@ app.post('/api/usuarios', authenticateToken, async (req, res) => {
 app.put('/api/usuarios/:id', authenticateToken, async (req, res) => {
     try {
         const { 
-            strNombreUsuario, 
-            idPerfil, 
-            idEstadoUsuario, 
-            strCorreo, 
+            username,
+            email,
+            nombre,
+            sername,
+            idPerfil,
+            idEstadoUsuario,
             strNumeroCelular,
             strImagenBase64 
         } = req.body;
         
-        let query = 'UPDATE usuarios SET strNombreUsuario = $1, idPerfil = $2, idEstadoUsuario = $3, strCorreo = $4, strNumeroCelular = $5';
-        const params = [strNombreUsuario, idPerfil, idEstadoUsuario, strCorreo.toLowerCase(), strNumeroCelular];
+        // Construir query dinámicamente
+        let query = 'UPDATE usuarios SET username = $1, email = $2, nombre = $3, sername = $4, idPerfil = $5, idEstadoUsuario = $6, strNumeroCelular = $7';
+        const params = [username.toLowerCase(), email.toLowerCase(), nombre, sername, idPerfil, idEstadoUsuario, strNumeroCelular];
+        
+        let paramIndex = 8;
         
         if (strImagenBase64) {
-            query += ', strImagen = $6';
+            query += ', strImagen = $' + paramIndex;
             params.push(strImagenBase64);
+            paramIndex++;
         }
         
-        query += ' WHERE id = $' + (params.length + 1) + ' RETURNING *';
+        query += ' WHERE id = $' + paramIndex + ' RETURNING id, username, email, nombre, sername';
         params.push(req.params.id);
         
         const result = await pool.query(query, params);
@@ -557,6 +624,14 @@ app.put('/api/usuarios/:id', authenticateToken, async (req, res) => {
         
         res.json({ success: true, message: 'Usuario actualizado', data: result.rows[0] });
     } catch (err) {
+        if (err.code === '23505') {
+            if (err.constraint === 'usuarios_username_key') {
+                return res.status(400).json({ success: false, message: 'El nombre de usuario ya existe' });
+            } else if (err.constraint === 'usuarios_email_key') {
+                return res.status(400).json({ success: false, message: 'El email ya existe' });
+            }
+        }
+        console.error('Error al actualizar usuario:', err);
         res.status(500).json({ success: false, message: 'Error al actualizar usuario' });
     }
 });
@@ -570,6 +645,35 @@ app.delete('/api/usuarios/:id', authenticateToken, async (req, res) => {
         res.json({ success: true, message: 'Usuario eliminado' });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Error al eliminar usuario' });
+    }
+});
+
+// Endpoint para cambiar contraseña
+app.put('/api/usuarios/:id/password', authenticateToken, async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        
+        // Verificar usuario actual
+        const userResult = await pool.query('SELECT password FROM usuarios WHERE id = $1', [req.params.id]);
+        
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+        }
+        
+        // Verificar contraseña actual
+        const passwordMatch = await bcrypt.compare(currentPassword, userResult.rows[0].password);
+        if (!passwordMatch) {
+            return res.status(401).json({ success: false, message: 'Contraseña actual incorrecta' });
+        }
+        
+        // Actualizar contraseña
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await pool.query('UPDATE usuarios SET password = $1 WHERE id = $2', [hashedPassword, req.params.id]);
+        
+        res.json({ success: true, message: 'Contraseña actualizada' });
+    } catch (err) {
+        console.error('Error al cambiar contraseña:', err);
+        res.status(500).json({ success: false, message: 'Error al cambiar contraseña' });
     }
 });
 
@@ -753,8 +857,16 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ SERVIDOR INICIADO CORRECTAMENTE`);
     console.log(`📡 Puerto: ${PORT}`);
     console.log('='.repeat(50));
-    console.log('📝 IMPORTANTE:');
-    console.log('   El PRIMER usuario registrado será ADMINISTRADOR');
+    console.log('📝 ESTRUCTURA DE USUARIOS:');
+    console.log('   - username: nombre de usuario');
+    console.log('   - email: correo electrónico');
+    console.log('   - nombre: nombre real');
+    console.log('   - sername: apellido (opcional)');
+    console.log('   - password: contraseña encriptada');
+    console.log('='.repeat(50));
+    console.log('👑 El PRIMER usuario registrado será ADMINISTRADOR');
     console.log('   con todos los permisos automáticamente');
+    console.log('='.repeat(50));
+    console.log('🔐 LOGIN: Case-insensitive para username y email');
     console.log('='.repeat(50));
 });

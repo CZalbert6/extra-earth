@@ -12,37 +12,40 @@ const API_URL = "https://extra-earth-production.up.railway.app";
     </div>
 
     <form id="registerForm">
+
       <div class="grid-form">
+
         <div class="input-group">
-          <label for="strNombreUsuario">Usuario *</label>
+          <label for="username">Usuario *</label>
           <div class="input-wrapper">
             <i class="fas fa-at"></i>
-            <input type="text" id="strNombreUsuario" placeholder="usuario123" required maxlength="100">
+            <input type="text" id="username" placeholder="usuario123" required maxlength="100">
           </div>
         </div>
 
         <div class="input-group">
-          <label for="strNumeroCelular">Teléfono</label>
+          <label for="telefono">Teléfono</label>
           <div class="input-wrapper">
             <i class="fas fa-phone"></i>
-            <input type="tel" id="strNumeroCelular" placeholder="+52 123 456 7890">
+            <input type="tel" id="telefono" placeholder="+52 123 456 7890">
           </div>
         </div>
+
       </div>
 
       <div class="input-group">
-        <label for="strCorreo">Correo Electrónico *</label>
+        <label for="email">Correo Electrónico *</label>
         <div class="input-wrapper">
           <i class="fas fa-envelope"></i>
-          <input type="email" id="strCorreo" placeholder="correo@corporativo.com" required>
+          <input type="email" id="email" placeholder="correo@corporativo.com" required>
         </div>
       </div>
 
       <div class="input-group">
-        <label for="strPwd">Contraseña *</label>
+        <label for="password">Contraseña *</label>
         <div class="input-wrapper">
           <i class="fas fa-lock"></i>
-          <input type="password" id="strPwd" placeholder="Mínimo 6 caracteres" required minlength="6">
+          <input type="password" id="password" placeholder="Mínimo 6 caracteres" required minlength="6">
         </div>
         <small class="field-hint">Mínimo 6 caracteres</small>
       </div>
@@ -59,10 +62,11 @@ const API_URL = "https://extra-earth-production.up.railway.app";
         <span>Finalizar Registro</span>
         <i class="fas fa-check-circle"></i>
       </button>
+
     </form>
 
     <div id="message" class="status-message"></div>
-    
+
     <div class="register-footer">
       ¿Ya tiene una cuenta? <a href="/extra-earth/login">Inicie sesión aquí</a>
     </div>
@@ -70,215 +74,227 @@ const API_URL = "https://extra-earth-production.up.railway.app";
 </Layout>
 
 <style>
-  .register-card {
-    max-width: 500px;
-    margin: 2rem auto;
-    padding: 1rem;
-  }
+.register-card{
+max-width:500px;
+margin:2rem auto;
+padding:1rem;
+}
 
-  .register-header {
-    text-align: center;
-    margin-bottom: 2rem;
-  }
+.register-header{
+text-align:center;
+margin-bottom:2rem;
+}
 
-  .register-header i {
-    font-size: 3rem;
-    color: #10b981;
-    margin-bottom: 1rem;
-  }
+.register-header i{
+font-size:3rem;
+color:#10b981;
+margin-bottom:1rem;
+}
 
-  .register-header h2 {
-    font-size: 1.75rem;
-    color: #1e293b;
-    margin: 0;
-  }
+.register-header h2{
+font-size:1.75rem;
+color:#1e293b;
+margin:0;
+}
 
-  .register-header p {
-    color: #64748b;
-    font-size: 0.9rem;
-  }
+.register-header p{
+color:#64748b;
+font-size:0.9rem;
+}
 
-  .grid-form {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-  }
+.grid-form{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:1rem;
+}
 
-  .input-group {
-    margin-bottom: 1.25rem;
-  }
+.input-group{
+margin-bottom:1.25rem;
+}
 
-  .input-group label {
-    display: block;
-    font-size: 0.85rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: #475569;
-  }
+.input-group label{
+display:block;
+font-size:0.85rem;
+font-weight:600;
+margin-bottom:0.5rem;
+color:#475569;
+}
 
-  .field-hint {
-    display: block;
-    font-size: 0.75rem;
-    color: #94a3b8;
-    margin-top: 0.25rem;
-  }
+.field-hint{
+display:block;
+font-size:0.75rem;
+color:#94a3b8;
+margin-top:0.25rem;
+}
 
-  .input-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-  }
+.input-wrapper{
+position:relative;
+display:flex;
+align-items:center;
+}
 
-  .input-wrapper i {
-    position: absolute;
-    left: 1rem;
-    color: #94a3b8;
-  }
+.input-wrapper i{
+position:absolute;
+left:1rem;
+color:#94a3b8;
+}
 
-  .input-wrapper input {
-    width: 100%;
-    padding: 0.75rem 1rem 0.75rem 2.5rem;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    transition: all 0.2s;
-  }
+.input-wrapper input{
+width:100%;
+padding:0.75rem 1rem 0.75rem 2.5rem;
+border:1px solid #e2e8f0;
+border-radius:8px;
+font-size:0.95rem;
+transition:all .2s;
+}
 
-  .input-wrapper input:focus {
-    outline: none;
-    border-color: #10b981;
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
-  }
+.input-wrapper input:focus{
+outline:none;
+border-color:#10b981;
+box-shadow:0 0 0 3px rgba(16,185,129,.1);
+}
 
-  button {
-    width: 100%;
-    padding: 0.9rem;
-    background: #059669;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 10px;
-    transition: background 0.2s;
-    margin-top: 1rem;
-  }
+button{
+width:100%;
+padding:0.9rem;
+background:#059669;
+color:white;
+border:none;
+border-radius:8px;
+font-weight:600;
+cursor:pointer;
+display:flex;
+justify-content:center;
+align-items:center;
+gap:10px;
+transition:background .2s;
+margin-top:1rem;
+}
 
-  button:hover {
-    background: #047857;
-  }
+button:hover{
+background:#047857;
+}
 
-  button:disabled {
-    background: #94a3b8;
-    cursor: not-allowed;
-  }
+button:disabled{
+background:#94a3b8;
+cursor:not-allowed;
+}
 
-  .status-message {
-    margin-top: 1.5rem;
-    padding: 0.8rem;
-    border-radius: 6px;
-    font-size: 0.9rem;
-    display: none;
-    text-align: center;
-  }
+.status-message{
+margin-top:1.5rem;
+padding:0.8rem;
+border-radius:6px;
+font-size:0.9rem;
+display:none;
+text-align:center;
+}
 
-  .register-footer {
-    text-align: center;
-    margin-top: 2rem;
-    font-size: 0.85rem;
-    color: #64748b;
-  }
+.register-footer{
+text-align:center;
+margin-top:2rem;
+font-size:0.85rem;
+color:#64748b;
+}
 
-  .register-footer a {
-    color: #059669;
-    text-decoration: none;
-    font-weight: 600;
-  }
+.register-footer a{
+color:#059669;
+text-decoration:none;
+font-weight:600;
+}
 
-  @media (max-width: 480px) {
-    .grid-form { grid-template-columns: 1fr; }
-  }
+@media (max-width:480px){
+.grid-form{grid-template-columns:1fr;}
+}
 </style>
 
 <script is:inline define:vars={{ API_URL }}>
-  const form = document.getElementById('registerForm');
-  const messageDiv = document.getElementById('message');
-  const btnRegister = document.getElementById('btnRegister');
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const strNombreUsuario = document.getElementById('strNombreUsuario').value.trim();
-    const strCorreo = document.getElementById('strCorreo').value.trim();
-    const strNumeroCelular = document.getElementById('strNumeroCelular').value.trim();
-    const strPwd = document.getElementById('strPwd').value;
-    const confirmPwd = document.getElementById('confirmPwd').value;
+const form = document.getElementById('registerForm');
+const messageDiv = document.getElementById('message');
+const btnRegister = document.getElementById('btnRegister');
 
-    if (!strNombreUsuario || !strCorreo || !strPwd) {
-      showMsg('Todos los campos marcados con * son requeridos', 'error');
-      return;
-    }
+form.addEventListener('submit', async (e) => {
 
-    if (strPwd.length < 6) {
-      showMsg('La contraseña debe tener al menos 6 caracteres', 'error');
-      return;
-    }
+e.preventDefault();
 
-    if (strPwd !== confirmPwd) {
-      showMsg('Las contraseñas no coinciden', 'error');
-      return;
-    }
+const username = document.getElementById('username').value.trim();
+const email = document.getElementById('email').value.trim();
+const telefono = document.getElementById('telefono').value.trim();
+const password = document.getElementById('password').value;
+const confirmPwd = document.getElementById('confirmPwd').value;
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(strCorreo)) {
-      showMsg('Ingrese un correo electrónico válido', 'error');
-      return;
-    }
+if(!username || !email || !password){
+showMsg('Todos los campos marcados con * son requeridos','error');
+return;
+}
 
-    btnRegister.disabled = true;
-    btnRegister.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Procesando...';
+if(password.length < 6){
+showMsg('La contraseña debe tener al menos 6 caracteres','error');
+return;
+}
 
-    try {
-      const response = await fetch(`${API_URL}/api/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          strNombreUsuario, 
-          strCorreo, 
-          strPwd,
-          strNumeroCelular: strNumeroCelular || null
-        })
-      });
+if(password !== confirmPwd){
+showMsg('Las contraseñas no coinciden','error');
+return;
+}
 
-      const data = await response.json();
+btnRegister.disabled = true;
+btnRegister.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Procesando...';
 
-      if (data.success) {
-        showMsg('✅ Registro exitoso. Redirigiendo al login...', 'success');
-        setTimeout(() => {
-          window.location.href = "/extra-earth/login";
-        }, 2000);
-      } else {
-        showMsg(data.message || 'Error al registrar el usuario', 'error');
-      }
-    } catch (error) {
-      showMsg('Error de conexión con el servidor', 'error');
-    } finally {
-      btnRegister.disabled = false;
-      btnRegister.innerHTML = '<span>Finalizar Registro</span> <i class="fas fa-check-circle"></i>';
-    }
-  });
+try{
 
-  function showMsg(text, type) {
-    messageDiv.style.display = 'block';
-    messageDiv.style.background = type === 'success' ? '#dcfce7' : '#fee2e2';
-    messageDiv.style.color = type === 'success' ? '#166534' : '#991b1b';
-    messageDiv.textContent = text;
-    
-    setTimeout(() => {
-      messageDiv.style.display = 'none';
-    }, 5000);
-  }
+const response = await fetch(`${API_URL}/api/register`,{
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({
+username:username,
+email:email,
+nombre:username,
+sername:"",
+password:password,
+strNumeroCelular:telefono || null
+})
+});
+
+const data = await response.json();
+
+if(data.success){
+
+showMsg('✅ Registro exitoso. Redirigiendo al login...','success');
+
+setTimeout(()=>{
+window.location.href="/extra-earth/login";
+},2000);
+
+}else{
+showMsg(data.message || 'Error al registrar','error');
+}
+
+}catch(err){
+
+console.error(err);
+showMsg('Error de conexión con el servidor','error');
+
+}finally{
+
+btnRegister.disabled=false;
+btnRegister.innerHTML='<span>Finalizar Registro</span> <i class="fas fa-check-circle"></i>';
+
+}
+
+});
+
+function showMsg(text,type){
+
+messageDiv.style.display='block';
+messageDiv.style.background= type==='success' ? '#dcfce7' : '#fee2e2';
+messageDiv.style.color= type==='success' ? '#166534' : '#991b1b';
+messageDiv.textContent=text;
+
+setTimeout(()=>{
+messageDiv.style.display='none';
+},5000);
+
+}
+
 </script>

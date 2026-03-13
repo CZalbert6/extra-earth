@@ -4,314 +4,256 @@ const API_URL = "https://extra-earth-production.up.railway.app";
 ---
 
 <Layout title="Acceso al Sistema | ERP">
-  <div class="login-card">
-    <div class="login-header">
-      <i class="fas fa-user-circle"></i>
-      <h2>Iniciar Sesión</h2>
-      <p>Ingrese sus credenciales corporativas</p>
-    </div>
 
-    <form id="loginForm">
-      <div class="input-group">
-        <label for="loginIdentifier">Usuario o Email</label>
-        <div class="input-wrapper">
-          <i class="fas fa-user"></i>
-          <input type="text" id="loginIdentifier" placeholder="Ej: admin" required>
-        </div>
-      </div>
+<div class="login-card">
 
-      <div class="input-group">
-        <label for="loginPassword">Contraseña</label>
-        <div class="input-wrapper">
-          <i class="fas fa-lock"></i>
-          <input type="password" id="loginPassword" placeholder="••••••••" required>
-        </div>
-      </div>
+<div class="login-header">
+<i class="fas fa-user-circle"></i>
+<h2>Iniciar Sesión</h2>
+<p>Ingrese sus credenciales corporativas</p>
+</div>
 
-      <div id="captcha-container" class="captcha-container">
-        <div class="captcha-loading">
-          <i class="fas fa-spinner fa-spin"></i> Cargando verificación de seguridad...
-        </div>
-      </div>
+<form id="loginForm">
 
-      <button type="submit" id="btnSubmit" disabled>
-        <span>Ingresar al Sistema</span>
-        <i class="fas fa-arrow-right"></i>
-      </button>
-    </form>
+<div class="input-group">
+<label for="loginIdentifier">Usuario o Email</label>
 
-    <div id="message" class="status-message"></div>
+<div class="input-wrapper">
+<i class="fas fa-user"></i>
+<input type="text" id="loginIdentifier" placeholder="Ej: admin" required>
+</div>
 
-    <div class="login-footer">
-      ¿No tiene cuenta? <a href="/extra-earth/register">Regístrese aquí</a>
-    </div>
-  </div>
+</div>
+
+<div class="input-group">
+<label for="loginPassword">Contraseña</label>
+
+<div class="input-wrapper">
+<i class="fas fa-lock"></i>
+<input type="password" id="loginPassword" placeholder="••••••••" required>
+</div>
+
+</div>
+
+<button type="submit" id="btnSubmit">
+<span>Ingresar al Sistema</span>
+<i class="fas fa-arrow-right"></i>
+</button>
+
+</form>
+
+<div id="message" class="status-message"></div>
+
+<div class="login-footer">
+¿No tiene cuenta? 
+<a href="/extra-earth/register">Regístrese aquí</a>
+</div>
+
+</div>
+
 </Layout>
 
 <style>
-.login-card {
-  max-width: 420px;
-  margin: 2rem auto;
-  padding: 1rem;
+
+.login-card{
+max-width:420px;
+margin:2rem auto;
+padding:1rem;
 }
 
-.login-header {
-  text-align: center;
-  margin-bottom: 2rem;
+.login-header{
+text-align:center;
+margin-bottom:2rem;
 }
 
-.login-header i {
-  font-size: 3.5rem;
-  color: #3b82f6;
-  margin-bottom: 1rem;
+.login-header i{
+font-size:3.5rem;
+color:#3b82f6;
+margin-bottom:1rem;
 }
 
-.login-header h2 {
-  font-size: 1.75rem;
-  color: #1e293b;
-  margin: 0;
+.login-header h2{
+font-size:1.75rem;
+color:#1e293b;
+margin:0;
 }
 
-.login-header p {
-  color: #64748b;
-  font-size: 0.9rem;
+.login-header p{
+color:#64748b;
+font-size:0.9rem;
 }
 
-.input-group {
-  margin-bottom: 1.25rem;
+.input-group{
+margin-bottom:1.25rem;
 }
 
-.input-group label {
-  display: block;
-  font-size: 0.85rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-  color: #475569;
+.input-group label{
+display:block;
+font-size:0.85rem;
+font-weight:600;
+margin-bottom:0.5rem;
+color:#475569;
 }
 
-.input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
+.input-wrapper{
+position:relative;
+display:flex;
+align-items:center;
 }
 
-.input-wrapper i {
-  position: absolute;
-  left: 1rem;
-  color: #94a3b8;
+.input-wrapper i{
+position:absolute;
+left:1rem;
+color:#94a3b8;
 }
 
-.input-wrapper input {
-  width: 100%;
-  padding: 0.75rem 1rem 0.75rem 2.5rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 1rem;
-  transition: all 0.2s;
+.input-wrapper input{
+width:100%;
+padding:0.75rem 1rem 0.75rem 2.5rem;
+border:1px solid #e2e8f0;
+border-radius:8px;
+font-size:1rem;
+transition:all .2s;
 }
 
-.input-wrapper input:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+.input-wrapper input:focus{
+outline:none;
+border-color:#3b82f6;
+box-shadow:0 0 0 3px rgba(59,130,246,.1);
 }
 
-.captcha-container {
-  margin: 1.5rem 0;
-  min-height: 90px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: #f8fafc;
-  border-radius: 8px;
-  padding: 10px;
+button{
+width:100%;
+padding:0.8rem;
+background:#1e293b;
+color:white;
+border:none;
+border-radius:8px;
+font-weight:600;
+cursor:pointer;
+display:flex;
+justify-content:center;
+align-items:center;
+gap:10px;
 }
 
-.captcha-loading {
-  color: #64748b;
-  font-size: 0.9rem;
+button:hover{
+background:#334155;
 }
 
-.h-captcha {
-  width: 100%;
-  max-width: 304px;
-  margin: 0 auto;
+button:disabled{
+background:#94a3b8;
+cursor:not-allowed;
 }
 
-button {
-  width: 100%;
-  padding: 0.8rem;
-  background: #1e293b;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 10px;
+.status-message{
+margin-top:1.5rem;
+padding:0.8rem;
+border-radius:6px;
+font-size:0.9rem;
+display:none;
+text-align:center;
 }
 
-button:hover:not(:disabled) {
-  background: #334155;
+.login-footer{
+text-align:center;
+margin-top:2rem;
+font-size:0.85rem;
+color:#64748b;
 }
 
-button:disabled {
-  background: #94a3b8;
-  cursor: not-allowed;
-  opacity: 0.7;
+.login-footer a{
+color:#3b82f6;
+text-decoration:none;
+font-weight:600;
 }
 
-.status-message {
-  margin-top: 1.5rem;
-  padding: 0.8rem;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  display: none;
-  text-align: center;
-}
-
-.login-footer {
-  text-align: center;
-  margin-top: 2rem;
-  font-size: 0.85rem;
-  color: #64748b;
-}
-
-.login-footer a {
-  color: #3b82f6;
-  text-decoration: none;
-  font-weight: 600;
-}
 </style>
 
 <script is:inline define:vars={{ API_URL }}>
 
-const form = document.getElementById('loginForm');
-const messageDiv = document.getElementById('message');
-const btnSubmit = document.getElementById('btnSubmit');
-const captchaContainer = document.getElementById('captcha-container');
+const form = document.getElementById("loginForm");
+const messageDiv = document.getElementById("message");
+const btnSubmit = document.getElementById("btnSubmit");
 
-let captchaCargado = false;
+form.addEventListener("submit", async (e)=>{
 
-function cargarCaptcha(){
+e.preventDefault();
 
-  if(captchaCargado) return;
-  captchaCargado = true;
+const username = document.getElementById("loginIdentifier").value.trim();
+const password = document.getElementById("loginPassword").value;
 
-  const captchaDiv = document.createElement('div');
-  captchaDiv.className = 'h-captcha';
-  captchaDiv.setAttribute('data-sitekey','10000000-ffff-ffff-ffff-ffffffffffff');
+if(!username || !password){
+showMsg("Complete todos los campos","error");
+return;
+}
 
-  captchaContainer.innerHTML='';
-  captchaContainer.appendChild(captchaDiv);
+btnSubmit.disabled=true;
+btnSubmit.innerHTML='<i class="fas fa-spinner fa-spin"></i> Validando...';
 
-  const script = document.createElement('script');
-  script.src='https://js.hcaptcha.com/1/api.js';
-  script.async=true;
-  script.defer=true;
+try{
 
-  script.onload = ()=>{
-    console.log("hCaptcha cargado");
-    btnSubmit.disabled=false;
-  };
+const response = await fetch(`${API_URL}/api/login`,{
 
-  script.onerror = ()=>{
-    captchaContainer.innerHTML='<div style="color:red">Error cargando captcha</div>';
-    btnSubmit.disabled=false;
-  };
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
 
-  document.head.appendChild(script);
+body:JSON.stringify({
+username:username,
+password:password
+})
+
+});
+
+const data = await response.json();
+
+if(data.success){
+
+showMsg("Acceso concedido","success");
+
+localStorage.setItem("token",data.token);
+localStorage.setItem("user",JSON.stringify(data.user));
+localStorage.setItem("permisos",JSON.stringify(data.permisos || []));
+
+setTimeout(()=>{
+window.location.href="/extra-earth/";
+},1200);
+
+}else{
+
+showMsg(data.message || "Credenciales incorrectas","error");
 
 }
 
-window.addEventListener("load",cargarCaptcha);
+}catch(err){
 
-form.addEventListener('submit', async(e)=>{
+console.error(err);
+showMsg("Error de conexión con el servidor","error");
 
-  e.preventDefault();
+}
 
-  const username=document.getElementById('loginIdentifier').value.trim();
-  const password=document.getElementById('loginPassword').value;
-
-  if(!username || !password){
-    showMsg('Por favor complete todos los campos','error');
-    return;
-  }
-
-  if(!window.hcaptcha){
-    showMsg('Captcha no disponible','error');
-    return;
-  }
-
-  const captchaResponse=hcaptcha.getResponse();
-
-  if(!captchaResponse){
-    showMsg('Complete el captcha','error');
-    return;
-  }
-
-  btnSubmit.disabled=true;
-  btnSubmit.innerHTML='<i class="fas fa-spinner fa-spin"></i> Validando...';
-
-  try{
-
-    const response=await fetch(`${API_URL}/api/login`,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({username,password})
-    });
-
-    const data=await response.json();
-
-    if(data.success){
-
-      showMsg('Acceso concedido','success');
-
-      localStorage.setItem("token",data.token);
-      localStorage.setItem("user",JSON.stringify(data.user));
-      localStorage.setItem("permisos",JSON.stringify(data.permisos||[]));
-
-      setTimeout(()=>{
-        window.location.href="/extra-earth/";
-      },1500);
-
-    }else{
-
-      showMsg(data.message || 'Credenciales incorrectas','error');
-
-      if(window.hcaptcha) hcaptcha.reset();
-
-    }
-
-  }catch(err){
-
-    console.error(err);
-    showMsg('Error de conexión con el servidor','error');
-
-  }
-
-  btnSubmit.disabled=false;
-  btnSubmit.innerHTML='<span>Ingresar al Sistema</span><i class="fas fa-arrow-right"></i>';
+btnSubmit.disabled=false;
+btnSubmit.innerHTML='<span>Ingresar al Sistema</span><i class="fas fa-arrow-right"></i>';
 
 });
 
 function showMsg(text,type){
 
-  messageDiv.style.display='block';
+messageDiv.style.display="block";
 
-  messageDiv.style.background=
-  type==='success'?'#dcfce7':'#fee2e2';
+messageDiv.style.background=
+type==="success" ? "#dcfce7" : "#fee2e2";
 
-  messageDiv.style.color=
-  type==='success'?'#166534':'#991b1b';
+messageDiv.style.color=
+type==="success" ? "#166534" : "#991b1b";
 
-  messageDiv.textContent=text;
+messageDiv.textContent=text;
 
-  setTimeout(()=>{
-    messageDiv.style.display='none';
-  },5000);
+setTimeout(()=>{
+messageDiv.style.display="none";
+},5000);
 
 }
 

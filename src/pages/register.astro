@@ -1,7 +1,5 @@
 ---
 import Layout from '../layout/layout.astro';
-// En producción, lo ideal es usar import.meta.env.PUBLIC_API_URL
-// Pero mantendremos tu constante para no romper tu flujo actual.
 const API_URL = "https://extra-earth-production.up.railway.app";
 ---
 
@@ -14,20 +12,11 @@ const API_URL = "https://extra-earth-production.up.railway.app";
     </div>
 
     <form id="registerForm" data-api-url={API_URL}>
-
       <div class="input-group">
         <label for="username">Usuario *</label>
         <div class="input-wrapper">
           <i class="fas fa-at"></i>
           <input type="text" id="username" name="username" placeholder="usuario123" required maxlength="100">
-        </div>
-      </div>
-
-      <div class="input-group">
-        <label for="nombre">Nombre Completo *</label>
-        <div class="input-wrapper">
-          <i class="fas fa-user-tag"></i>
-          <input type="text" id="nombre" name="nombre" placeholder="Juan Pérez" required>
         </div>
       </div>
 
@@ -60,7 +49,6 @@ const API_URL = "https://extra-earth-production.up.railway.app";
         <span>Finalizar Registro</span>
         <i class="fas fa-check-circle"></i>
       </button>
-
     </form>
 
     <div id="message" class="status-message"></div>
@@ -93,57 +81,39 @@ button:disabled { background: #94a3b8; cursor: not-allowed; }
 </style>
 
 <script>
-  // Astro v5: Usamos el tag script normal. Astro lo procesará, minificará y agrupará.
-  // Envolvemos todo en una función para asegurar que el DOM esté listo
   const setupRegisterForm = () => {
     const form = document.getElementById('registerForm') as HTMLFormElement;
-    
-    // Si el formulario no está en la página actual (útil si usas ViewTransitions), salimos
     if (!form) return;
 
     const messageDiv = document.getElementById('message');
     const btnRegister = document.getElementById('btnRegister') as HTMLButtonElement;
-    
-    // Recuperamos la URL que inyectamos desde Astro
     const apiUrl = form.dataset.apiUrl;
 
-    // Función auxiliar para mensajes
     const showMsg = (text, type) => {
       if (!messageDiv) return;
       messageDiv.style.display = 'block';
       messageDiv.style.background = type === 'success' ? '#dcfce7' : '#fee2e2';
       messageDiv.style.color = type === 'success' ? '#166534' : '#991b1b';
       messageDiv.textContent = text;
-
-      setTimeout(() => {
-        messageDiv.style.display = 'none';
-      }, 5000);
+      setTimeout(() => { messageDiv.style.display = 'none'; }, 5000);
     };
 
-    // Usamos onsubmit en lugar de addEventListener para evitar duplicaciones
-    // si la página se recarga o se navega por cliente
     form.onsubmit = async (e) => {
       e.preventDefault();
 
       const username = (document.getElementById('username') as HTMLInputElement).value.trim();
-      const nombre = (document.getElementById('nombre') as HTMLInputElement).value.trim();
       const email = (document.getElementById('email') as HTMLInputElement).value.trim();
       const password = (document.getElementById('password') as HTMLInputElement).value;
       const confirmPwd = (document.getElementById('confirmPwd') as HTMLInputElement).value;
 
-      if (!username || !nombre || !email || !password) {
-        showMsg('Todos los campos son obligatorios', 'error');
-        return;
+      if (!username || !email || !password) {
+        showMsg('Todos los campos son obligatorios', 'error'); return;
       }
-
       if (password.length < 6) {
-        showMsg('La contraseña debe tener al menos 6 caracteres', 'error');
-        return;
+        showMsg('La contraseña debe tener al menos 6 caracteres', 'error'); return;
       }
-
       if (password !== confirmPwd) {
-        showMsg('Las contraseñas no coinciden', 'error');
-        return;
+        showMsg('Las contraseñas no coinciden', 'error'); return;
       }
 
       btnRegister.disabled = true;
@@ -154,24 +124,20 @@ button:disabled { background: #94a3b8; cursor: not-allowed; }
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            username,
-            email,
-            nombre,
-            password
+            strNombreUsuario: username,
+            strCorreo: email,
+            strPwd: password,
+            strNumeroCelular: "" 
           })
         });
 
         const data = await response.json();
 
-        if (data.success) {
+        if (response.ok && data.success) {
           showMsg('✅ Registro exitoso. Redirigiendo al login...', 'success');
-          // Redirección segura
-          setTimeout(() => {
-            window.location.href = "/extra-earth/login";
-          }, 2000);
+          setTimeout(() => { window.location.href = "/extra-earth/login"; }, 2000);
         } else {
           showMsg(data.message || 'Error al registrar', 'error');
-          // Restauramos el botón solo si hubo error
           btnRegister.disabled = false;
           btnRegister.innerHTML = '<span>Finalizar Registro</span><i class="fas fa-check-circle"></i>';
         }
@@ -184,9 +150,6 @@ button:disabled { background: #94a3b8; cursor: not-allowed; }
     };
   };
 
-  // Inicialización estándar
   document.addEventListener('DOMContentLoaded', setupRegisterForm);
-  
-  // Soporte para Astro View Transitions (si decides usarlas)
   document.addEventListener('astro:page-load', setupRegisterForm);
 </script>

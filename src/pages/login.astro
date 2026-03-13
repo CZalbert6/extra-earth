@@ -14,7 +14,6 @@ const API_URL = "https://extra-earth-production.up.railway.app";
     </div>
 
     <form id="loginForm" data-api-url={API_URL}>
-      
       <div class="input-group">
         <label for="loginIdentifier">Usuario o Email</label>
         <div class="input-wrapper">
@@ -39,7 +38,6 @@ const API_URL = "https://extra-earth-production.up.railway.app";
         <span>Ingresar al Sistema</span>
         <i class="fas fa-arrow-right"></i>
       </button>
-
     </form>
 
     <div id="message" class="status-message"></div>
@@ -97,18 +95,14 @@ button:disabled { background: #94a3b8; cursor: not-allowed; }
       const username = usernameInput.value.trim();
       const password = passwordInput.value;
 
-      // Validación de hCaptcha en el cliente
       const hcaptchaElement = document.querySelector('[name="h-captcha-response"]') as HTMLTextAreaElement;
       const hcaptchaToken = hcaptchaElement ? hcaptchaElement.value : '';
 
       if (!hcaptchaToken) {
-          showMsg("Por favor, resuelva el captcha.", "error");
-          return;
+          showMsg("Por favor, resuelva el captcha.", "error"); return;
       }
-
       if (!username || !password) {
-        showMsg("Complete todos los campos", "error");
-        return;
+        showMsg("Complete todos los campos", "error"); return;
       }
 
       btnSubmit.disabled = true;
@@ -117,13 +111,10 @@ button:disabled { background: #94a3b8; cursor: not-allowed; }
       try {
         const response = await fetch(`${apiUrl}/api/login`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             username: username,
-            password: password,
-            captchaToken: hcaptchaToken 
+            password: password
           })
         });
 
@@ -131,7 +122,6 @@ button:disabled { background: #94a3b8; cursor: not-allowed; }
 
         if (response.ok && data.success) {
           showMsg("Acceso concedido", "success");
-
           localStorage.setItem("token", data.token);
           localStorage.setItem("user", JSON.stringify(data.user));
           localStorage.setItem("permisos", JSON.stringify(data.permisos || []));
@@ -139,17 +129,12 @@ button:disabled { background: #94a3b8; cursor: not-allowed; }
           setTimeout(() => {
             window.location.href = "/extra-earth/principal1/estatico1";
           }, 1200);
-
         } else {
           showMsg(data.message || "Credenciales incorrectas", "error");
-          // Reseteamos el hCaptcha en caso de error
-          if (typeof window.hcaptcha !== 'undefined') {
-              window.hcaptcha.reset();
-          }
+          if (typeof window.hcaptcha !== 'undefined') window.hcaptcha.reset();
           btnSubmit.disabled = false;
           btnSubmit.innerHTML = '<span>Ingresar al Sistema</span><i class="fas fa-arrow-right"></i>';
         }
-
       } catch (err) {
         console.error("Error en fetch login:", err);
         showMsg("Error de conexión con el servidor", "error");

@@ -28,9 +28,8 @@ const API_URL = "https://extra-earth-production.up.railway.app";
         </div>
       </div>
 
-      <!-- Contenedor del captcha - se cargará después -->
       <div id="captcha-container" class="captcha-container">
-        <div id="captcha-loading" class="captcha-loading">
+        <div class="captcha-loading">
           <i class="fas fa-spinner fa-spin"></i> Cargando verificación de seguridad...
         </div>
       </div>
@@ -42,7 +41,7 @@ const API_URL = "https://extra-earth-production.up.railway.app";
     </form>
 
     <div id="message" class="status-message"></div>
-    
+
     <div class="login-footer">
       ¿No tiene cuenta? <a href="/extra-earth/register">Regístrese aquí</a>
     </div>
@@ -50,275 +49,270 @@ const API_URL = "https://extra-earth-production.up.railway.app";
 </Layout>
 
 <style>
-  .login-card {
-    max-width: 420px;
-    margin: 2rem auto;
-    padding: 1rem;
-  }
+.login-card {
+  max-width: 420px;
+  margin: 2rem auto;
+  padding: 1rem;
+}
 
-  .login-header {
-    text-align: center;
-    margin-bottom: 2rem;
-  }
+.login-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
 
-  .login-header i {
-    font-size: 3.5rem;
-    color: #3b82f6;
-    margin-bottom: 1rem;
-  }
+.login-header i {
+  font-size: 3.5rem;
+  color: #3b82f6;
+  margin-bottom: 1rem;
+}
 
-  .login-header h2 {
-    font-size: 1.75rem;
-    color: #1e293b;
-    margin: 0;
-  }
+.login-header h2 {
+  font-size: 1.75rem;
+  color: #1e293b;
+  margin: 0;
+}
 
-  .login-header p {
-    color: #64748b;
-    font-size: 0.9rem;
-  }
+.login-header p {
+  color: #64748b;
+  font-size: 0.9rem;
+}
 
-  .input-group {
-    margin-bottom: 1.25rem;
-  }
+.input-group {
+  margin-bottom: 1.25rem;
+}
 
-  .input-group label {
-    display: block;
-    font-size: 0.85rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: #475569;
-  }
+.input-group label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #475569;
+}
 
-  .input-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-  }
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
 
-  .input-wrapper i {
-    position: absolute;
-    left: 1rem;
-    color: #94a3b8;
-  }
+.input-wrapper i {
+  position: absolute;
+  left: 1rem;
+  color: #94a3b8;
+}
 
-  .input-wrapper input {
-    width: 100%;
-    padding: 0.75rem 1rem 0.75rem 2.5rem;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    font-size: 1rem;
-    transition: all 0.2s;
-  }
+.input-wrapper input {
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
 
-  .input-wrapper input:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  }
+.input-wrapper input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+}
 
-  .captcha-container {
-    margin: 1.5rem 0;
-    min-height: 90px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: #f8fafc;
-    border-radius: 8px;
-    padding: 10px;
-  }
+.captcha-container {
+  margin: 1.5rem 0;
+  min-height: 90px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 10px;
+}
 
-  .captcha-loading {
-    color: #64748b;
-    font-size: 0.9rem;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
+.captcha-loading {
+  color: #64748b;
+  font-size: 0.9rem;
+}
 
-  .h-captcha {
-    width: 100%;
-    max-width: 304px;
-    margin: 0 auto;
-  }
+.h-captcha {
+  width: 100%;
+  max-width: 304px;
+  margin: 0 auto;
+}
 
-  button {
-    width: 100%;
-    padding: 0.8rem;
-    background: #1e293b;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 10px;
-    transition: all 0.2s;
-  }
+button {
+  width: 100%;
+  padding: 0.8rem;
+  background: #1e293b;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
 
-  button:hover:not(:disabled) {
-    background: #334155;
-  }
+button:hover:not(:disabled) {
+  background: #334155;
+}
 
-  button:disabled {
-    background: #94a3b8;
-    cursor: not-allowed;
-    opacity: 0.7;
-  }
+button:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
 
-  .status-message {
-    margin-top: 1.5rem;
-    padding: 0.8rem;
-    border-radius: 6px;
-    font-size: 0.9rem;
-    display: none;
-    text-align: center;
-  }
+.status-message {
+  margin-top: 1.5rem;
+  padding: 0.8rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  display: none;
+  text-align: center;
+}
 
-  .login-footer {
-    text-align: center;
-    margin-top: 2rem;
-    font-size: 0.85rem;
-    color: #64748b;
-  }
+.login-footer {
+  text-align: center;
+  margin-top: 2rem;
+  font-size: 0.85rem;
+  color: #64748b;
+}
 
-  .login-footer a {
-    color: #3b82f6;
-    text-decoration: none;
-    font-weight: 600;
-  }
+.login-footer a {
+  color: #3b82f6;
+  text-decoration: none;
+  font-weight: 600;
+}
 </style>
 
 <script is:inline define:vars={{ API_URL }}>
-  const form = document.getElementById('loginForm');
-  const messageDiv = document.getElementById('message');
-  const btnSubmit = document.getElementById('btnSubmit');
-  const captchaContainer = document.getElementById('captcha-container');
-  const captchaLoading = document.getElementById('captcha-loading');
-  
-  let captchaResuelto = false;
 
-  // Cargar hCaptcha dinámicamente con HTTPS forzado
-  function cargarCaptcha() {
-    // Crear el div para hCaptcha
-    const captchaDiv = document.createElement('div');
-    captchaDiv.className = 'h-captcha';
-    captchaDiv.setAttribute('data-sitekey', '10000000-ffff-ffff-ffff-ffffffffffff');
-    
-    // Reemplazar el loading con el captcha
-    captchaContainer.innerHTML = '';
-    captchaContainer.appendChild(captchaDiv);
-    
-    // Cargar script de hCaptcha con HTTPS
-    const script = document.createElement('script');
-    script.src = 'https://js.hcaptcha.com/1/api.js';
-    script.async = true;
-    script.defer = true;
-    
-    script.onload = function() {
-      console.log('✅ Script hCaptcha cargado');
-      if (window.hcaptcha) {
-        captchaLoading.style.display = 'none';
-        btnSubmit.disabled = false;
-      }
-    };
-    
-    script.onerror = function() {
-      captchaContainer.innerHTML = '<div class="captcha-loading" style="color: #ef4444;"><i class="fas fa-exclamation-triangle"></i> Error al cargar captcha. Recargue la página.</div>';
-    };
-    
-    document.head.appendChild(script);
+const form = document.getElementById('loginForm');
+const messageDiv = document.getElementById('message');
+const btnSubmit = document.getElementById('btnSubmit');
+const captchaContainer = document.getElementById('captcha-container');
+
+let captchaCargado = false;
+
+function cargarCaptcha(){
+
+  if(captchaCargado) return;
+  captchaCargado = true;
+
+  const captchaDiv = document.createElement('div');
+  captchaDiv.className = 'h-captcha';
+  captchaDiv.setAttribute('data-sitekey','10000000-ffff-ffff-ffff-ffffffffffff');
+
+  captchaContainer.innerHTML='';
+  captchaContainer.appendChild(captchaDiv);
+
+  const script = document.createElement('script');
+  script.src='https://js.hcaptcha.com/1/api.js';
+  script.async=true;
+  script.defer=true;
+
+  script.onload = ()=>{
+    console.log("hCaptcha cargado");
+    btnSubmit.disabled=false;
+  };
+
+  script.onerror = ()=>{
+    captchaContainer.innerHTML='<div style="color:red">Error cargando captcha</div>';
+    btnSubmit.disabled=false;
+  };
+
+  document.head.appendChild(script);
+
+}
+
+window.addEventListener("load",cargarCaptcha);
+
+form.addEventListener('submit', async(e)=>{
+
+  e.preventDefault();
+
+  const username=document.getElementById('loginIdentifier').value.trim();
+  const password=document.getElementById('loginPassword').value;
+
+  if(!username || !password){
+    showMsg('Por favor complete todos los campos','error');
+    return;
   }
 
-  // Cargar captcha cuando la página esté lista
-  if (document.readyState === 'complete') {
-    cargarCaptcha();
-  } else {
-    window.addEventListener('load', cargarCaptcha);
+  if(!window.hcaptcha){
+    showMsg('Captcha no disponible','error');
+    return;
   }
 
-  // Timeout de seguridad
-  setTimeout(() => {
-    if (!window.hcaptcha) {
-      captchaContainer.innerHTML = '<div class="captcha-loading" style="color: #ef4444;"><i class="fas fa-exclamation-triangle"></i> Error al cargar captcha. Recargue la página.</div>';
-      btnSubmit.disabled = false; // Permitir envío por si acaso
-    }
-  }, 10000);
+  const captchaResponse=hcaptcha.getResponse();
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const username = document.getElementById('loginIdentifier').value.trim();
-    const password = document.getElementById('loginPassword').value;
-
-    if (!username || !password) {
-      showMsg('Por favor, complete todos los campos', 'error');
-      return;
-    }
-
-    // Verificar captcha OBLIGATORIO
-    if (!window.hcaptcha) {
-      showMsg('Error: Captcha no disponible. Intente de nuevo.', 'error');
-      return;
-    }
-
-    const captchaResponse = hcaptcha.getResponse();
-    if (!captchaResponse) {
-      showMsg('Por favor, complete el captcha', 'error');
-      return;
-    }
-
-    btnSubmit.disabled = true;
-    btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Validando...';
-
-    try {
-      const response = await fetch(`${API_URL}/api/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          username, 
-          password
-          // No enviamos captcha porque estamos en modo prueba
-        })
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        showMsg('✅ Acceso concedido. Iniciando sesión...', 'success');
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("user", JSON.stringify(data.user));
-        localStorage.setItem("permisos", JSON.stringify(data.permisos || []));
-        
-        setTimeout(() => {
-          window.location.href = "/extra-earth/";
-        }, 1500);
-      } else {
-        showMsg(data.message || 'Credenciales inválidas', 'error');
-        if (window.hcaptcha) hcaptcha.reset();
-      }
-    } catch (error) {
-      showMsg('Error de conexión con el servidor', 'error');
-      console.error('Login error:', error);
-    } finally {
-      btnSubmit.disabled = false;
-      btnSubmit.innerHTML = '<span>Ingresar al Sistema</span> <i class="fas fa-arrow-right"></i>';
-    }
-  });
-
-  function showMsg(text, type) {
-    messageDiv.style.display = 'block';
-    messageDiv.style.background = type === 'success' ? '#dcfce7' : '#fee2e2';
-    messageDiv.style.color = type === 'success' ? '#166534' : '#991b1b';
-    messageDiv.textContent = text;
-    
-    setTimeout(() => {
-      messageDiv.style.display = 'none';
-    }, 5000);
+  if(!captchaResponse){
+    showMsg('Complete el captcha','error');
+    return;
   }
 
-  document.getElementById('loginIdentifier').disabled = false;
-  document.getElementById('loginPassword').disabled = false;
+  btnSubmit.disabled=true;
+  btnSubmit.innerHTML='<i class="fas fa-spinner fa-spin"></i> Validando...';
+
+  try{
+
+    const response=await fetch(`${API_URL}/api/login`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({username,password})
+    });
+
+    const data=await response.json();
+
+    if(data.success){
+
+      showMsg('Acceso concedido','success');
+
+      localStorage.setItem("token",data.token);
+      localStorage.setItem("user",JSON.stringify(data.user));
+      localStorage.setItem("permisos",JSON.stringify(data.permisos||[]));
+
+      setTimeout(()=>{
+        window.location.href="/extra-earth/";
+      },1500);
+
+    }else{
+
+      showMsg(data.message || 'Credenciales incorrectas','error');
+
+      if(window.hcaptcha) hcaptcha.reset();
+
+    }
+
+  }catch(err){
+
+    console.error(err);
+    showMsg('Error de conexión con el servidor','error');
+
+  }
+
+  btnSubmit.disabled=false;
+  btnSubmit.innerHTML='<span>Ingresar al Sistema</span><i class="fas fa-arrow-right"></i>';
+
+});
+
+function showMsg(text,type){
+
+  messageDiv.style.display='block';
+
+  messageDiv.style.background=
+  type==='success'?'#dcfce7':'#fee2e2';
+
+  messageDiv.style.color=
+  type==='success'?'#166534':'#991b1b';
+
+  messageDiv.textContent=text;
+
+  setTimeout(()=>{
+    messageDiv.style.display='none';
+  },5000);
+
+}
+
 </script>

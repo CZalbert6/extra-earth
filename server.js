@@ -35,6 +35,10 @@ app.get('/health', (req, res) => res.status(200).send('OK'));
 // --- 4. Inicialización de Tablas ---
 const initDB = async () => {
     try {
+        // --- ELIMINAR TABLA VIEJA (SOLO UNA VEZ) ---
+        await pool.query(`DROP TABLE IF EXISTS usuarios CASCADE;`);
+        console.log('🗑️ Tabla antigua usuarios eliminada');
+        
         // Tabla perfiles
         await pool.query(`
             CREATE TABLE IF NOT EXISTS perfiles (
@@ -44,6 +48,7 @@ const initDB = async () => {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
+        console.log('✅ Tabla perfiles creada');
 
         // Tabla modulos
         await pool.query(`
@@ -53,8 +58,9 @@ const initDB = async () => {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
+        console.log('✅ Tabla modulos creada');
 
-        // Tabla usuarios1 - NUEVA TABLA PARA EVITAR CONFLICTOS
+        // Tabla usuarios1 - AHORA ES LA ÚNICA TABLA DE USUARIOS
         await pool.query(`
             CREATE TABLE IF NOT EXISTS usuarios1 (
                 id SERIAL PRIMARY KEY,
@@ -70,6 +76,7 @@ const initDB = async () => {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
+        console.log('✅ Tabla usuarios1 creada');
 
         // Tabla permisos_perfil
         await pool.query(`
@@ -85,6 +92,7 @@ const initDB = async () => {
                 UNIQUE(idModulo, idPerfil)
             )
         `);
+        console.log('✅ Tabla permisos_perfil creada');
 
         // Tabla menu
         await pool.query(`
@@ -95,6 +103,7 @@ const initDB = async () => {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
+        console.log('✅ Tabla menu creada');
 
         // Insertar módulos iniciales
         const modulosIniciales = [
@@ -108,6 +117,7 @@ const initDB = async () => {
                 [modulo]
             );
         }
+        console.log('✅ Módulos iniciales insertados');
 
         // Insertar menú inicial
         const menuItems = [
@@ -130,8 +140,9 @@ const initDB = async () => {
                 );
             }
         }
+        console.log('✅ Menú inicial insertado');
 
-        console.log('✅ Base de datos inicializada con usuarios1');
+        console.log('✅ Base de datos inicializada con usuarios1 como única tabla');
     } catch (err) {
         console.error('❌ Error iniciando DB:', err);
     }
@@ -175,7 +186,7 @@ app.post('/api/register', async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
         
-        // Verificar si es el primer usuario en usuarios1
+        // Verificar si es el primer usuario
         const userCount = await pool.query('SELECT COUNT(*) FROM usuarios1');
         const esPrimerUsuario = parseInt(userCount.rows[0].count) === 0;
         
@@ -217,7 +228,6 @@ app.post('/api/register', async (req, res) => {
         });
     } catch (err) {
         if (err.code === '23505') {
-            // Actualizado para las restricciones de usuarios1
             if (err.constraint === 'usuarios1_username_key') {
                 return res.status(400).json({ success: false, message: 'El nombre de usuario ya existe' });
             } else if (err.constraint === 'usuarios1_email_key') {
@@ -318,67 +328,6 @@ app.get('/api/perfiles', authenticateToken, async (req, res) => {
     }
 });
 
-app.get('/api/perfiles/:id', authenticateToken, async (req, res) => {
-    try {
-        const result = await pool.query('SELECT * FROM perfiles WHERE id = $1', [req.params.id]);
-        if (result.rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'Perfil no encontrado' });
-        }
-        res.json({ success: true, data: result.rows[0] });
-    } catch (err) {
-        res.status(500).json({ success: false, message: 'Error al obtener perfil' });
-    }
-});
-
-app.post('/api/perfiles', authenticateToken, async (req, res) => {
-    try {
-        const { strNombrePerfil, bitAdministrador } = req.body;
-        
-        const result = await pool.query(
-            'INSERT INTO perfiles (strNombrePerfil, bitAdministrador) VALUES ($1, $2) RETURNING *',
-            [strNombrePerfil, bitAdministrador || false]
-        );
-        
-        res.status(201).json({ success: true, message: 'Perfil creado', data: result.rows[0] });
-    } catch (err) {
-        if (err.code === '23505') {
-            return res.status(400).json({ success: false, message: 'El nombre del perfil ya existe' });
-        }
-        res.status(500).json({ success: false, message: 'Error al crear perfil' });
-    }
-});
-
-app.put('/api/perfiles/:id', authenticateToken, async (req, res) => {
-    try {
-        const { strNombrePerfil, bitAdministrador } = req.body;
-        
-        const result = await pool.query(
-            'UPDATE perfiles SET strNombrePerfil = $1, bitAdministrador = $2 WHERE id = $3 RETURNING *',
-            [strNombrePerfil, bitAdministrador, req.params.id]
-        );
-        
-        if (result.rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'Perfil no encontrado' });
-        }
-        
-        res.json({ success: true, message: 'Perfil actualizado', data: result.rows[0] });
-    } catch (err) {
-        res.status(500).json({ success: false, message: 'Error al actualizar perfil' });
-    }
-});
-
-app.delete('/api/perfiles/:id', authenticateToken, async (req, res) => {
-    try {
-        const result = await pool.query('DELETE FROM perfiles WHERE id = $1 RETURNING id', [req.params.id]);
-        if (result.rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'Perfil no encontrado' });
-        }
-        res.json({ success: true, message: 'Perfil eliminado' });
-    } catch (err) {
-        res.status(500).json({ success: false, message: 'Error al eliminar perfil' });
-    }
-});
-
 // --- 8. CRUD Módulos ---
 app.get('/api/modulos', authenticateToken, async (req, res) => {
     try {
@@ -409,68 +358,7 @@ app.get('/api/modulos', authenticateToken, async (req, res) => {
     }
 });
 
-app.get('/api/modulos/:id', authenticateToken, async (req, res) => {
-    try {
-        const result = await pool.query('SELECT * FROM modulos WHERE id = $1', [req.params.id]);
-        if (result.rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'Módulo no encontrado' });
-        }
-        res.json({ success: true, data: result.rows[0] });
-    } catch (err) {
-        res.status(500).json({ success: false, message: 'Error al obtener módulo' });
-    }
-});
-
-app.post('/api/modulos', authenticateToken, async (req, res) => {
-    try {
-        const { strNombreModulo } = req.body;
-        
-        const result = await pool.query(
-            'INSERT INTO modulos (strNombreModulo) VALUES ($1) RETURNING *',
-            [strNombreModulo]
-        );
-        
-        res.status(201).json({ success: true, message: 'Módulo creado', data: result.rows[0] });
-    } catch (err) {
-        if (err.code === '23505') {
-            return res.status(400).json({ success: false, message: 'El nombre del módulo ya existe' });
-        }
-        res.status(500).json({ success: false, message: 'Error al crear módulo' });
-    }
-});
-
-app.put('/api/modulos/:id', authenticateToken, async (req, res) => {
-    try {
-        const { strNombreModulo } = req.body;
-        
-        const result = await pool.query(
-            'UPDATE modulos SET strNombreModulo = $1 WHERE id = $2 RETURNING *',
-            [strNombreModulo, req.params.id]
-        );
-        
-        if (result.rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'Módulo no encontrado' });
-        }
-        
-        res.json({ success: true, message: 'Módulo actualizado', data: result.rows[0] });
-    } catch (err) {
-        res.status(500).json({ success: false, message: 'Error al actualizar módulo' });
-    }
-});
-
-app.delete('/api/modulos/:id', authenticateToken, async (req, res) => {
-    try {
-        const result = await pool.query('DELETE FROM modulos WHERE id = $1 RETURNING id', [req.params.id]);
-        if (result.rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'Módulo no encontrado' });
-        }
-        res.json({ success: true, message: 'Módulo eliminado' });
-    } catch (err) {
-        res.status(500).json({ success: false, message: 'Error al eliminar módulo' });
-    }
-});
-
-// --- 9. CRUD Usuarios1 ---
+// --- 9. CRUD Usuarios1 (renombrado a /api/usuarios) ---
 app.get('/api/usuarios', authenticateToken, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -681,76 +569,6 @@ app.get('/api/permisos-perfil', authenticateToken, async (req, res) => {
     }
 });
 
-app.get('/api/permisos-perfil/:id', authenticateToken, async (req, res) => {
-    try {
-        const result = await pool.query(
-            `SELECT pp.*, m.strNombreModulo, p.strNombrePerfil 
-             FROM permisos_perfil pp
-             JOIN modulos m ON pp.idModulo = m.id
-             JOIN perfiles p ON pp.idPerfil = p.id
-             WHERE pp.id = $1`,
-            [req.params.id]
-        );
-        if (result.rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'Permiso no encontrado' });
-        }
-        res.json({ success: true, data: result.rows[0] });
-    } catch (err) {
-        res.status(500).json({ success: false, message: 'Error al obtener permiso' });
-    }
-});
-
-app.post('/api/permisos-perfil', authenticateToken, async (req, res) => {
-    try {
-        const { idModulo, idPerfil, bitAgregar, bitEditar, bitConsulta, bitEliminar, bitDetalle } = req.body;
-        
-        const result = await pool.query(
-            `INSERT INTO permisos_perfil (idModulo, idPerfil, bitAgregar, bitEditar, bitConsulta, bitEliminar, bitDetalle) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-            [idModulo, idPerfil, bitAgregar || false, bitEditar || false, bitConsulta || false, bitEliminar || false, bitDetalle || false]
-        );
-        
-        res.status(201).json({ success: true, message: 'Permiso creado', data: result.rows[0] });
-    } catch (err) {
-        if (err.code === '23505') {
-            return res.status(400).json({ success: false, message: 'Ya existe un permiso para este módulo y perfil' });
-        }
-        res.status(500).json({ success: false, message: 'Error al crear permiso' });
-    }
-});
-
-app.put('/api/permisos-perfil/:id', authenticateToken, async (req, res) => {
-    try {
-        const { idModulo, idPerfil, bitAgregar, bitEditar, bitConsulta, bitEliminar, bitDetalle } = req.body;
-        
-        const result = await pool.query(
-            `UPDATE permisos_perfil SET idModulo = $1, idPerfil = $2, bitAgregar = $3, bitEditar = $4, bitConsulta = $5, bitEliminar = $6, bitDetalle = $7 
-             WHERE id = $8 RETURNING *`,
-            [idModulo, idPerfil, bitAgregar, bitEditar, bitConsulta, bitEliminar, bitDetalle, req.params.id]
-        );
-        
-        if (result.rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'Permiso no encontrado' });
-        }
-        
-        res.json({ success: true, message: 'Permiso actualizado', data: result.rows[0] });
-    } catch (err) {
-        res.status(500).json({ success: false, message: 'Error al actualizar permiso' });
-    }
-});
-
-app.delete('/api/permisos-perfil/:id', authenticateToken, async (req, res) => {
-    try {
-        const result = await pool.query('DELETE FROM permisos_perfil WHERE id = $1 RETURNING id', [req.params.id]);
-        if (result.rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'Permiso no encontrado' });
-        }
-        res.json({ success: true, message: 'Permiso eliminado' });
-    } catch (err) {
-        res.status(500).json({ success: false, message: 'Error al eliminar permiso' });
-    }
-});
-
 // --- 11. Endpoint para menú dinámico ---
 app.get('/api/menu', authenticateToken, async (req, res) => {
     try {
@@ -827,7 +645,8 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ SERVIDOR INICIADO CORRECTAMENTE`);
     console.log(`📡 Puerto: ${PORT}`);
     console.log('='.repeat(50));
-    console.log('📝 ESTRUCTURA DE USUARIOS:');
+    console.log('🗑️ TABLA ANTIGUA ELIMINADA - Solo existe usuarios1');
+    console.log('📝 ESTRUCTURA DE USUARIOS (usuarios1):');
     console.log('   - username: nombre de usuario');
     console.log('   - email: correo electrónico');
     console.log('   - nombre: nombre real');
@@ -835,8 +654,5 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log('   - password: contraseña encriptada');
     console.log('='.repeat(50));
     console.log('👑 El PRIMER usuario registrado será ADMINISTRADOR');
-    console.log('   con todos los permisos automáticamente');
-    console.log('='.repeat(50));
-    console.log('🔐 LOGIN: Case-insensitive para username y email');
     console.log('='.repeat(50));
 });

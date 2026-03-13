@@ -1,10 +1,11 @@
 ---
 import Layout from '../layout/layout.astro';
-// URL de tu API en Railway
 const API_URL = "https://extra-earth-production.up.railway.app";
 ---
 
 <Layout title="Acceso al Sistema | ERP">
+  <script src="https://js.hcaptcha.com/1/api.js" async defer is:inline></script>
+
   <div class="login-card">
     <div class="login-header">
       <i class="fas fa-user-circle"></i>
@@ -30,9 +31,8 @@ const API_URL = "https://extra-earth-production.up.railway.app";
         </div>
       </div>
 
-      <div class="input-group captcha-container" style="text-align: center; margin-bottom: 1rem; padding: 10px; border: 1px dashed #cbd5e1; background: #f8fafc;">
-         <label style="display:inline; margin-right: 10px;">[ ] No soy un robot (Simulador Captcha)</label>
-         <input type="checkbox" id="captchaSimulado" required title="Por favor, marca esta casilla">
+      <div class="input-group" style="display: flex; justify-content: center; margin-bottom: 1.5rem;">
+         <div class="h-captcha" data-sitekey="10000000-ffff-ffff-ffff-000000000001"></div>
       </div>
 
       <button type="submit" id="btnSubmit">
@@ -71,17 +71,12 @@ button:disabled { background: #94a3b8; cursor: not-allowed; }
 </style>
 
 <script>
-  // Envolvemos la lógica para asegurar que el DOM cargó
   const setupLoginForm = () => {
     const form = document.getElementById("loginForm") as HTMLFormElement;
-    
-    // Salida rápida si el formulario no está en la vista actual
     if (!form) return;
 
     const messageDiv = document.getElementById("message");
     const btnSubmit = document.getElementById("btnSubmit") as HTMLButtonElement;
-    
-    // Recuperamos la API URL del data-attribute
     const apiUrl = form.dataset.apiUrl;
 
     const showMsg = (text, type) => {
@@ -90,10 +85,7 @@ button:disabled { background: #94a3b8; cursor: not-allowed; }
       messageDiv.style.background = type === "success" ? "#dcfce7" : "#fee2e2";
       messageDiv.style.color = type === "success" ? "#166534" : "#991b1b";
       messageDiv.textContent = text;
-
-      setTimeout(() => {
-        messageDiv.style.display = "none";
-      }, 5000);
+      setTimeout(() => { messageDiv.style.display = "none"; }, 5000);
     };
 
     form.onsubmit = async (e) => {
@@ -101,14 +93,16 @@ button:disabled { background: #94a3b8; cursor: not-allowed; }
 
       const usernameInput = document.getElementById("loginIdentifier") as HTMLInputElement;
       const passwordInput = document.getElementById("loginPassword") as HTMLInputElement;
-      const captchaInput = document.getElementById("captchaSimulado") as HTMLInputElement;
-
+      
       const username = usernameInput.value.trim();
       const password = passwordInput.value;
 
-      // Validación de Captcha (Requisito 22)
-      if (captchaInput && !captchaInput.checked) {
-          showMsg("Por favor, resuelva el captcha", "error");
+      // Validación de hCaptcha en el cliente
+      const hcaptchaElement = document.querySelector('[name="h-captcha-response"]') as HTMLTextAreaElement;
+      const hcaptchaToken = hcaptchaElement ? hcaptchaElement.value : '';
+
+      if (!hcaptchaToken) {
+          showMsg("Por favor, resuelva el captcha.", "error");
           return;
       }
 
@@ -128,29 +122,30 @@ button:disabled { background: #94a3b8; cursor: not-allowed; }
           },
           body: JSON.stringify({
             username: username,
-            password: password
+            password: password,
+            captchaToken: hcaptchaToken 
           })
         });
 
         const data = await response.json();
 
-        if (data.success) {
+        if (response.ok && data.success) {
           showMsg("Acceso concedido", "success");
 
-          // Guardamos en localStorage. 
-          // Si implementaste el utils/permisos.js, podrías usar authStore.setToken() aquí.
           localStorage.setItem("token", data.token);
           localStorage.setItem("user", JSON.stringify(data.user));
           localStorage.setItem("permisos", JSON.stringify(data.permisos || []));
 
-          // Redirección. Asegúrate de que esta ruta base sea correcta según tu estructura
           setTimeout(() => {
-            window.location.href = "/extra-earth/principal1/estatico1"; // Redirigir a una ruta válida post-login
+            window.location.href = "/extra-earth/principal1/estatico1";
           }, 1200);
 
         } else {
-          // El backend ya maneja el estado inactivo (Requisito 21)
           showMsg(data.message || "Credenciales incorrectas", "error");
+          // Reseteamos el hCaptcha en caso de error
+          if (typeof window.hcaptcha !== 'undefined') {
+              window.hcaptcha.reset();
+          }
           btnSubmit.disabled = false;
           btnSubmit.innerHTML = '<span>Ingresar al Sistema</span><i class="fas fa-arrow-right"></i>';
         }
@@ -158,14 +153,13 @@ button:disabled { background: #94a3b8; cursor: not-allowed; }
       } catch (err) {
         console.error("Error en fetch login:", err);
         showMsg("Error de conexión con el servidor", "error");
+        if (typeof window.hcaptcha !== 'undefined') window.hcaptcha.reset();
         btnSubmit.disabled = false;
         btnSubmit.innerHTML = '<span>Ingresar al Sistema</span><i class="fas fa-arrow-right"></i>';
       }
     };
   };
 
-  // Inicializar cuando el DOM esté listo
   document.addEventListener('DOMContentLoaded', setupLoginForm);
-  // Soporte para Astro View Transitions
   document.addEventListener('astro:page-load', setupLoginForm);
 </script>

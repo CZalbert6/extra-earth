@@ -9,466 +9,405 @@ const { title = "Sistema Corporativo" } = Astro.props;
 <!DOCTYPE html>
 <html lang="es">
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>{title}</title>
-	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-	<style is:global>
-		:root {
-			--primary: #1e293b;
-			--accent: #3b82f6;
-			--bg-main: #f8fafc;
-			--text-main: #334155;
-			--sidebar-width: 260px;
-		}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{title}</title>
 
-		* { box-sizing: border-box; }
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
-		body {
-			font-family: 'Inter', sans-serif;
-			margin: 0;
-			background-color: var(--bg-main);
-			color: var(--text-main);
-			display: flex;
-			min-height: 100vh;
-		}
+<style is:global>
+:root{
+--primary:#1e293b;
+--accent:#3b82f6;
+--bg-main:#f8fafc;
+--text-main:#334155;
+--sidebar-width:260px;
+}
 
-		aside {
-			width: var(--sidebar-width);
-			background-color: var(--primary);
-			color: white;
-			display: flex;
-			flex-direction: column;
-			position: fixed;
-			height: 100vh;
-			transition: transform 0.3s ease;
-			z-index: 100;
-		}
+*{box-sizing:border-box}
 
-		.sidebar-header {
-			padding: 1.5rem;
-			font-weight: 600;
-			font-size: 1.2rem;
-			border-bottom: 1px solid rgba(255,255,255,0.1);
-			display: flex;
-			align-items: center;
-			gap: 10px;
-		}
+body{
+font-family:'Inter',sans-serif;
+margin:0;
+background:var(--bg-main);
+color:var(--text-main);
+display:flex;
+min-height:100vh;
+}
 
-		nav { flex: 1; padding: 1rem 0; overflow-y: auto; }
+aside{
+width:var(--sidebar-width);
+background:var(--primary);
+color:white;
+display:flex;
+flex-direction:column;
+position:fixed;
+height:100vh;
+transition:.3s;
+z-index:100;
+}
 
-		.menu-section {
-			margin-bottom: 1rem;
-		}
+.sidebar-header{
+padding:1.5rem;
+font-weight:600;
+font-size:1.2rem;
+border-bottom:1px solid rgba(255,255,255,.1);
+display:flex;
+gap:10px;
+align-items:center;
+}
 
-		.menu-section-title {
-			padding: 0.5rem 1.5rem;
-			font-size: 0.7rem;
-			color: #94a3b8;
-			text-transform: uppercase;
-			letter-spacing: 1px;
-		}
+nav{flex:1;padding:1rem 0;overflow-y:auto}
 
-		nav a {
-			display: flex;
-			align-items: center;
-			padding: 0.8rem 1.5rem;
-			color: #cbd5e1;
-			text-decoration: none;
-			transition: 0.2s;
-			font-size: 0.95rem;
-		}
+.menu-section{margin-bottom:1rem}
 
-		nav a:hover, nav a.active {
-			background-color: rgba(255,255,255,0.05);
-			color: white;
-			border-left: 4px solid var(--accent);
-		}
+.menu-section-title{
+padding:.5rem 1.5rem;
+font-size:.7rem;
+color:#94a3b8;
+text-transform:uppercase;
+letter-spacing:1px;
+}
 
-		nav a i {
-			width: 25px;
-		}
+nav a{
+display:flex;
+align-items:center;
+padding:.8rem 1.5rem;
+color:#cbd5e1;
+text-decoration:none;
+font-size:.95rem;
+transition:.2s;
+}
 
-		.menu-toggle {
-			display: none;
-			position: fixed;
-			top: 1rem;
-			left: 1rem;
-			z-index: 101;
-			background: var(--primary);
-			color: white;
-			border: none;
-			padding: 0.5rem 1rem;
-			border-radius: 4px;
-			cursor: pointer;
-		}
+nav a:hover,
+nav a.active{
+background:rgba(255,255,255,.05);
+color:white;
+border-left:4px solid var(--accent);
+}
 
-		main {
-			margin-left: var(--sidebar-width);
-			flex: 1;
-			display: flex;
-			flex-direction: column;
-			min-height: 100vh;
-		}
+nav a i{width:25px}
 
-		header {
-			background: white;
-			height: 60px;
-			display: flex;
-			align-items: center;
-			justify-content: space-between;
-			padding: 0 2rem;
-			box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-		}
+.menu-toggle{
+display:none;
+position:fixed;
+top:1rem;
+left:1rem;
+z-index:101;
+background:var(--primary);
+color:white;
+border:none;
+padding:.5rem 1rem;
+border-radius:4px;
+cursor:pointer;
+}
 
-		.breadcrumbs {
-			padding: 1rem 2rem;
-			font-size: 0.85rem;
-			color: #64748b;
-			background: white;
-			border-bottom: 1px solid #e2e8f0;
-		}
+main{
+margin-left:var(--sidebar-width);
+flex:1;
+display:flex;
+flex-direction:column;
+min-height:100vh;
+}
 
-		.breadcrumbs span { margin: 0 0.5rem; color: #94a3b8; }
+header{
+background:white;
+height:60px;
+display:flex;
+align-items:center;
+justify-content:space-between;
+padding:0 2rem;
+box-shadow:0 1px 3px rgba(0,0,0,.1);
+}
 
-		.content-wrapper {
-			padding: 2rem;
-			flex: 1;
-		}
+.breadcrumbs{
+padding:1rem 2rem;
+font-size:.85rem;
+color:#64748b;
+background:white;
+border-bottom:1px solid #e2e8f0;
+}
 
-		.card {
-			background: white;
-			border-radius: 8px;
-			padding: 1.5rem;
-			box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-			border: 1px solid #e2e8f0;
-		}
+.breadcrumbs span{margin:0 .5rem;color:#94a3b8}
 
-		.user-info {
-			display: flex;
-			align-items: center;
-			gap: 10px;
-		}
+.content-wrapper{padding:2rem;flex:1}
 
-		.user-avatar {
-			width: 35px;
-			height: 35px;
-			background: #e2e8f0;
-			border-radius: 50%;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			overflow: hidden;
-		}
+.card{
+background:white;
+border-radius:8px;
+padding:1.5rem;
+box-shadow:0 1px 3px rgba(0,0,0,.05);
+border:1px solid #e2e8f0;
+}
 
-		.user-avatar img {
-			width: 100%;
-			height: 100%;
-			object-fit: cover;
-		}
+.user-info{
+display:flex;
+align-items:center;
+gap:10px;
+}
 
-		.logout-btn {
-			background: none;
-			border: none;
-			color: #ef4444;
-			cursor: pointer;
-			padding: 0.5rem;
-			border-radius: 4px;
-		}
+.user-avatar{
+width:35px;
+height:35px;
+background:#e2e8f0;
+border-radius:50%;
+display:flex;
+align-items:center;
+justify-content:center;
+overflow:hidden;
+}
 
-		.logout-btn:hover {
-			background: #fee2e2;
-		}
+.user-avatar img{
+width:100%;
+height:100%;
+object-fit:cover;
+}
 
-		@media (max-width: 768px) {
-			aside {
-				transform: translateX(-100%);
-			}
-			aside.open {
-				transform: translateX(0);
-			}
-			main {
-				margin-left: 0;
-			}
-			.menu-toggle {
-				display: block;
-			}
-		}
-	</style>
+.logout-btn{
+background:none;
+border:none;
+color:#ef4444;
+cursor:pointer;
+padding:.5rem;
+border-radius:4px;
+}
+
+.logout-btn:hover{
+background:#fee2e2;
+}
+
+@media(max-width:768px){
+
+aside{transform:translateX(-100%)}
+
+aside.open{transform:translateX(0)}
+
+main{margin-left:0}
+
+.menu-toggle{display:block}
+
+}
+</style>
 </head>
+
 <body>
-	<button class="menu-toggle" id="menuToggle">
-		<i class="fas fa-bars"></i>
-	</button>
 
-	<aside id="sidebar">
-		<div class="sidebar-header">
-			<i class="fas fa-building"></i>
-			<span>CORP-DEV 2026</span>
-		</div>
-		<nav id="menu-container">
-			<!-- El menú se cargará dinámicamente -->
-			<div style="text-align: center; padding: 2rem; color: #94a3b8;">
-				<i class="fas fa-spinner fa-spin"></i> Cargando menú...
-			</div>
-		</nav>
-	</aside>
+<button class="menu-toggle" id="menuToggle">
+<i class="fas fa-bars"></i>
+</button>
 
-	<main>
-		<header>
-			<div id="page-title" style="font-weight: 600;">Panel de Control</div>
-			<div class="user-info">
-				<span id="user-name" style="font-size: 0.9rem;">Invitado</span>
-				<div class="user-avatar" id="userAvatar">
-					<i class="fas fa-user"></i>
-				</div>
-				<button class="logout-btn" id="logoutBtn" title="Cerrar sesión">
-					<i class="fas fa-sign-out-alt"></i>
-				</button>
-			</div>
-		</header>
+<aside id="sidebar">
 
-		<div class="breadcrumbs" id="breadcrumbs">
-			Inicio
-		</div>
+<div class="sidebar-header">
+<i class="fas fa-building"></i>
+<span>CORP-DEV 2026</span>
+</div>
 
-		<div class="content-wrapper">
-			<div class="card">
-				<slot />
-			</div>
-		</div>
-	</main>
+<nav id="menu-container">
 
-	<script>
-		const API_URL = "https://extra-earth-production.up.railway.app";
-		const menuContainer = document.getElementById('menu-container');
-		const userNameSpan = document.getElementById('user-name');
-		const userAvatar = document.getElementById('userAvatar');
-		const logoutBtn = document.getElementById('logoutBtn');
-		const menuToggle = document.getElementById('menuToggle');
-		const sidebar = document.getElementById('sidebar');
+<div style="text-align:center;padding:2rem;color:#94a3b8;">
+<i class="fas fa-spinner fa-spin"></i>
+Cargando menú...
+</div>
 
-		// Variable para evitar múltiples redirecciones
-		let redirigiendo = false;
+</nav>
 
-		// Toggle menú en móvil
-		menuToggle?.addEventListener('click', () => {
-			sidebar.classList.toggle('open');
-		});
+</aside>
 
-		// Cerrar menú al hacer clic fuera en móvil
-		document.addEventListener('click', (e) => {
-			if (window.innerWidth <= 768) {
-				if (!sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
-					sidebar.classList.remove('open');
-				}
-			}
-		});
+<main>
 
-		// Cargar información del usuario
-		function cargarInfoUsuario() {
-			try {
-				const user = JSON.parse(localStorage.getItem('user'));
-				if (user) {
-					userNameSpan.textContent = user.username || 'Usuario';
-					
-					// Si hay imagen de perfil, mostrarla
-					if (user.strImagen) {
-						userAvatar.innerHTML = `<img src="${user.strImagen}" alt="Avatar">`;
-					}
-				}
-			} catch (e) {
-				console.error('Error cargando info de usuario:', e);
-			}
-		}
+<header>
 
-		// Cargar menú dinámico
-		async function cargarMenu() {
-			// Si no hay token, no intentar cargar menú
-			const token = localStorage.getItem('token');
-			if (!token) {
-				menuContainer.innerHTML = `
-					<a href="/extra-earth/"><i class="fas fa-home"></i> Inicio</a>
-					<div style="padding: 1rem; color: #94a3b8; text-align: center;">
-						<i class="fas fa-lock"></i> Inicie sesión para ver el menú
-					</div>
-				`;
-				return;
-			}
+<div id="page-title" style="font-weight:600">
+Panel de Control
+</div>
 
-			try {
-				const response = await fetch(`${API_URL}/api/menu`, {
-					headers: { 'Authorization': `Bearer ${token}` }
-				});
-				
-				if (!response.ok) {
-					throw new Error('Error en la respuesta del servidor');
-				}
-				
-				const data = await response.json();
+<div class="user-info">
 
-				if (data.success) {
-					renderMenu(data.data);
-				} else {
-					renderMenuError();
-				}
-			} catch (error) {
-				console.error('Error cargando menú:', error);
-				renderMenuError();
-			}
-		}
+<span id="user-name" style="font-size:.9rem">
+Invitado
+</span>
 
-		function renderMenu(menuData) {
-			let html = '<a href="/extra-earth/"><i class="fas fa-home"></i> Inicio</a>';
-			
-			// Seguridad (Menú 1)
-			if (menuData[1]?.modulos?.length > 0) {
-				html += '<div class="menu-section"><div class="menu-section-title">Seguridad</div>';
-				menuData[1].modulos.forEach(mod => {
-					const url = getUrlModulo(mod.nombre);
-					html += `<a href="${url}" data-modulo="${mod.id}"><i class="fas ${getIconoModulo(mod.nombre)}"></i> ${mod.nombre}</a>`;
-				});
-				html += '</div>';
-			}
+<div class="user-avatar" id="userAvatar">
+<i class="fas fa-user"></i>
+</div>
 
-			// Principal 1 (Menú 2)
-			if (menuData[2]?.modulos?.length > 0) {
-				html += '<div class="menu-section"><div class="menu-section-title">Principal 1</div>';
-				menuData[2].modulos.forEach(mod => {
-					const url = getUrlModulo(mod.nombre);
-					html += `<a href="${url}" data-modulo="${mod.id}"><i class="fas ${getIconoModulo(mod.nombre)}"></i> ${mod.nombre}</a>`;
-				});
-				html += '</div>';
-			}
+<button class="logout-btn" id="logoutBtn">
+<i class="fas fa-sign-out-alt"></i>
+</button>
 
-			// Principal 2 (Menú 3)
-			if (menuData[3]?.modulos?.length > 0) {
-				html += '<div class="menu-section"><div class="menu-section-title">Principal 2</div>';
-				menuData[3].modulos.forEach(mod => {
-					const url = getUrlModulo(mod.nombre);
-					html += `<a href="${url}" data-modulo="${mod.id}"><i class="fas ${getIconoModulo(mod.nombre)}"></i> ${mod.nombre}</a>`;
-				});
-				html += '</div>';
-			}
+</div>
 
-			// Si no hay módulos, mostrar mensaje
-			if (!menuData[1]?.modulos?.length && !menuData[2]?.modulos?.length && !menuData[3]?.modulos?.length) {
-				html += '<div style="padding: 2rem; text-align: center; color: #94a3b8;">No tiene módulos asignados</div>';
-			}
+</header>
 
-			menuContainer.innerHTML = html;
+<div class="breadcrumbs" id="breadcrumbs">
+Inicio
+</div>
 
-			// Marcar enlace activo
-			const currentPath = window.location.pathname;
-			document.querySelectorAll('#menu-container a').forEach(link => {
-				if (link.getAttribute('href') === currentPath) {
-					link.classList.add('active');
-				}
-			});
-		}
+<div class="content-wrapper">
+<div class="card">
+<slot />
+</div>
+</div>
 
-		function renderMenuError() {
-			menuContainer.innerHTML = `
-				<a href="/extra-earth/"><i class="fas fa-home"></i> Inicio</a>
-				<div class="menu-section">
-					<div class="menu-section-title">Seguridad</div>
-					<a href="/extra-earth/seguridad/perfiles"><i class="fas fa-user-shield"></i> Perfiles</a>
-					<a href="/extra-earth/seguridad/modulos"><i class="fas fa-puzzle-piece"></i> Módulos</a>
-					<a href="/extra-earth/seguridad/permisos"><i class="fas fa-key"></i> Permisos-Perfil</a>
-					<a href="/extra-earth/seguridad/usuarios"><i class="fas fa-users"></i> Usuarios</a>
-				</div>
-			`;
-		}
+</main>
 
-		function getUrlModulo(nombre) {
-			const urls = {
-				'Perfil': '/extra-earth/seguridad/perfiles',
-				'Módulo': '/extra-earth/seguridad/modulos',
-				'Permisos-Perfil': '/extra-earth/seguridad/permisos',
-				'Usuario': '/extra-earth/seguridad/usuarios',
-				'Principal 1.1': '/extra-earth/principal1/estatico1',
-				'Principal 1.2': '/extra-earth/principal1/estatico2',
-				'Principal 2.1': '/extra-earth/principal2/estatico3',
-				'Principal 2.2': '/extra-earth/principal2/estatico4'
-			};
-			return urls[nombre] || '#';
-		}
+<script>
 
-		function getIconoModulo(nombre) {
-			const iconos = {
-				'Perfil': 'fa-user-shield',
-				'Módulo': 'fa-puzzle-piece',
-				'Permisos-Perfil': 'fa-key',
-				'Usuario': 'fa-users',
-				'Principal 1.1': 'fa-file',
-				'Principal 1.2': 'fa-file',
-				'Principal 2.1': 'fa-file',
-				'Principal 2.2': 'fa-file'
-			};
-			return iconos[nombre] || 'fa-circle';
-		}
+const API_URL="https://extra-earth-production.up.railway.app"
 
-		// Actualizar breadcrumbs
-		function actualizarBreadcrumbs() {
-			try {
-				const path = window.location.pathname.split('/').filter(p => p && p !== 'extra-earth');
-				const breadContainer = document.getElementById('breadcrumbs');
-				
-				if (path.length === 0 || (path.length === 1 && path[0] === '')) {
-					breadContainer.innerHTML = 'Inicio';
-				} else {
-					const breadItems = ['Inicio', ...path.map(p => p.charAt(0).toUpperCase() + p.slice(1))];
-					breadContainer.innerHTML = breadItems.join(' <span>/</span> ');
-				}
-			} catch (e) {
-				console.error('Error actualizando breadcrumbs:', e);
-			}
-		}
+const menuContainer=document.getElementById("menu-container")
+const userNameSpan=document.getElementById("user-name")
+const logoutBtn=document.getElementById("logoutBtn")
 
-		// Cerrar sesión
-		logoutBtn.addEventListener('click', () => {
-			localStorage.removeItem('token');
-			localStorage.removeItem('user');
-			localStorage.removeItem('permisos');
-			window.location.href = '/extra-earth/login';
-		});
+/* =========================
+   VERIFICAR AUTENTICACIÓN
+   ========================= */
 
-		// Verificar autenticación (CORREGIDO)
-		function verificarAuth() {
-			// Evitar redirecciones múltiples
-			if (redirigiendo) return;
-			
-			const token = localStorage.getItem('token');
-			const currentPath = window.location.pathname;
-			
-			// Rutas que NO requieren autenticación
-			const publicPaths = [
-				'/extra-earth/login',
-				'/extra-earth/register',
-				'/extra-earth/',
-				'/extra-earth'
-			];
-			
-			// Si está en ruta pública, no hacer nada
-			if (publicPaths.includes(currentPath)) {
-				return;
-			}
-			
-			// Si no hay token y no es ruta pública, redirigir a login
-			if (!token) {
-				redirigiendo = true;
-				window.location.href = '/extra-earth/login';
-			}
-		}
+function verificarAuth(){
 
-		// Inicializar cuando el DOM esté listo
-		document.addEventListener('DOMContentLoaded', () => {
-			verificarAuth();
-			cargarInfoUsuario();
-			actualizarBreadcrumbs();
-			cargarMenu(); // Siempre cargar menú (maneja internamente si hay token)
-		});
-	</script>
+let path=window.location.pathname
+
+/* normalizar */
+path=path.replace(/\/$/,"")
+
+const token=localStorage.getItem("token")
+
+/* rutas públicas */
+
+const publicRoutes=[
+"/extra-earth",
+"/extra-earth/login",
+"/extra-earth/register"
+]
+
+const isPublic=publicRoutes.some(r=>path.startsWith(r))
+
+if(isPublic) return
+
+if(!token){
+
+window.location.href="/extra-earth/login"
+
+}
+
+}
+
+/* =========================
+   CARGAR USUARIO
+   ========================= */
+
+function cargarInfoUsuario(){
+
+try{
+
+const user=JSON.parse(localStorage.getItem("user"))
+
+if(user){
+
+userNameSpan.textContent=user.username||"Usuario"
+
+}
+
+}catch(e){
+
+console.error(e)
+
+}
+
+}
+
+/* =========================
+   MENÚ
+   ========================= */
+
+async function cargarMenu(){
+
+const token=localStorage.getItem("token")
+
+if(!token){
+
+menuContainer.innerHTML=`
+<a href="/extra-earth/"><i class="fas fa-home"></i> Inicio</a>
+<div style="padding:1rem;text-align:center;color:#94a3b8">
+Inicie sesión
+</div>
+`
+return
+
+}
+
+try{
+
+const res=await fetch(`${API_URL}/api/menu`,{
+headers:{Authorization:`Bearer ${token}`}
+})
+
+const data=await res.json()
+
+if(!data.success){
+
+menuContainer.innerHTML="Error cargando menú"
+return
+
+}
+
+let html=`<a href="/extra-earth/"><i class="fas fa-home"></i> Inicio</a>`
+
+Object.values(data.data).forEach(menu=>{
+
+if(menu.modulos?.length){
+
+html+=`<div class="menu-section">
+<div class="menu-section-title">${menu.nombre}</div>`
+
+menu.modulos.forEach(mod=>{
+
+html+=`<a href="#">${mod.nombre}</a>`
+
+})
+
+html+=`</div>`
+
+}
+
+})
+
+menuContainer.innerHTML=html
+
+}catch(err){
+
+console.error(err)
+
+}
+
+}
+
+/* =========================
+   LOGOUT
+   ========================= */
+
+logoutBtn.addEventListener("click",()=>{
+
+localStorage.removeItem("token")
+localStorage.removeItem("user")
+
+window.location.href="/extra-earth/login"
+
+})
+
+/* ========================= */
+
+document.addEventListener("DOMContentLoaded",()=>{
+
+verificarAuth()
+cargarInfoUsuario()
+cargarMenu()
+
+})
+
+</script>
+
 </body>
 </html>

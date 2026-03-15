@@ -299,7 +299,6 @@ app.post('/api/login', async (req, res) => {
 });
 
 // --- 7. CRUD Perfiles ---
-// GET: Leer Perfiles (Ya lo tenías)
 app.get('/api/perfiles', authenticateToken, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -324,16 +323,10 @@ app.get('/api/perfiles', authenticateToken, async (req, res) => {
     }
 });
 
-// ==========================================
-// NUEVO: POST, PUT, DELETE PARA PERFILES
-// ==========================================
-
-// POST: Crear nuevo perfil
 app.post('/api/perfiles', authenticateToken, async (req, res) => {
     try {
         const { strNombrePerfil, strnombreperfil, bitAdministrador, bitadministrador } = req.body;
         const nombre = strNombrePerfil || strnombreperfil;
-        // Validamos el boolean para evitar errores de undefined
         const isAdmin = bitAdministrador !== undefined ? bitAdministrador : (bitadministrador || false);
 
         if (!nombre) {
@@ -347,7 +340,7 @@ app.post('/api/perfiles', authenticateToken, async (req, res) => {
         
         res.status(201).json({ success: true, message: 'Perfil creado', data: result.rows[0] });
     } catch (err) {
-        if (err.code === '23505') { // Error de duplicado en Postgres
+        if (err.code === '23505') { 
             return res.status(400).json({ success: false, message: 'Ya existe un perfil con este nombre' });
         }
         console.error('Error al crear perfil:', err);
@@ -355,7 +348,6 @@ app.post('/api/perfiles', authenticateToken, async (req, res) => {
     }
 });
 
-// PUT: Actualizar perfil existente
 app.put('/api/perfiles/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
@@ -386,7 +378,6 @@ app.put('/api/perfiles/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// DELETE: Eliminar perfil
 app.delete('/api/perfiles/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
@@ -398,7 +389,6 @@ app.delete('/api/perfiles/:id', authenticateToken, async (req, res) => {
         
         res.json({ success: true, message: 'Perfil eliminado correctamente' });
     } catch (err) {
-        // Error 23503: Intento de eliminar un perfil que ya está asignado a un usuario
         if (err.code === '23503') {
             return res.status(400).json({ success: false, message: 'No puedes eliminar este perfil porque hay usuarios asignados a él' });
         }
@@ -406,8 +396,6 @@ app.delete('/api/perfiles/:id', authenticateToken, async (req, res) => {
         res.status(500).json({ success: false, message: 'Error interno al eliminar perfil' });
     }
 });
-// ==========================================
-
 
 // --- 8. CRUD Módulos ---
 app.get('/api/modulos', authenticateToken, async (req, res) => {
@@ -439,7 +427,7 @@ app.get('/api/modulos', authenticateToken, async (req, res) => {
     }
 });
 
-// --- 9. CRUD Usuarios1 (renombrado a /api/usuarios) ---
+// --- 9. CRUD Usuarios1 ---
 app.get('/api/usuarios', authenticateToken, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -590,7 +578,6 @@ app.delete('/api/usuarios/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// Endpoint para cambiar contraseña
 app.put('/api/usuarios/:id/password', authenticateToken, async (req, res) => {
     try {
         const { currentPassword, newPassword } = req.body;
@@ -617,6 +604,7 @@ app.put('/api/usuarios/:id/password', authenticateToken, async (req, res) => {
 });
 
 // --- 10. CRUD Permisos-Perfil ---
+// GET: Listar todos
 app.get('/api/permisos-perfil', authenticateToken, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -647,6 +635,98 @@ app.get('/api/permisos-perfil', authenticateToken, async (req, res) => {
         });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Error al obtener permisos' });
+    }
+});
+
+// GET: Ver detalle de un solo permiso
+app.get('/api/permisos-perfil/:id', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT pp.*, m.strNombreModulo, p.strNombrePerfil 
+             FROM permisos_perfil pp
+             JOIN modulos m ON pp.idModulo = m.id
+             JOIN perfiles p ON pp.idPerfil = p.id
+             WHERE pp.id = $1`,
+            [req.params.id]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Permiso no encontrado' });
+        }
+        res.json({ success: true, data: result.rows[0] });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Error al obtener el permiso' });
+    }
+});
+
+// POST: Crear nuevo permiso
+app.post('/api/permisos-perfil', authenticateToken, async (req, res) => {
+    try {
+        const { idModulo, idPerfil, bitAgregar, bitEditar, bitConsulta, bitEliminar, bitDetalle } = req.body;
+
+        if (!idModulo || !idPerfil) {
+            return res.status(400).json({ success: false, message: 'Faltan Módulo o Perfil' });
+        }
+
+        const query = `
+            INSERT INTO permisos_perfil (idModulo, idPerfil, bitAgregar, bitEditar, bitConsulta, bitEliminar, bitDetalle) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *
+        `;
+        const values = [idModulo, idPerfil, bitAgregar || false, bitEditar || false, bitConsulta || false, bitEliminar || false, bitDetalle || false];
+        
+        const result = await pool.query(query, values);
+        res.status(201).json({ success: true, message: 'Permiso creado', data: result.rows[0] });
+
+    } catch (err) {
+        if (err.code === '23505') { // Constraint unique violation (idModulo + idPerfil)
+            return res.status(400).json({ success: false, message: 'Este perfil ya tiene permisos asignados para ese módulo. Edítalos en su lugar.' });
+        }
+        console.error('Error al crear permiso:', err);
+        res.status(500).json({ success: false, message: 'Error interno al crear permiso' });
+    }
+});
+
+// PUT: Actualizar permiso existente
+app.put('/api/permisos-perfil/:id', authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { idModulo, idPerfil, bitAgregar, bitEditar, bitConsulta, bitEliminar, bitDetalle } = req.body;
+
+        const query = `
+            UPDATE permisos_perfil 
+            SET idModulo = $1, idPerfil = $2, bitAgregar = $3, bitEditar = $4, bitConsulta = $5, bitEliminar = $6, bitDetalle = $7 
+            WHERE id = $8 RETURNING *
+        `;
+        const values = [idModulo, idPerfil, bitAgregar || false, bitEditar || false, bitConsulta || false, bitEliminar || false, bitDetalle || false, id];
+        
+        const result = await pool.query(query, values);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Permiso no encontrado' });
+        }
+        res.json({ success: true, message: 'Permiso actualizado', data: result.rows[0] });
+
+    } catch (err) {
+        if (err.code === '23505') {
+            return res.status(400).json({ success: false, message: 'Ya existe una configuración para este Módulo y Perfil.' });
+        }
+        console.error('Error al actualizar permiso:', err);
+        res.status(500).json({ success: false, message: 'Error interno al actualizar permiso' });
+    }
+});
+
+// DELETE: Eliminar permiso
+app.delete('/api/permisos-perfil/:id', authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query('DELETE FROM permisos_perfil WHERE id = $1 RETURNING id', [id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Permiso no encontrado' });
+        }
+        res.json({ success: true, message: 'Permiso eliminado' });
+    } catch (err) {
+        console.error('Error al eliminar permiso:', err);
+        res.status(500).json({ success: false, message: 'Error interno al eliminar permiso' });
     }
 });
 

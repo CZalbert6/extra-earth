@@ -126,8 +126,9 @@ button:disabled { background: #94a3b8; cursor: not-allowed; }
           localStorage.setItem("user", JSON.stringify(data.user));
           localStorage.setItem("permisos", JSON.stringify(data.permisos || []));
 
+          // REDIRECCIÓN CORREGIDA PARA EVITAR 404
           setTimeout(() => {
-            window.location.href = "/extra-earth/principal1/estatico1";
+            window.location.href = "/extra-earth/modulos/principal-1-1";
           }, 1200);
         } else {
           showMsg(data.message || "Credenciales incorrectas", "error");

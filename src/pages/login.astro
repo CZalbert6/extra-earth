@@ -95,18 +95,23 @@ const API_URL = "https://extra-earth-production.up.railway.app";
         const data = await res.json();
         if (res.ok && data.success) {
           localStorage.clear();
+          
+          // GUARDADO COMPLETO: Token, Usuario y Permisos
           localStorage.setItem("token", data.token);
           localStorage.setItem("user", JSON.stringify(data.user));
+          localStorage.setItem("permisos", JSON.stringify(data.permisos || []));
+          
           showMsg("Bienvenido", "success");
           setTimeout(() => { window.location.href = "/extra-earth/modulos/principal-1-1"; }, 1000);
         } else {
           showMsg(data.message || "Error", "error");
           btnSubmit.disabled = false;
-          btnSubmit.innerHTML = '<span>Ingresar</span>';
+          btnSubmit.innerHTML = '<span>Ingresar al Sistema</span><i class="fas fa-arrow-right"></i>';
         }
       } catch (err) {
         showMsg("Error de conexión", "error");
         btnSubmit.disabled = false;
+        btnSubmit.innerHTML = '<span>Ingresar al Sistema</span><i class="fas fa-arrow-right"></i>';
       }
     };
   };

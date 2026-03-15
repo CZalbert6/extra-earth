@@ -16,30 +16,20 @@ export interface Props {
     eliminar?: boolean;
     detalle?: boolean;
   };
-  onPageChange?: (page: number) => void;
-  onAdd?: () => void;
-  onEdit?: (item: any) => void;
-  onDelete?: (id: number) => void;
-  onView?: (item: any) => void;
-  onSearch?: (term: string) => void;
+  id: string; // ID necesario para manipularlo desde el script
 }
 
 const { 
   title, 
   columns, 
-  data, 
+  data = [], 
   pagination, 
   permissions,
-  onPageChange,
-  onAdd,
-  onEdit,
-  onDelete,
-  onView,
-  onSearch 
+  id 
 } = Astro.props;
 ---
 
-<div class="crud-container">
+<div class="crud-container" id={id}>
   <div class="crud-header">
     <h2>{title}</h2>
     <div class="header-actions">
@@ -48,14 +38,13 @@ const {
           <i class="fas fa-search"></i>
           <input 
             type="text" 
-            id="searchInput" 
             placeholder="Buscar..." 
-            oninput={onSearch ? `window.searchHandler('${onSearch}', this.value)` : null}
+            oninput="window.searchHandler(this.value)"
           />
         </div>
       )}
       {permissions.agregar && (
-        <button class="btn-add" onclick={onAdd}>
+        <button class="btn-add" onclick="window.agregarNuevo()">
           <i class="fas fa-plus"></i> Agregar
         </button>
       )}
@@ -71,12 +60,12 @@ const {
         </tr>
       </thead>
       <tbody>
-        {data.length > 0 ? (
+        {data && data.length > 0 ? (
           data.map(item => (
             <tr>
               {columns.map(col => <td>{item[col.key]}</td>)}
               <td class="actions-cell">
-                {permissions.consulta && (
+                {permissions.detalle && (
                   <button class="btn-icon view" onclick={`window.viewHandler('${JSON.stringify(item).replace(/'/g, "\\'")}')`} title="Ver detalle">
                     <i class="fas fa-eye"></i>
                   </button>
@@ -113,14 +102,7 @@ const {
         <i class="fas fa-chevron-left"></i>
       </button>
       
-      {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map(pageNum => (
-        <button 
-          class={`page-btn ${pageNum === pagination.page ? 'active' : ''}`}
-          onclick={`window.pageHandler(${pageNum})`}
-        >
-          {pageNum}
-        </button>
-      ))}
+      <span class="page-info">Página {pagination.page} de {pagination.totalPages}</span>
       
       <button 
         class="page-btn" 
@@ -134,186 +116,25 @@ const {
 </div>
 
 <style>
-  .crud-container {
-    background: white;
-    border-radius: 8px;
-    padding: 1.5rem;
-  }
-
-  .crud-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-    flex-wrap: wrap;
-    gap: 1rem;
-  }
-
-  .crud-header h2 {
-    margin: 0;
-    font-size: 1.5rem;
-    color: #1e293b;
-  }
-
-  .header-actions {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-  }
-
-  .search-box {
-    position: relative;
-    display: flex;
-    align-items: center;
-  }
-
-  .search-box i {
-    position: absolute;
-    left: 1rem;
-    color: #94a3b8;
-  }
-
-  .search-box input {
-    padding: 0.5rem 1rem 0.5rem 2.5rem;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    width: 250px;
-    font-size: 0.9rem;
-  }
-
-  .search-box input:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  }
-
-  .btn-add {
-    background: #059669;
-    color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-weight: 500;
-  }
-
-  .btn-add:hover {
-    background: #047857;
-  }
-
-  .table-responsive {
-    overflow-x: auto;
-  }
-
-  .crud-table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  .crud-table th {
-    text-align: left;
-    padding: 1rem;
-    background: #f8fafc;
-    border-bottom: 2px solid #e2e8f0;
-    color: #475569;
-    font-weight: 600;
-    font-size: 0.9rem;
-  }
-
-  .crud-table td {
-    padding: 1rem;
-    border-bottom: 1px solid #e2e8f0;
-    color: #334155;
-  }
-
-  .crud-table tr:hover {
-    background: #f8fafc;
-  }
-
-  .actions-cell {
-    display: flex;
-    gap: 0.5rem;
-  }
-
-  .btn-icon {
-    background: none;
-    border: none;
-    padding: 0.5rem;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: all 0.2s;
-  }
-
-  .btn-icon.view {
-    color: #3b82f6;
-  }
-  
-  .btn-icon.edit {
-    color: #f59e0b;
-  }
-  
-  .btn-icon.delete {
-    color: #ef4444;
-  }
-
-  .btn-icon:hover {
-    background: #f1f5f9;
-    transform: scale(1.1);
-  }
-
-  .no-data {
-    text-align: center;
-    color: #94a3b8;
-    padding: 2rem;
-  }
-
-  .pagination {
-    display: flex;
-    justify-content: center;
-    gap: 0.5rem;
-    margin-top: 1.5rem;
-  }
-
-  .page-btn {
-    padding: 0.5rem 1rem;
-    border: 1px solid #e2e8f0;
-    background: white;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .page-btn:hover:not(:disabled) {
-    background: #f8fafc;
-    border-color: #94a3b8;
-  }
-
-  .page-btn.active {
-    background: #1e293b;
-    color: white;
-    border-color: #1e293b;
-  }
-
-  .page-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  @media (max-width: 768px) {
-    .crud-header {
-      flex-direction: column;
-      align-items: stretch;
-    }
-
-    .header-actions {
-      flex-direction: column;
-    }
-
-    .search-box input {
-      width: 100%;
-    }
-  }
+  /* Mantengo tus estilos pero ajusto la paginación para que se vea más profesional */
+  .crud-container { background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  .crud-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; gap: 1rem; }
+  .crud-header h2 { margin: 0; font-size: 1.3rem; color: #1e293b; }
+  .header-actions { display: flex; gap: 1rem; }
+  .search-box { position: relative; }
+  .search-box i { position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); color: #94a3b8; }
+  .search-box input { padding: 0.5rem 1rem 0.5rem 2.2rem; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.9rem; }
+  .btn-add { background: #059669; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 6px; cursor: pointer; font-weight: 500; transition: 0.2s; }
+  .btn-add:hover { background: #047857; }
+  .crud-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+  .crud-table th { text-align: left; padding: 0.8rem; background: #f8fafc; border-bottom: 2px solid #e2e8f0; color: #475569; font-size: 0.85rem; }
+  .crud-table td { padding: 0.8rem; border-bottom: 1px solid #e2e8f0; font-size: 0.9rem; }
+  .actions-cell { display: flex; gap: 0.3rem; }
+  .btn-icon { border: none; background: none; cursor: pointer; padding: 0.4rem; border-radius: 4px; }
+  .view { color: #3b82f6; } .edit { color: #f59e0b; } .delete { color: #ef4444; }
+  .btn-icon:hover { background: #f1f5f9; }
+  .pagination { display: flex; justify-content: center; align-items: center; gap: 1rem; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #f1f5f9; }
+  .page-btn { padding: 0.4rem 0.8rem; border: 1px solid #e2e8f0; background: white; border-radius: 4px; cursor: pointer; }
+  .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .page-info { font-size: 0.85rem; color: #64748b; }
 </style>

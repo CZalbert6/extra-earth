@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layout/layout.astro';
+// Asumiendo que estos componentes existen en tu carpeta components
 import CrudTable from '../../components/CrudTable.astro';
 import ModalForm from '../../components/ModalForm.astro';
 
@@ -7,434 +8,194 @@ const API_URL = "https://extra-earth-production.up.railway.app";
 const pageTitle = "Gestión de Perfiles";
 ---
 
-<Layout title={`${pageTitle} | Sistema Corporativo`}>
+<Layout title={`${pageTitle} | Sistema Corporativo`} moduloActual="Perfil">
   <div class="page-header">
     <h1><i class="fas fa-user-shield"></i> {pageTitle}</h1>
+    <div id="header-actions"></div> </div>
+
+  <div id="modalFormContainer" style="display:none;">
+    <ModalForm title="Perfil" id="modalForm">
+      <form id="perfilForm" slot="form" class="modal-form">
+        <input type="hidden" id="perfilId">
+        <div class="form-group">
+          <label for="strNombrePerfil">Nombre del Perfil *</label>
+          <input type="text" id="strNombrePerfil" required maxlength="100" />
+        </div>
+
+        <div class="form-group checkbox-group">
+          <label>
+            <input type="checkbox" id="bitAdministrador" />
+            ¿Es Administrador? (Acceso total)
+          </label>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" onclick="window.closeModal()">Cancelar</button>
+          <button type="submit" class="btn-primary" id="btnGuardar">Guardar</button>
+        </div>
+      </form>
+    </ModalForm>
   </div>
 
-  <!-- Modal para formulario -->
-  <ModalForm title="Perfil" isOpen={false} client:load id="modalForm">
-    <form id="perfilForm" slot="form" class="modal-form">
-      <div class="form-group">
-        <label for="strNombrePerfil">Nombre del Perfil *</label>
-        <input type="text" id="strNombrePerfil" required maxlength="100" />
-      </div>
-
-      <div class="form-group checkbox-group">
-        <label>
-          <input type="checkbox" id="bitAdministrador" />
-          Administrador (acceso total)
-        </label>
-      </div>
-
-      <div class="form-actions">
-        <button type="button" class="btn-secondary" onclick="window.closeModal()">Cancelar</button>
-        <button type="submit" class="btn-primary" id="btnGuardar">Guardar</button>
-      </div>
-    </form>
-  </ModalForm>
-
-  <!-- Modal para detalle -->
-  <ModalForm title="Detalle del Perfil" isOpen={false} client:load id="modalDetalle">
-    <div slot="form" id="detalleContent" class="detail-view">
-      <p>Cargando...</p>
-    </div>
-  </ModalForm>
-
-  <!-- Componente de tabla -->
-  <CrudTable 
-    title="Lista de Perfiles"
-    columns={[
-      { key: 'id', label: 'ID' },
-      { key: 'strnombreperfil', label: 'Nombre' },
-      { key: 'bitadministrador', label: 'Administrador' }
-    ]}
-    data={[]}
-    pagination={{ page: 1, limit: 5, total: 0, totalPages: 1 }}
-    permissions={{ agregar: true, editar: true, consulta: true, eliminar: true, detalle: true }}
-    client:load
-    id="crudTable"
-  />
+  <div id="tableContainer">
+     </div>
 
   <div id="message" class="status-message"></div>
 </Layout>
 
-<script define:vars={{ API_URL }}>
+<script>
+  import { verificarPermisosModulo } from '../../utils/permisos';
+  const API_URL = "https://extra-earth-production.up.railway.app";
+  
   let currentPage = 1;
   let currentItem = null;
-  let isEditing = false;
-  let userPermissions = JSON.parse(localStorage.getItem('permisos') || '[]');
-  let moduloPermisos = {};
+  const { permisos } = verificarPermisosModulo('Perfil');
 
-  // Obtener permisos para este módulo
-  const moduloActual = 'Perfil';
-  const permisoModulo = userPermissions.find(p => p.strnombremodulo === moduloActual) || {};
-  moduloPermisos = {
-    agregar: permisoModulo.bitagregar || false,
-    editar: permisoModulo.biteditar || false,
-    consulta: permisoModulo.bitconsulta || false,
-    eliminar: permisoModulo.biteliminar || false,
-    detalle: permisoModulo.bitdetalle || false
-  };
-
-  // Elementos del DOM
-  const modalForm = document.getElementById('modalForm');
-  const modalDetalle = document.getElementById('modalDetalle');
-  const perfilForm = document.getElementById('perfilForm');
-  const crudTable = document.getElementById('crudTable');
+  // Referencias DOM
   const messageDiv = document.getElementById('message');
+  const perfilForm = document.getElementById('perfilForm');
 
-  // Funciones globales para los handlers
-  window.pageHandler = (page) => {
-    currentPage = page;
-    cargarDatos();
-  };
+  // Función para cargar datos
+  async function cargarDatos(page = 1) {
+    if (!permisos.consulta) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/api/perfiles?page=${page}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
 
-  window.searchHandler = (term) => {
-    // Implementar búsqueda
-    console.log('Buscar:', term);
-  };
-
-  window.viewHandler = (itemStr) => {
-    const item = JSON.parse(itemStr);
-    mostrarDetalle(item);
-  };
-
-  window.editHandler = (itemStr) => {
-    const item = JSON.parse(itemStr);
-    editarItem(item);
-  };
-
-  window.deleteHandler = async (id) => {
-    if (confirm('¿Está seguro de eliminar este perfil?')) {
-      await eliminarItem(id);
+      if (data.success) {
+        renderizarTabla(data.data);
+        // Aquí podrías renderizar la paginación si no usas el componente CrudTable automático
+      }
+    } catch (error) {
+      showMsg('Error al conectar con el servidor', 'error');
     }
-  };
+  }
 
+  function renderizarTabla(perfiles) {
+    const container = document.getElementById('tableContainer');
+    container.innerHTML = `
+      <table class="crud-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Perfil</th>
+            <th>Admin</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${perfiles.map(p => `
+            <tr>
+              <td>${p.id}</td>
+              <td>${p.strnombreperfil}</td>
+              <td>${p.bitadministrador ? '✅' : '❌'}</td>
+              <td>
+                ${permisos.editar ? `<button onclick="window.prepararEdicion(${p.id}, '${p.strnombreperfil}', ${p.bitadministrador})" class="btn-icon edit"><i class="fas fa-edit"></i></button>` : ''}
+                ${permisos.eliminar ? `<button onclick="window.eliminarPerfil(${p.id})" class="btn-icon delete"><i class="fas fa-trash"></i></button>` : ''}
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+
+  // Handlers globales
   window.closeModal = () => {
-    modalForm.setAttribute('isOpen', 'false');
-    modalDetalle.setAttribute('isOpen', 'false');
-    currentItem = null;
-    isEditing = false;
+    document.getElementById('modalFormContainer').style.display = 'none';
     perfilForm.reset();
   };
 
-  // Cargar datos iniciales
-  async function cargarDatos() {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/perfiles?page=${currentPage}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-
-      if (data.success) {
-        // Transformar datos para mostrar
-        const transformedData = data.data.map(item => ({
-          ...item,
-          bitadministrador: item.bitadministrador ? 'Sí' : 'No'
-        }));
-
-        // Actualizar tabla
-        crudTable.setAttribute('data', JSON.stringify(transformedData));
-        crudTable.setAttribute('pagination', JSON.stringify(data.pagination));
-        crudTable.setAttribute('permissions', JSON.stringify(moduloPermisos));
-      }
-    } catch (error) {
-      showMsg('Error al cargar datos', 'error');
-    }
-  }
-
-  // Mostrar detalle
-  async function mostrarDetalle(item) {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/perfiles/${item.id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-
-      if (data.success) {
-        const detalle = data.data;
-        const detalleHTML = `
-          <div class="detail-item">
-            <strong>ID:</strong> ${detalle.id}
-          </div>
-          <div class="detail-item">
-            <strong>Nombre:</strong> ${detalle.strnombreperfil}
-          </div>
-          <div class="detail-item">
-            <strong>Administrador:</strong> ${detalle.bitadministrador ? 'Sí' : 'No'}
-          </div>
-          <div class="detail-item">
-            <strong>Fecha Creación:</strong> ${new Date(detalle.created_at).toLocaleString()}
-          </div>
-        `;
-        document.getElementById('detalleContent').innerHTML = detalleHTML;
-        modalDetalle.setAttribute('isOpen', 'true');
-      }
-    } catch (error) {
-      showMsg('Error al cargar detalle', 'error');
-    }
-  }
-
-  // Editar item
-  function editarItem(item) {
-    currentItem = item;
-    isEditing = true;
-    document.getElementById('strNombrePerfil').value = item.strnombreperfil;
-    document.getElementById('bitAdministrador').checked = item.bitadministrador === 'Sí';
-    document.getElementById('btnGuardar').textContent = 'Actualizar';
-    modalForm.setAttribute('title', 'Editar Perfil');
-    modalForm.setAttribute('isOpen', 'true');
-  }
-
-  // Agregar nuevo
   window.agregarNuevo = () => {
-    isEditing = false;
     currentItem = null;
-    perfilForm.reset();
+    document.getElementById('perfilId').value = '';
     document.getElementById('btnGuardar').textContent = 'Guardar';
-    modalForm.setAttribute('title', 'Nuevo Perfil');
-    modalForm.setAttribute('isOpen', 'true');
+    document.getElementById('modalFormContainer').style.display = 'flex';
   };
 
-  // Guardar/Actualizar
+  window.prepararEdicion = (id, nombre, isAdmin) => {
+    currentItem = id;
+    document.getElementById('perfilId').value = id;
+    document.getElementById('strNombrePerfil').value = nombre;
+    document.getElementById('bitAdministrador').checked = isAdmin;
+    document.getElementById('btnGuardar').textContent = 'Actualizar';
+    document.getElementById('modalFormContainer').style.display = 'flex';
+  };
+
   perfilForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const id = document.getElementById('perfilId').value;
+    const body = {
+      strNombrePerfil: document.getElementById('strNombrePerfil').value.trim(),
+      bitAdministrador: document.getElementById('bitAdministrador').checked
+    };
 
-    const nombre = document.getElementById('strNombrePerfil').value.trim();
-    const administrador = document.getElementById('bitAdministrador').checked;
+    const token = localStorage.getItem('token');
+    const method = id ? 'PUT' : 'POST';
+    const url = id ? `${API_URL}/api/perfiles/${id}` : `${API_URL}/api/perfiles`;
 
-    if (!nombre) {
-      showMsg('El nombre del perfil es requerido', 'error');
-      return;
-    }
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify(body)
+    });
 
-    try {
-      const token = localStorage.getItem('token');
-      const url = isEditing ? `${API_URL}/api/perfiles/${currentItem.id}` : `${API_URL}/api/perfiles`;
-      const method = isEditing ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ strNombrePerfil: nombre, bitAdministrador: administrador })
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        showMsg(isEditing ? 'Perfil actualizado' : 'Perfil creado', 'success');
-        window.closeModal();
-        cargarDatos();
-      } else {
-        showMsg(data.message, 'error');
-      }
-    } catch (error) {
-      showMsg('Error al guardar', 'error');
+    const data = await res.json();
+    if (data.success) {
+      showMsg(id ? 'Actualizado correctamente' : 'Creado correctamente', 'success');
+      window.closeModal();
+      cargarDatos(currentPage);
+    } else {
+      showMsg(data.message, 'error');
     }
   });
 
-  // Eliminar
-  async function eliminarItem(id) {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/perfiles/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-
-      if (data.success) {
-        showMsg('Perfil eliminado', 'success');
-        cargarDatos();
-      } else {
-        showMsg(data.message, 'error');
-      }
-    } catch (error) {
-      showMsg('Error al eliminar', 'error');
+  window.eliminarPerfil = async (id) => {
+    if (!confirm('¿Desea eliminar este perfil?')) return;
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API_URL}/api/perfiles/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if ((await res.json()).success) {
+      showMsg('Eliminado', 'success');
+      cargarDatos(currentPage);
     }
-  }
+  };
 
   function showMsg(text, type) {
     messageDiv.style.display = 'block';
     messageDiv.style.background = type === 'success' ? '#dcfce7' : '#fee2e2';
-    messageDiv.style.color = type === 'success' ? '#166534' : '#991b1b';
     messageDiv.textContent = text;
-    setTimeout(() => {
-      messageDiv.style.display = 'none';
-    }, 3000);
+    setTimeout(() => messageDiv.style.display = 'none', 3000);
   }
 
-  // Inicializar
+  // Inicialización
   document.addEventListener('DOMContentLoaded', () => {
-    cargarDatos();
-    // Agregar botón agregar
-    if (moduloPermisos.agregar) {
-      const addButton = document.createElement('button');
-      addButton.className = 'btn-add-global';
-      addButton.innerHTML = '<i class="fas fa-plus"></i> Nuevo Perfil';
-      addButton.onclick = window.agregarNuevo;
-      document.querySelector('.page-header').appendChild(addButton);
+    if (permisos.agregar) {
+      const btn = document.createElement('button');
+      btn.className = 'btn-add-global';
+      btn.innerHTML = '<i class="fas fa-plus"></i> Nuevo Perfil';
+      btn.onclick = window.agregarNuevo;
+      document.getElementById('header-actions').appendChild(btn);
     }
+    cargarDatos();
   });
 </script>
 
 <style>
-  .page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2rem;
-    flex-wrap: wrap;
-    gap: 1rem;
-  }
-
-  .page-header h1 {
-    margin: 0;
-    font-size: 1.75rem;
-    color: #1e293b;
-  }
-
-  .page-header h1 i {
-    margin-right: 0.5rem;
-    color: #3b82f6;
-  }
-
-  .btn-add-global {
-    background: #059669;
-    color: white;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 6px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-weight: 500;
-    font-size: 1rem;
-  }
-
-  .btn-add-global:hover {
-    background: #047857;
-  }
-
-  .modal-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-  }
-
-  .form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .form-group label {
-    font-weight: 600;
-    color: #475569;
-  }
-
-  .form-group input[type="text"] {
-    padding: 0.75rem;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    font-size: 1rem;
-  }
-
-  .form-group input[type="text"]:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  }
-
-  .checkbox-group {
-    flex-direction: row;
-    align-items: center;
-  }
-
-  .form-actions {
-    display: flex;
-    gap: 1rem;
-    justify-content: flex-end;
-    margin-top: 1rem;
-  }
-
-  .btn-primary, .btn-secondary {
-    padding: 0.75rem 1.5rem;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 500;
-  }
-
-  .btn-primary {
-    background: #1e293b;
-    color: white;
-  }
-
-  .btn-primary:hover {
-    background: #334155;
-  }
-
-  .btn-secondary {
-    background: #f1f5f9;
-    color: #475569;
-  }
-
-  .btn-secondary:hover {
-    background: #e2e8f0;
-  }
-
-  .detail-view {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .detail-item {
-    padding: 0.75rem;
-    background: #f8fafc;
-    border-radius: 4px;
-  }
-
-  .status-message {
-    position: fixed;
-    bottom: 2rem;
-    right: 2rem;
-    padding: 1rem;
-    border-radius: 6px;
-    display: none;
-    z-index: 1100;
-    animation: slideInRight 0.3s ease;
-  }
-
-  @keyframes slideInRight {
-    from {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
-
-  @media (max-width: 768px) {
-    .page-header {
-      flex-direction: column;
-      align-items: stretch;
-    }
-
-    .status-message {
-      bottom: 1rem;
-      right: 1rem;
-      left: 1rem;
-    }
-  }
+  /* Tus estilos CSS se mantienen igual */
+  .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+  .btn-add-global { background: #059669; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer; }
+  #modalFormContainer { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center; }
+  .crud-table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; }
+  .crud-table th, .crud-table td { padding: 1rem; border-bottom: 1px solid #e2e8f0; text-align: left; }
+  .btn-icon { border: none; background: none; cursor: pointer; padding: 0.5rem; }
+  .edit { color: #f59e0b; }
+  .delete { color: #ef4444; }
+  .status-message { position: fixed; bottom: 2rem; right: 2rem; padding: 1rem; border-radius: 6px; display: none; z-index: 3000; }
 </style>

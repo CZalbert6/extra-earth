@@ -36,9 +36,32 @@ const { title = "Sistema Corporativo", moduloActual } = Astro.props;
         .breadcrumbs span{margin:0 .5rem;color:#94a3b8}
         .content-wrapper{padding:2rem;flex:1}
         .card{background:white;border-radius:8px;padding:1.5rem;box-shadow:0 1px 3px rgba(0,0,0,.05);border:1px solid #e2e8f0;}
+        
         .user-info{display:flex;align-items:center;gap:10px;}
-        .user-avatar{width:35px;height:35px;background:#e2e8f0;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;}
-        .user-avatar img{width:100%;height:100%;object-fit:cover;}
+        
+        /* CORRECCIÓN DE IMAGEN DE USUARIO EN CABECERA */
+        .user-avatar {
+            width: 35px;
+            height: 35px;
+            background: #e2e8f0;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden; /* Corta cualquier exceso de imagen */
+            border: 1px solid #cbd5e1;
+            flex-shrink: 0; /* Evita que el contenedor se deforme */
+        }
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Ajusta la imagen al círculo sin estirarla */
+        }
+        .user-avatar i {
+            font-size: 1.1rem;
+            color: #64748b;
+        }
+
         .logout-btn{background:none;border:none;color:#ef4444;cursor:pointer;padding:.5rem;border-radius:4px;}
         .logout-btn:hover{background:#fee2e2;}
         @media(max-width:768px){aside{transform:translateX(-100%)} aside.open{transform:translateX(0)} main{margin-left:0} .menu-toggle{display:block}}
@@ -101,7 +124,10 @@ const { title = "Sistema Corporativo", moduloActual } = Astro.props;
 
         function cargarInfoUsuario() {
             try {
-                const user = JSON.parse(localStorage.getItem("user") || "null");
+                const userString = localStorage.getItem("user");
+                if (!userString) return;
+                
+                const user = JSON.parse(userString);
                 if (user) {
                     if(userNameSpan) userNameSpan.textContent = user.nombre || user.username;
                     const img = document.getElementById('userImg') as HTMLImageElement;
@@ -112,7 +138,7 @@ const { title = "Sistema Corporativo", moduloActual } = Astro.props;
                         icon.style.display = 'none';
                     }
                 }
-            } catch(e) { console.error(e); }
+            } catch(e) { console.error("Error al cargar info de usuario:", e); }
         }
 
         async function cargarMenu() {
@@ -132,7 +158,7 @@ const { title = "Sistema Corporativo", moduloActual } = Astro.props;
 
                 const data = await res.json();
                 if (!data.success) {
-                    menuContainer.innerHTML = `<div style="padding:1rem; color:red;">Error de acceso</div>`;
+                    menuContainer.innerHTML = `<div style="padding:1rem; color:red; font-size:0.8rem;">Error de acceso</div>`;
                     return;
                 }
 
@@ -145,7 +171,6 @@ const { title = "Sistema Corporativo", moduloActual } = Astro.props;
                             const nombre = mod.strNombreModulo || mod.nombre;
                             let slug = nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-').replace(/\./g, '-');
                             
-                            // Mapeo manual para archivos físicos
                             if (slug === "modulo") slug = "modulos";
                             if (slug === "perfil") slug = "perfiles";
                             if (slug === "usuario") slug = "usuarios";
@@ -160,12 +185,15 @@ const { title = "Sistema Corporativo", moduloActual } = Astro.props;
                 });
                 menuContainer.innerHTML = html;
             } catch (err) {
-                console.error(err);
-                menuContainer.innerHTML = `<div style="padding:1rem; color:gray;">Error de conexión</div>`;
+                console.error("Error al cargar menú:", err);
+                menuContainer.innerHTML = `<div style="padding:1rem; color:gray; font-size:0.8rem;">Error de conexión</div>`;
             }
         }
 
-        logoutBtn?.addEventListener("click", () => { localStorage.clear(); window.location.href = "/extra-earth/login"; });
+        logoutBtn?.addEventListener("click", () => { 
+            localStorage.clear(); 
+            window.location.href = "/extra-earth/login"; 
+        });
         
         document.getElementById('menuToggle')!.onclick = () => {
             document.getElementById('sidebar')!.classList.toggle('open');

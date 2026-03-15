@@ -74,9 +74,9 @@ const API_URL = "https://extra-earth-production.up.railway.app";
             </div>
           </div>
           
-          <div class="imagen-input">
+          <div class="imagen-input" style="text-align: center;">
             <input type="file" id="imagenFile" accept="image/jpeg,image/png,image/gif" onchange="previsualizarImagen(event)">
-            <button type="button" class="btn-clear" onclick="limpiarImagen()" style="display: none;" id="btnClearImagen">
+            <button type="button" class="btn-clear" onclick="limpiarImagen()" style="display: none; background: #fee2e2; color: #ef4444; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-top: 5px;" id="btnClearImagen">
               <i class="fas fa-times"></i> Quitar imagen
             </button>
           </div>
@@ -122,7 +122,6 @@ const API_URL = "https://extra-earth-production.up.railway.app";
 </Layout>
 
 <script>
-  // RUTA CORREGIDA: Doble punto para salir de /modulos/ y /pages/
   import { verificarPermisosModulo } from '../../utils/permisos';
   const API_URL = "https://extra-earth-production.up.railway.app";
 
@@ -132,8 +131,9 @@ const API_URL = "https://extra-earth-production.up.railway.app";
   window.previsualizarImagen = (event) => {
     const file = event.target.files[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        alert('La imagen es muy pesada. Máximo 2MB.');
+      if (file.size > 1 * 1024 * 1024) { // Bajado a 1MB para mejor rendimiento
+        alert('La imagen es muy pesada. Máximo 1MB.');
+        event.target.value = '';
         return;
       }
       const reader = new FileReader();
@@ -196,7 +196,9 @@ const API_URL = "https://extra-earth-production.up.railway.app";
       <tr>
         <td>${u.id}</td>
         <td>
-          <img src="${u.strimagen || 'https://ui-avatars.com/api/?name=' + u.username}" class="foto-perfil-tabla">
+          <div class="foto-container-tabla">
+            <img src="${u.strimagen || 'https://ui-avatars.com/api/?name=' + u.username}" class="foto-perfil-tabla">
+          </div>
         </td>
         <td>${u.username}</td>
         <td>${u.nombre}</td>
@@ -259,10 +261,13 @@ const API_URL = "https://extra-earth-production.up.railway.app";
       
       if (u.strimagen) {
         document.getElementById('strImagenBase64').value = u.strimagen;
-        document.getElementById('previewImg').src = u.strimagen;
-        document.getElementById('previewImg').style.display = 'block';
+        const img = document.getElementById('previewImg');
+        img.src = u.strimagen;
+        img.style.display = 'block';
         document.getElementById('previewPlaceholder').style.display = 'none';
         document.getElementById('btnClearImagen').style.display = 'inline-block';
+      } else {
+        limpiarImagen();
       }
       document.getElementById('modalUsuario').style.display = 'flex';
     }
@@ -320,12 +325,43 @@ const API_URL = "https://extra-earth-production.up.railway.app";
   .form-group { display: flex; flex-direction: column; margin-bottom: 1rem; }
   .form-group label { font-weight: 600; margin-bottom: 0.5rem; }
   .form-group input, .form-group select { padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; }
-  .imagen-preview { width: 80px; height: 80px; border-radius: 50%; overflow: hidden; background: #eee; margin: 1rem 0; border: 2px solid #e2e8f0; }
-  .imagen-preview img { width: 100%; height: 100%; object-fit: cover; }
-  .preview-placeholder { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: #94a3b8; }
+  
+  /* AJUSTE DE IMAGEN EN MODAL */
+  .imagen-preview { 
+    width: 120px; 
+    height: 120px; 
+    border-radius: 50%; 
+    overflow: hidden; 
+    background: #f1f5f9; 
+    margin: 1rem auto; 
+    border: 3px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .imagen-preview img { 
+    width: 100%; 
+    height: 100%; 
+    object-fit: cover; /* Evita que se deforme o se vea enorme */
+  }
+
+  /* AJUSTE DE IMAGEN EN TABLA */
+  .foto-container-tabla {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #eee;
+  }
+  .foto-perfil-tabla { 
+    width: 100%; 
+    height: 100%; 
+    object-fit: cover; 
+  }
+
+  .preview-placeholder { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; color: #94a3b8; }
   .crud-table { width: 100%; border-collapse: collapse; background: white; }
   .crud-table th, .crud-table td { padding: 1rem; border-bottom: 1px solid #eee; text-align: left; }
-  .foto-perfil-tabla { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; }
   .badge { padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem; }
   .badge-active { background: #dcfce7; color: #166534; }
   .badge-inactive { background: #fee2e2; color: #991b1b; }

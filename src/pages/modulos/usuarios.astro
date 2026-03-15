@@ -68,7 +68,7 @@ const API_URL = "https://extra-earth-production.up.railway.app";
         <div class="form-group imagen-group">
           <label>Foto de Perfil</label>
           <div class="imagen-preview" id="imagenPreview">
-            <img id="previewImg" src="#" alt="Vista previa" style="display: none;">
+            <img id="previewImg" src="#" alt="Vista previa" style="display: none; width: 100%; height: 100%; object-fit: cover;">
             <div class="preview-placeholder" id="previewPlaceholder">
               <i class="fas fa-user"></i>
             </div>
@@ -131,7 +131,7 @@ const API_URL = "https://extra-earth-production.up.railway.app";
   window.previsualizarImagen = (event) => {
     const file = event.target.files[0];
     if (file) {
-      if (file.size > 1 * 1024 * 1024) { // Bajado a 1MB para mejor rendimiento
+      if (file.size > 1 * 1024 * 1024) { 
         alert('La imagen es muy pesada. Máximo 1MB.');
         event.target.value = '';
         return;
@@ -140,8 +140,11 @@ const API_URL = "https://extra-earth-production.up.railway.app";
       reader.onload = (e) => {
         const base64 = e.target.result;
         document.getElementById('strImagenBase64').value = base64;
-        document.getElementById('previewImg').src = base64;
-        document.getElementById('previewImg').style.display = 'block';
+        
+        const previewImg = document.getElementById('previewImg');
+        previewImg.src = base64;
+        previewImg.style.display = 'block';
+        
         document.getElementById('previewPlaceholder').style.display = 'none';
         document.getElementById('btnClearImagen').style.display = 'inline-block';
       };
@@ -152,7 +155,11 @@ const API_URL = "https://extra-earth-production.up.railway.app";
   window.limpiarImagen = () => {
     document.getElementById('imagenFile').value = '';
     document.getElementById('strImagenBase64').value = '';
-    document.getElementById('previewImg').style.display = 'none';
+    
+    const previewImg = document.getElementById('previewImg');
+    previewImg.style.display = 'none';
+    previewImg.src = '#'; // Liberamos memoria de la imagen anterior
+    
     document.getElementById('previewPlaceholder').style.display = 'flex';
     document.getElementById('btnClearImagen').style.display = 'none';
   };
@@ -197,7 +204,7 @@ const API_URL = "https://extra-earth-production.up.railway.app";
         <td>${u.id}</td>
         <td>
           <div class="foto-container-tabla">
-            <img src="${u.strimagen || 'https://ui-avatars.com/api/?name=' + u.username}" class="foto-perfil-tabla">
+            <img src="${u.strimagen || 'https://ui-avatars.com/api/?name=' + u.username}" class="foto-perfil-tabla" alt="Avatar">
           </div>
         </td>
         <td>${u.username}</td>
@@ -326,10 +333,10 @@ const API_URL = "https://extra-earth-production.up.railway.app";
   .form-group label { font-weight: 600; margin-bottom: 0.5rem; }
   .form-group input, .form-group select { padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; }
   
-  /* AJUSTE DE IMAGEN EN MODAL */
+  /* AJUSTE DE IMAGEN BLINDADO */
   .imagen-preview { 
-    width: 120px; 
-    height: 120px; 
+    width: 120px !important; 
+    height: 120px !important; 
     border-radius: 50%; 
     overflow: hidden; 
     background: #f1f5f9; 
@@ -338,30 +345,28 @@ const API_URL = "https://extra-earth-production.up.railway.app";
     display: flex;
     align-items: center;
     justify-content: center;
-  }
-  .imagen-preview img { 
-    width: 100%; 
-    height: 100%; 
-    object-fit: cover; /* Evita que se deforme o se vea enorme */
+    flex-shrink: 0; /* Evita que el modal aplaste o estire el contenedor */
   }
 
-  /* AJUSTE DE IMAGEN EN TABLA */
   .foto-container-tabla {
-    width: 40px;
-    height: 40px;
+    width: 40px !important;
+    height: 40px !important;
     border-radius: 50%;
     overflow: hidden;
     background: #eee;
-  }
-  .foto-perfil-tabla { 
-    width: 100%; 
-    height: 100%; 
-    object-fit: cover; 
+    flex-shrink: 0;
   }
 
-  .preview-placeholder { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; color: #94a3b8; }
+  .foto-perfil-tabla { 
+    width: 100% !important; 
+    height: 100% !important; 
+    object-fit: cover !important; 
+  }
+
+  .preview-placeholder { height: 100%; width: 100%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; color: #94a3b8; }
+  
   .crud-table { width: 100%; border-collapse: collapse; background: white; }
-  .crud-table th, .crud-table td { padding: 1rem; border-bottom: 1px solid #eee; text-align: left; }
+  .crud-table th, .crud-table td { padding: 1rem; border-bottom: 1px solid #eee; text-align: left; vertical-align: middle; }
   .badge { padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem; }
   .badge-active { background: #dcfce7; color: #166534; }
   .badge-inactive { background: #fee2e2; color: #991b1b; }

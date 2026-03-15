@@ -109,6 +109,7 @@ header{background:white;height:60px;display:flex;align-items:center;justify-cont
 <div id="auth-metadata" data-modulo={moduloActual}></div>
 
 <script>
+// RUTA CORREGIDA: layout.astro está en src/layout/, subimos un nivel para ir a src/utils/
 import { verificarPermisosModulo } from '../utils/permisos';
 
 const API_URL="https://extra-earth-production.up.railway.app"
@@ -128,9 +129,9 @@ function verificarAuth(){
         return;
     }
 
-    const moduloActual = metadata?.dataset.modulo;
-    if (moduloActual && moduloActual !== "undefined" && moduloActual !== "") {
-        const { tieneAcceso } = verificarPermisosModulo(moduloActual);
+    const modName = metadata?.dataset.modulo;
+    if (modName && modName !== "undefined" && modName !== "") {
+        const { tieneAcceso } = verificarPermisosModulo(modName);
         const user = JSON.parse(localStorage.getItem('user') || '{}');
 
         if (!tieneAcceso && !user.esAdmin) {
@@ -163,7 +164,10 @@ async function cargarMenu(){
             headers: { Authorization: `Bearer ${token}` }
         });
         const data = await res.json();
-        if (!data.success) return;
+        if (!data.success) {
+            menuContainer.innerHTML = `<div style="padding:1rem; color:red;">Error al cargar menú</div>`;
+            return;
+        }
 
         let html = `<a href="/extra-earth/modulos/principal-1-1"><i class="fas fa-home"></i> Inicio</a>`;
 
@@ -172,18 +176,17 @@ async function cargarMenu(){
                 html += `<div class="menu-section"><div class="menu-section-title">${grupo.nombre}</div>`;
                 
                 grupo.modulos.forEach(mod => {
-                    // Slugificación limpia para archivos en carpeta /modulos/
                     let slug = mod.strNombreModulo.toLowerCase()
                         .normalize("NFD")
-                        .replace(/[\u0300-\u036f]/g, "") // Quitar acentos
-                        .replace(/\s+/g, '-')            // Espacios -> guion
-                        .replace(/\./g, '-');            // Puntos -> guion (Principal 1.1 -> principal-1-1)
+                        .replace(/[\u0300-\u036f]/g, "") 
+                        .replace(/\s+/g, '-')            
+                        .replace(/\./g, '-');            
 
-                    // Casos especiales según tus nombres de archivos reales
+                    // Mapeo exacto a tus archivos físicos en pages/modulos/
                     if (slug === "modulo") slug = "modulos";
-                    if (slug === "permisos-perfil") slug = "permisos";
-                    if (slug === "usuario") slug = "usuarios";
                     if (slug === "perfil") slug = "perfiles";
+                    if (slug === "usuario") slug = "usuarios";
+                    if (slug === "permisos-perfil") slug = "permisos";
 
                     const url = `/extra-earth/modulos/${slug}`;
                     const activeClass = window.location.pathname.includes(slug) ? 'active' : '';
@@ -196,7 +199,10 @@ async function cargarMenu(){
             }
         });
         menuContainer.innerHTML = html;
-    } catch (err) { console.error(err); }
+    } catch (err) { 
+        console.error(err);
+        menuContainer.innerHTML = `<div style="padding:1rem; color:gray;">Error de conexión</div>`;
+    }
 }
 
 logoutBtn.addEventListener("click", () => {

@@ -1,4 +1,5 @@
 ---
+// src/pages/modulos/permisos.astro
 import Layout from '../../layout/layout.astro';
 const API_URL = "https://extra-earth-production.up.railway.app";
 const pageTitle = "Gestión de Permisos por Perfil";
@@ -91,11 +92,11 @@ const pageTitle = "Gestión de Permisos por Perfil";
 </Layout>
 
 <script>
+  // RUTA CORREGIDA: Dos niveles arriba para salir de /modulos/ y /pages/
   import { verificarPermisosModulo } from '../../utils/permisos';
   const API_URL = "https://extra-earth-production.up.railway.app";
 
   let currentPage = 1;
-  // Obtener los permisos del usuario logueado para ESTE módulo
   const { permisos } = verificarPermisosModulo('Permisos-Perfil');
 
   async function cargarSelects() {
@@ -123,7 +124,9 @@ const pageTitle = "Gestión de Permisos por Perfil";
 
   async function cargarPermisos(page = 1) {
     if (!permisos.consulta) return;
-    document.getElementById('loading').style.display = 'block';
+    currentPage = page;
+    const loading = document.getElementById('loading');
+    if(loading) loading.style.display = 'block';
     
     try {
       const token = localStorage.getItem('token');
@@ -137,11 +140,13 @@ const pageTitle = "Gestión de Permisos por Perfil";
         renderizarPaginacion(data.pagination);
       }
     } catch (error) { showMsg('Error al cargar permisos', 'error'); } 
-    finally { document.getElementById('loading').style.display = 'none'; }
+    finally { if(loading) loading.style.display = 'none'; }
   }
 
   function renderizarTabla(listaPermisos) {
     const tbody = document.getElementById('tablaBody');
+    if (!tbody) return;
+    
     if (listaPermisos.length === 0) {
       tbody.innerHTML = '<tr><td colspan="9" class="no-data">No hay permisos</td></tr>';
       return;
@@ -168,6 +173,7 @@ const pageTitle = "Gestión de Permisos por Perfil";
 
   function renderizarPaginacion(pagination) {
     const div = document.getElementById('pagination');
+    if (!div) return;
     if (pagination.totalPages <= 1) { div.innerHTML = ''; return; }
     
     let html = '';
@@ -177,9 +183,13 @@ const pageTitle = "Gestión de Permisos por Perfil";
     div.innerHTML = html;
   }
 
+  // Hacer funciones globales para botones inyectados
+  window.cargarPermisos = cargarPermisos;
+
   window.abrirModalNuevo = () => {
     document.getElementById('modalTitulo').textContent = 'Nuevo Permiso';
-    document.getElementById('permisoForm').reset();
+    const form = document.getElementById('permisoForm') as HTMLFormElement;
+    if(form) form.reset();
     document.getElementById('permisoId').value = '';
     document.getElementById('modalPermiso').style.display = 'flex';
   };
@@ -193,28 +203,38 @@ const pageTitle = "Gestión de Permisos por Perfil";
     if (data.success) {
       const p = data.data;
       document.getElementById('modalTitulo').textContent = 'Editar Permiso';
-      document.getElementById('permisoId').value = p.id;
-      document.getElementById('idModulo').value = p.idmodulo;
-      document.getElementById('idPerfil').value = p.idperfil;
-      document.getElementById('bitAgregar').checked = p.bitagregar;
-      document.getElementById('bitEditar').checked = p.biteditar;
-      document.getElementById('bitConsulta').checked = p.bitconsulta;
-      document.getElementById('bitEliminar').checked = p.biteliminar;
-      document.getElementById('bitDetalle').checked = p.bitdetalle;
+      (document.getElementById('permisoId') as HTMLInputElement).value = p.id;
+      (document.getElementById('idModulo') as HTMLSelectElement).value = p.idmodulo;
+      (document.getElementById('idPerfil') as HTMLSelectElement).value = p.idperfil;
+      (document.getElementById('bitAgregar') as HTMLInputElement).checked = p.bitagregar;
+      (document.getElementById('bitEditar') as HTMLInputElement).checked = p.biteditar;
+      (document.getElementById('bitConsulta') as HTMLInputElement).checked = p.bitconsulta;
+      (document.getElementById('bitEliminar') as HTMLInputElement).checked = p.biteliminar;
+      (document.getElementById('bitDetalle') as HTMLInputElement).checked = p.bitdetalle;
       document.getElementById('modalPermiso').style.display = 'flex';
     }
   };
 
+  window.verDetalle = async (id) => {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API_URL}/api/permisos-perfil/${id}`, { headers: { 'Authorization': `Bearer ${token}` } });
+    const data = await res.json();
+    if (data.success) {
+      const p = data.data;
+      alert(`Módulo: ${p.strnombremodulo}\nPerfil: ${p.strnombreperfil}\n\nPermisos:\n- Agregar: ${p.bitagregar ? 'SÍ':'NO'}\n- Editar: ${p.biteditar ? 'SÍ':'NO'}\n- Consulta: ${p.bitconsulta ? 'SÍ':'NO'}\n- Eliminar: ${p.biteliminar ? 'SÍ':'NO'}`);
+    }
+  };
+
   window.guardarPermiso = async () => {
-    const id = document.getElementById('permisoId').value;
+    const id = (document.getElementById('permisoId') as HTMLInputElement).value;
     const permisoData = {
-      idModulo: parseInt(document.getElementById('idModulo').value),
-      idPerfil: parseInt(document.getElementById('idPerfil').value),
-      bitAgregar: document.getElementById('bitAgregar').checked,
-      bitEditar: document.getElementById('bitEditar').checked,
-      bitConsulta: document.getElementById('bitConsulta').checked,
-      bitEliminar: document.getElementById('bitEliminar').checked,
-      bitDetalle: document.getElementById('bitDetalle').checked
+      idModulo: parseInt((document.getElementById('idModulo') as HTMLSelectElement).value),
+      idPerfil: parseInt((document.getElementById('idPerfil') as HTMLSelectElement).value),
+      bitAgregar: (document.getElementById('bitAgregar') as HTMLInputElement).checked,
+      bitEditar: (document.getElementById('bitEditar') as HTMLInputElement).checked,
+      bitConsulta: (document.getElementById('bitConsulta') as HTMLInputElement).checked,
+      bitEliminar: (document.getElementById('bitEliminar') as HTMLInputElement).checked,
+      bitDetalle: (document.getElementById('bitDetalle') as HTMLInputElement).checked
     };
     
     const token = localStorage.getItem('token');
@@ -243,6 +263,7 @@ const pageTitle = "Gestión de Permisos por Perfil";
 
   function showMsg(text, type) {
     const msgDiv = document.getElementById('message');
+    if(!msgDiv) return;
     msgDiv.style.display = 'block';
     msgDiv.style.background = type === 'success' ? '#dcfce7' : '#fee2e2';
     msgDiv.textContent = text;
@@ -250,7 +271,10 @@ const pageTitle = "Gestión de Permisos por Perfil";
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    if (permisos.agregar) document.getElementById('btnNuevoPermiso').style.display = 'block';
+    if (permisos.agregar) {
+        const btn = document.getElementById('btnNuevoPermiso');
+        if(btn) btn.style.display = 'block';
+    }
     cargarSelects();
     cargarPermisos();
   });
@@ -259,12 +283,13 @@ const pageTitle = "Gestión de Permisos por Perfil";
 <style>
   .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
   .btn-add { background: #059669; color: white; border: none; padding: 0.7rem 1.2rem; border-radius: 6px; cursor: pointer; font-weight: 600; }
-  .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 2000; }
   .modal-content { background: white; padding: 2rem; border-radius: 8px; width: 90%; max-width: 600px; }
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
   .form-group { display: flex; flex-direction: column; gap: 0.5rem; }
   .form-group select { padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; }
-  .permisos-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; background: #f8fafc; padding: 1rem; border-radius: 6px; }
+  .permisos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; background: #f8fafc; padding: 1rem; border-radius: 6px; }
+  .permiso-item label { display: flex; align-items: center; gap: 5px; font-size: 0.85rem; cursor: pointer; }
   .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 1.5rem; }
   .crud-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
   .crud-table th, .crud-table td { padding: 0.8rem; border-bottom: 1px solid #eee; text-align: left; }
@@ -274,5 +299,5 @@ const pageTitle = "Gestión de Permisos por Perfil";
   .pagination { display: flex; justify-content: center; gap: 5px; margin-top: 1rem; }
   .pagination button { padding: 5px 10px; cursor: pointer; border: 1px solid #ddd; background: white; }
   .pagination button.active { background: #1e293b; color: white; border-color: #1e293b; }
-  .status-message { position: fixed; bottom: 20px; right: 20px; padding: 10px 20px; border-radius: 5px; display: none; }
+  .status-message { position: fixed; bottom: 20px; right: 20px; padding: 10px 20px; border-radius: 5px; display: none; z-index: 3000; }
 </style>

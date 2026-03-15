@@ -1,4 +1,5 @@
 ---
+// src/pages/modulos/usuarios.astro
 import Layout from '../../layout/layout.astro';
 const API_URL = "https://extra-earth-production.up.railway.app";
 ---
@@ -121,19 +122,17 @@ const API_URL = "https://extra-earth-production.up.railway.app";
 </Layout>
 
 <script>
+  // RUTA CORREGIDA: Doble punto para salir de /modulos/ y /pages/
   import { verificarPermisosModulo } from '../../utils/permisos';
   const API_URL = "https://extra-earth-production.up.railway.app";
 
   let currentPage = 1;
-  let currentItem = null;
-  
-  // 1. OBTENER PERMISOS PARA ESTE MÓDULO (Requisito PDF)
-  const { permisos, tieneAcceso } = verificarPermisosModulo('Usuario');
+  const { permisos } = verificarPermisosModulo('Usuario');
 
   window.previsualizarImagen = (event) => {
     const file = event.target.files[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) { // Límite 2MB para Base64
+      if (file.size > 2 * 1024 * 1024) {
         alert('La imagen es muy pesada. Máximo 2MB.');
         return;
       }
@@ -172,8 +171,7 @@ const API_URL = "https://extra-earth-production.up.railway.app";
   }
 
   async function cargarUsuarios(page = 1) {
-    if (!permisos.consulta) return; // Si no tiene permiso de consulta, no hace nada
-    
+    if (!permisos.consulta) return;
     document.getElementById('loading').style.display = 'block';
     try {
       const token = localStorage.getItem('token');
@@ -218,6 +216,18 @@ const API_URL = "https://extra-earth-production.up.railway.app";
     `).join('');
   }
 
+  function renderizarPaginacion(pagination) {
+    const div = document.getElementById('pagination');
+    if (pagination.totalPages <= 1) { div.innerHTML = ''; return; }
+    let html = '';
+    for (let i = 1; i <= pagination.totalPages; i++) {
+      html += `<button class="${i === pagination.page ? 'active' : ''}" onclick="window.cargarUsuarios(${i})">${i}</button>`;
+    }
+    div.innerHTML = html;
+  }
+
+  window.cargarUsuarios = cargarUsuarios;
+
   window.abrirModalNuevo = () => {
     document.getElementById('modalTitulo').textContent = 'Nuevo Usuario';
     document.getElementById('usuarioForm').reset();
@@ -227,9 +237,7 @@ const API_URL = "https://extra-earth-production.up.railway.app";
     document.getElementById('modalUsuario').style.display = 'flex';
   };
 
-  window.cerrarModal = () => {
-    document.getElementById('modalUsuario').style.display = 'none';
-  };
+  window.cerrarModal = () => { document.getElementById('modalUsuario').style.display = 'none'; };
 
   window.editarUsuario = async (id) => {
     const token = localStorage.getItem('token');
@@ -296,7 +304,6 @@ const API_URL = "https://extra-earth-production.up.railway.app";
     cargarUsuarios(currentPage);
   };
 
-  // INICIALIZACIÓN
   document.addEventListener('DOMContentLoaded', () => {
     if (permisos.agregar) document.getElementById('btnNuevoUsuario').style.display = 'block';
     cargarPerfiles();
@@ -306,23 +313,26 @@ const API_URL = "https://extra-earth-production.up.railway.app";
 
 <style>
   .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
-  .btn-add { background: #059669; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer; }
-  .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+  .btn-add { background: #059669; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600; }
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
   .modal-content { background: white; padding: 2rem; border-radius: 8px; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; }
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
   .form-group { display: flex; flex-direction: column; margin-bottom: 1rem; }
   .form-group label { font-weight: 600; margin-bottom: 0.5rem; }
   .form-group input, .form-group select { padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; }
-  .imagen-preview { width: 80px; height: 80px; border-radius: 50%; overflow: hidden; background: #eee; margin-bottom: 1rem; }
+  .imagen-preview { width: 80px; height: 80px; border-radius: 50%; overflow: hidden; background: #eee; margin: 1rem 0; border: 2px solid #e2e8f0; }
   .imagen-preview img { width: 100%; height: 100%; object-fit: cover; }
+  .preview-placeholder { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: #94a3b8; }
   .crud-table { width: 100%; border-collapse: collapse; background: white; }
   .crud-table th, .crud-table td { padding: 1rem; border-bottom: 1px solid #eee; text-align: left; }
   .foto-perfil-tabla { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; }
   .badge { padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem; }
   .badge-active { background: #dcfce7; color: #166534; }
   .badge-inactive { background: #fee2e2; color: #991b1b; }
-  .btn-icon { border: none; background: none; cursor: pointer; margin-right: 0.5rem; }
-  .btn-icon.edit { color: #f59e0b; }
-  .btn-icon.delete { color: #ef4444; }
-  .btn-icon.view { color: #3b82f6; }
+  .btn-icon { border: none; background: none; cursor: pointer; padding: 5px; }
+  .edit { color: #f59e0b; } .delete { color: #ef4444; } .view { color: #3b82f6; }
+  .pagination { display: flex; justify-content: center; gap: 5px; margin-top: 1rem; }
+  .pagination button { padding: 5px 10px; cursor: pointer; border: 1px solid #ddd; background: white; }
+  .pagination button.active { background: #1e293b; color: white; border-color: #1e293b; }
+  .status-message { position: fixed; bottom: 20px; right: 20px; padding: 10px 20px; border-radius: 5px; display: none; }
 </style>

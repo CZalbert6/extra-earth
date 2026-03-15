@@ -1,7 +1,6 @@
 ---
+// src/pages/modulos/perfiles.astro
 import Layout from '../../layout/layout.astro';
-// Asumiendo que estos componentes existen en tu carpeta components
-import CrudTable from '../../components/CrudTable.astro';
 import ModalForm from '../../components/ModalForm.astro';
 
 const API_URL = "https://extra-earth-production.up.railway.app";
@@ -11,7 +10,8 @@ const pageTitle = "Gestión de Perfiles";
 <Layout title={`${pageTitle} | Sistema Corporativo`} moduloActual="Perfil">
   <div class="page-header">
     <h1><i class="fas fa-user-shield"></i> {pageTitle}</h1>
-    <div id="header-actions"></div> </div>
+    <div id="header-actions"></div> 
+  </div>
 
   <div id="modalFormContainer" style="display:none;">
     <ModalForm title="Perfil" id="modalForm">
@@ -37,28 +37,35 @@ const pageTitle = "Gestión de Perfiles";
     </ModalForm>
   </div>
 
-  <div id="tableContainer">
-     </div>
+  <div id="loading" style="display: none; text-align: center; padding: 2rem;">
+    <i class="fas fa-spinner fa-spin fa-2x"></i>
+  </div>
 
+  <div id="tableContainer" class="table-responsive">
+    </div>
+
+  <div id="pagination" class="pagination"></div>
   <div id="message" class="status-message"></div>
 </Layout>
 
 <script>
+  // RUTA CORREGIDA: Doble punto para subir desde /modulos/ a /src/
   import { verificarPermisosModulo } from '../../utils/permisos';
   const API_URL = "https://extra-earth-production.up.railway.app";
   
   let currentPage = 1;
-  let currentItem = null;
   const { permisos } = verificarPermisosModulo('Perfil');
 
-  // Referencias DOM
   const messageDiv = document.getElementById('message');
-  const perfilForm = document.getElementById('perfilForm');
+  const perfilForm = document.getElementById('perfilForm') as HTMLFormElement;
 
-  // Función para cargar datos
   async function cargarDatos(page = 1) {
     if (!permisos.consulta) return;
+    currentPage = page;
     
+    const loading = document.getElementById('loading');
+    if(loading) loading.style.display = 'block';
+
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(`${API_URL}/api/perfiles?page=${page}`, {
@@ -68,15 +75,19 @@ const pageTitle = "Gestión de Perfiles";
 
       if (data.success) {
         renderizarTabla(data.data);
-        // Aquí podrías renderizar la paginación si no usas el componente CrudTable automático
+        renderizarPaginacion(data.pagination);
       }
     } catch (error) {
       showMsg('Error al conectar con el servidor', 'error');
+    } finally {
+      if(loading) loading.style.display = 'none';
     }
   }
 
   function renderizarTabla(perfiles) {
     const container = document.getElementById('tableContainer');
+    if(!container) return;
+
     container.innerHTML = `
       <table class="crud-table">
         <thead>
@@ -91,11 +102,11 @@ const pageTitle = "Gestión de Perfiles";
           ${perfiles.map(p => `
             <tr>
               <td>${p.id}</td>
-              <td>${p.strnombreperfil}</td>
+              <td><strong>${p.strnombreperfil}</strong></td>
               <td>${p.bitadministrador ? '✅' : '❌'}</td>
-              <td>
-                ${permisos.editar ? `<button onclick="window.prepararEdicion(${p.id}, '${p.strnombreperfil}', ${p.bitadministrador})" class="btn-icon edit"><i class="fas fa-edit"></i></button>` : ''}
-                ${permisos.eliminar ? `<button onclick="window.eliminarPerfil(${p.id})" class="btn-icon delete"><i class="fas fa-trash"></i></button>` : ''}
+              <td class="actions-cell">
+                ${permisos.editar ? `<button onclick="window.prepararEdicion(${p.id}, '${p.strnombreperfil}', ${p.bitadministrador})" class="btn-icon edit" title="Editar"><i class="fas fa-edit"></i></button>` : ''}
+                ${permisos.eliminar ? `<button onclick="window.eliminarPerfil(${p.id})" class="btn-icon delete" title="Eliminar"><i class="fas fa-trash"></i></button>` : ''}
               </td>
             </tr>
           `).join('')}
@@ -104,34 +115,49 @@ const pageTitle = "Gestión de Perfiles";
     `;
   }
 
-  // Handlers globales
+  function renderizarPaginacion(pagination) {
+    const div = document.getElementById('pagination');
+    if (!div) return;
+    if (pagination.totalPages <= 1) { div.innerHTML = ''; return; }
+    
+    let html = '';
+    for (let i = 1; i <= pagination.totalPages; i++) {
+      html += `<button class="${i === pagination.page ? 'active' : ''}" onclick="window.cargarDatos(${i})">${i}</button>`;
+    }
+    div.innerHTML = html;
+  }
+
+  // Hacer funciones globales para botones inyectados y eventos onclick
+  window.cargarDatos = cargarDatos;
+  
   window.closeModal = () => {
-    document.getElementById('modalFormContainer').style.display = 'none';
-    perfilForm.reset();
+    const modal = document.getElementById('modalFormContainer');
+    if(modal) modal.style.display = 'none';
+    if(perfilForm) perfilForm.reset();
   };
 
   window.agregarNuevo = () => {
-    currentItem = null;
-    document.getElementById('perfilId').value = '';
+    (document.getElementById('perfilId') as HTMLInputElement).value = '';
     document.getElementById('btnGuardar').textContent = 'Guardar';
-    document.getElementById('modalFormContainer').style.display = 'flex';
+    const modal = document.getElementById('modalFormContainer');
+    if(modal) modal.style.display = 'flex';
   };
 
   window.prepararEdicion = (id, nombre, isAdmin) => {
-    currentItem = id;
-    document.getElementById('perfilId').value = id;
-    document.getElementById('strNombrePerfil').value = nombre;
-    document.getElementById('bitAdministrador').checked = isAdmin;
+    (document.getElementById('perfilId') as HTMLInputElement).value = id;
+    (document.getElementById('strNombrePerfil') as HTMLInputElement).value = nombre;
+    (document.getElementById('bitAdministrador') as HTMLInputElement).checked = isAdmin;
     document.getElementById('btnGuardar').textContent = 'Actualizar';
-    document.getElementById('modalFormContainer').style.display = 'flex';
+    const modal = document.getElementById('modalFormContainer');
+    if(modal) modal.style.display = 'flex';
   };
 
-  perfilForm.addEventListener('submit', async (e) => {
+  perfilForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const id = document.getElementById('perfilId').value;
+    const id = (document.getElementById('perfilId') as HTMLInputElement).value;
     const body = {
-      strNombrePerfil: document.getElementById('strNombrePerfil').value.trim(),
-      bitAdministrador: document.getElementById('bitAdministrador').checked
+      strNombrePerfil: (document.getElementById('strNombrePerfil') as HTMLInputElement).value.trim(),
+      bitAdministrador: (document.getElementById('bitAdministrador') as HTMLInputElement).checked
     };
 
     const token = localStorage.getItem('token');
@@ -168,34 +194,44 @@ const pageTitle = "Gestión de Perfiles";
   };
 
   function showMsg(text, type) {
+    if(!messageDiv) return;
     messageDiv.style.display = 'block';
     messageDiv.style.background = type === 'success' ? '#dcfce7' : '#fee2e2';
     messageDiv.textContent = text;
-    setTimeout(() => messageDiv.style.display = 'none', 3000);
+    setTimeout(() => { if(messageDiv) messageDiv.style.display = 'none'; }, 3000);
   }
 
-  // Inicialización
   document.addEventListener('DOMContentLoaded', () => {
     if (permisos.agregar) {
       const btn = document.createElement('button');
       btn.className = 'btn-add-global';
       btn.innerHTML = '<i class="fas fa-plus"></i> Nuevo Perfil';
       btn.onclick = window.agregarNuevo;
-      document.getElementById('header-actions').appendChild(btn);
+      document.getElementById('header-actions')?.appendChild(btn);
     }
     cargarDatos();
   });
 </script>
 
 <style>
-  /* Tus estilos CSS se mantienen igual */
   .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
-  .btn-add-global { background: #059669; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer; }
-  #modalFormContainer { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center; }
+  .btn-add-global { background: #059669; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600; }
+  #modalFormContainer { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 3000; display: flex; align-items: center; justify-content: center; }
+  .modal-form { display: flex; flex-direction: column; gap: 1rem; }
+  .form-group { display: flex; flex-direction: column; gap: 0.5rem; }
+  .form-group input[type="text"] { padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; }
+  .checkbox-group label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9rem; }
+  .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 1rem; }
   .crud-table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; }
   .crud-table th, .crud-table td { padding: 1rem; border-bottom: 1px solid #e2e8f0; text-align: left; }
-  .btn-icon { border: none; background: none; cursor: pointer; padding: 0.5rem; }
+  .crud-table th { background: #f8fafc; color: #475569; font-weight: 600; font-size: 0.85rem; }
+  .actions-cell { display: flex; gap: 8px; }
+  .btn-icon { border: none; background: none; cursor: pointer; padding: 0.5rem; transition: transform 0.2s; }
+  .btn-icon:hover { transform: scale(1.1); }
   .edit { color: #f59e0b; }
   .delete { color: #ef4444; }
-  .status-message { position: fixed; bottom: 2rem; right: 2rem; padding: 1rem; border-radius: 6px; display: none; z-index: 3000; }
+  .pagination { display: flex; justify-content: center; gap: 5px; margin-top: 1.5rem; }
+  .pagination button { padding: 5px 12px; border: 1px solid #ddd; background: white; cursor: pointer; border-radius: 4px; }
+  .pagination button.active { background: #1e293b; color: white; border-color: #1e293b; }
+  .status-message { position: fixed; bottom: 2rem; right: 2rem; padding: 1rem 2rem; border-radius: 6px; display: none; z-index: 4000; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
 </style>

@@ -1,4 +1,5 @@
 ---
+// src/pages/modulos/modulos.astro
 import Layout from '../../layout/layout.astro';
 const API_URL = "https://extra-earth-production.up.railway.app";
 const pageTitle = "Gestión de Módulos";
@@ -62,6 +63,7 @@ const pageTitle = "Gestión de Módulos";
 </Layout>
 
 <script>
+  // RUTA CORREGIDA: Subimos dos niveles (../../) para llegar de /modulos/ a /utils/
   import { verificarPermisosModulo } from '../../utils/permisos';
   const API_URL = "https://extra-earth-production.up.railway.app";
 
@@ -71,8 +73,11 @@ const pageTitle = "Gestión de Módulos";
 
   async function cargarModulos(page = 1) {
     if (!permisos.consulta) return;
+    currentPage = page;
     
-    document.getElementById('loading').style.display = 'block';
+    const loading = document.getElementById('loading');
+    if(loading) loading.style.display = 'block';
+
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/api/modulos?page=${page}`, {
@@ -87,12 +92,14 @@ const pageTitle = "Gestión de Módulos";
     } catch (error) {
       showMsg('Error al cargar módulos', 'error');
     } finally {
-      document.getElementById('loading').style.display = 'none';
+      if(loading) loading.style.display = 'none';
     }
   }
 
   function renderizarTabla(modulos) {
     const tbody = document.getElementById('tablaBody');
+    if (!tbody) return;
+
     if (modulos.length === 0) {
       tbody.innerHTML = '<tr><td colspan="4" class="no-data">No hay módulos registrados</td></tr>';
       return;
@@ -114,6 +121,7 @@ const pageTitle = "Gestión de Módulos";
 
   function renderizarPaginacion(pagination) {
     const div = document.getElementById('pagination');
+    if (!div) return;
     if (pagination.totalPages <= 1) { div.innerHTML = ''; return; }
     
     let html = '';
@@ -123,13 +131,13 @@ const pageTitle = "Gestión de Módulos";
     div.innerHTML = html;
   }
 
-  // Hacer funciones disponibles globalmente para los onclick de los botones inyectados
+  // Hacer funciones disponibles globalmente para los eventos onclick
   window.cargarModulos = cargarModulos;
 
   window.abrirModalNuevo = () => {
     document.getElementById('modalTitulo').textContent = 'Nuevo Módulo';
-    document.getElementById('moduloForm').reset();
-    document.getElementById('moduloId').value = '';
+    (document.getElementById('moduloForm') as HTMLFormElement).reset();
+    (document.getElementById('moduloId') as HTMLInputElement).value = '';
     document.getElementById('modalModulo').style.display = 'flex';
   };
 
@@ -147,8 +155,8 @@ const pageTitle = "Gestión de Módulos";
       if (data.success) {
         const m = data.data;
         document.getElementById('modalTitulo').textContent = 'Editar Módulo';
-        document.getElementById('moduloId').value = m.id;
-        document.getElementById('strNombreModulo').value = m.strnombremodulo;
+        (document.getElementById('moduloId') as HTMLInputElement).value = m.id;
+        (document.getElementById('strNombreModulo') as HTMLInputElement).value = m.strnombremodulo;
         document.getElementById('modalModulo').style.display = 'flex';
       }
     } catch (error) { showMsg('Error al cargar', 'error'); }
@@ -166,8 +174,8 @@ const pageTitle = "Gestión de Módulos";
   };
 
   window.guardarModulo = async () => {
-    const id = document.getElementById('moduloId').value;
-    const nombre = document.getElementById('strNombreModulo').value.trim();
+    const id = (document.getElementById('moduloId') as HTMLInputElement).value;
+    const nombre = (document.getElementById('strNombreModulo') as HTMLInputElement).value.trim();
     const token = localStorage.getItem('token');
     
     const response = await fetch(id ? `${API_URL}/api/modulos/${id}` : `${API_URL}/api/modulos`, {
@@ -198,23 +206,26 @@ const pageTitle = "Gestión de Módulos";
 
   function showMsg(text, type) {
     const msgDiv = document.getElementById('message');
+    if (!msgDiv) return;
     msgDiv.style.display = 'block';
     msgDiv.style.background = type === 'success' ? '#dcfce7' : '#fee2e2';
     msgDiv.textContent = text;
-    setTimeout(() => msgDiv.style.display = 'none', 3000);
+    setTimeout(() => { if(msgDiv) msgDiv.style.display = 'none'; }, 3000);
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    if (permisos.agregar) document.getElementById('btnNuevoModulo').style.display = 'block';
+    if (permisos.agregar) {
+        const btn = document.getElementById('btnNuevoModulo');
+        if(btn) btn.style.display = 'block';
+    }
     cargarModulos();
   });
 </script>
 
 <style>
-  /* Mantener tus estilos anteriores */
   .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
   .btn-add { background: #059669; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600; }
-  .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 2000; }
   .modal-content { background: white; padding: 2rem; border-radius: 8px; width: 100%; max-width: 450px; }
   .form-group { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.5rem; }
   .form-group input { padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; }
@@ -223,5 +234,5 @@ const pageTitle = "Gestión de Módulos";
   .crud-table th, .crud-table td { padding: 1rem; border-bottom: 1px solid #eee; text-align: left; }
   .btn-icon { border: none; background: none; cursor: pointer; padding: 5px; }
   .edit { color: #f59e0b; } .delete { color: #ef4444; } .view { color: #3b82f6; }
-  .status-message { position: fixed; bottom: 20px; right: 20px; padding: 10px 20px; border-radius: 5px; display: none; z-index: 1100; }
+  .status-message { position: fixed; bottom: 20px; right: 20px; padding: 10px 20px; border-radius: 5px; display: none; z-index: 3000; }
 </style>

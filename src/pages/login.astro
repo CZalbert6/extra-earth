@@ -1,3 +1,4 @@
+---
 import Layout from '../layout/layout.astro';
 const API_URL = "https://extra-earth-production.up.railway.app";
 ---
@@ -125,7 +126,7 @@ button:disabled { background: #94a3b8; cursor: not-allowed; }
           localStorage.setItem("user", JSON.stringify(data.user));
           localStorage.setItem("permisos", JSON.stringify(data.permisos || []));
 
-          // REDIRECCIÓN CORREGIDA A LA NUEVA UBICACIÓN
+          // REDIRECCIÓN CORREGIDA PARA EVITAR 404
           setTimeout(() => {
             window.location.href = "/extra-earth/modulos/principal-1-1";
           }, 1200);

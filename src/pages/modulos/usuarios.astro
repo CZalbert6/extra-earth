@@ -68,7 +68,7 @@ const API_URL = "https://extra-earth-production.up.railway.app";
         <div class="form-group imagen-group">
           <label>Foto de Perfil</label>
           <div class="imagen-preview" id="imagenPreview">
-            <img id="previewImg" src="#" alt="Vista previa" style="display: none; width: 100%; height: 100%; object-fit: cover;">
+            <img id="previewImg" src="#" alt="Vista previa" style="display: none; width: 120px; height: 120px; object-fit: cover; border-radius: 50%;">
             <div class="preview-placeholder" id="previewPlaceholder">
               <i class="fas fa-user"></i>
             </div>
@@ -128,29 +128,60 @@ const API_URL = "https://extra-earth-production.up.railway.app";
   let currentPage = 1;
   const { permisos } = verificarPermisosModulo('Usuario');
 
+  // --- NUEVO MOTOR DE REDIMENSIONAMIENTO CON CANVAS ---
   window.previsualizarImagen = (event) => {
     const file = event.target.files[0];
-    if (file) {
-      if (file.size > 1 * 1024 * 1024) { 
-        alert('La imagen es muy pesada. Máximo 1MB.');
-        event.target.value = '';
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const base64 = e.target.result;
-        document.getElementById('strImagenBase64').value = base64;
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        // 1. Crear un canvas virtual
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 250; // Tamaño máximo ideal para perfil
+        const MAX_HEIGHT = 250;
+        let width = img.width;
+        let height = img.height;
+
+        // 2. Calcular nuevas medidas manteniendo proporción
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height = Math.round((height * MAX_WIDTH) / width);
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width = Math.round((width * MAX_HEIGHT) / height);
+            height = MAX_HEIGHT;
+          }
+        }
+
+        // 3. Dibujar la imagen redimensionada
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // 4. Obtener el nuevo Base64 comprimido (Calidad 0.8)
+        const base64Redimensionado = canvas.toDataURL('image/jpeg', 0.8);
+
+        // 5. Asignar al formulario y a la vista previa
+        document.getElementById('strImagenBase64').value = base64Redimensionado;
         
         const previewImg = document.getElementById('previewImg');
-        previewImg.src = base64;
+        previewImg.src = base64Redimensionado;
         previewImg.style.display = 'block';
         
         document.getElementById('previewPlaceholder').style.display = 'none';
         document.getElementById('btnClearImagen').style.display = 'inline-block';
       };
-      reader.readAsDataURL(file);
-    }
+      // Iniciar la carga de la imagen original
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
   };
+  // ----------------------------------------------------
 
   window.limpiarImagen = () => {
     document.getElementById('imagenFile').value = '';
@@ -158,7 +189,7 @@ const API_URL = "https://extra-earth-production.up.railway.app";
     
     const previewImg = document.getElementById('previewImg');
     previewImg.style.display = 'none';
-    previewImg.src = '#'; // Liberamos memoria de la imagen anterior
+    previewImg.src = '#'; 
     
     document.getElementById('previewPlaceholder').style.display = 'flex';
     document.getElementById('btnClearImagen').style.display = 'none';
@@ -333,10 +364,10 @@ const API_URL = "https://extra-earth-production.up.railway.app";
   .form-group label { font-weight: 600; margin-bottom: 0.5rem; }
   .form-group input, .form-group select { padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; }
   
-  /* AJUSTE DE IMAGEN BLINDADO */
+  /* CONTENEDORES ESTRICTOS PARA IMÁGENES */
   .imagen-preview { 
-    width: 120px !important; 
-    height: 120px !important; 
+    width: 120px; 
+    height: 120px; 
     border-radius: 50%; 
     overflow: hidden; 
     background: #f1f5f9; 
@@ -345,22 +376,24 @@ const API_URL = "https://extra-earth-production.up.railway.app";
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0; /* Evita que el modal aplaste o estire el contenedor */
   }
 
   .foto-container-tabla {
-    width: 40px !important;
-    height: 40px !important;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     overflow: hidden;
     background: #eee;
-    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .foto-perfil-tabla { 
-    width: 100% !important; 
-    height: 100% !important; 
-    object-fit: cover !important; 
+    width: 40px; 
+    height: 40px; 
+    object-fit: cover; 
+    border-radius: 50%;
   }
 
   .preview-placeholder { height: 100%; width: 100%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; color: #94a3b8; }

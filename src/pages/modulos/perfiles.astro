@@ -60,7 +60,7 @@ const pageTitle = "Gestión de Perfiles";
   const { permisos } = verificarPermisosModulo('Perfil');
 
   const messageDiv = document.getElementById('message');
-  const perfilForm = document.getElementById('perfilForm') as HTMLFormElement;
+  const perfilForm = document.getElementById('perfilForm');
 
   async function cargarDatos(page = 1) {
     if (!permisos.consulta) return;
@@ -139,7 +139,7 @@ const pageTitle = "Gestión de Perfiles";
   };
 
   window.agregarNuevo = () => {
-    (document.getElementById('perfilId') as HTMLInputElement).value = '';
+    document.getElementById('perfilId').value = '';
     document.getElementById('modalTitulo').textContent = 'Nuevo Perfil';
     document.getElementById('btnGuardar').textContent = 'Guardar';
     const modal = document.getElementById('modalFormContainer');
@@ -147,9 +147,9 @@ const pageTitle = "Gestión de Perfiles";
   };
 
   window.prepararEdicion = (id, nombre, isAdmin) => {
-    (document.getElementById('perfilId') as HTMLInputElement).value = id;
-    (document.getElementById('strNombrePerfil') as HTMLInputElement).value = nombre;
-    (document.getElementById('bitAdministrador') as HTMLInputElement).checked = isAdmin;
+    document.getElementById('perfilId').value = id;
+    document.getElementById('strNombrePerfil').value = nombre;
+    document.getElementById('bitAdministrador').checked = isAdmin;
     document.getElementById('modalTitulo').textContent = 'Editar Perfil';
     document.getElementById('btnGuardar').textContent = 'Actualizar';
     const modal = document.getElementById('modalFormContainer');
@@ -158,22 +158,44 @@ const pageTitle = "Gestión de Perfiles";
 
   perfilForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const id = (document.getElementById('perfilId') as HTMLInputElement).value;
+    const btnGuardar = document.getElementById('btnGuardar');
+    
+    const id = document.getElementById('perfilId').value;
+    const nombreVal = document.getElementById('strNombrePerfil').value.trim();
+    const isAdmin = document.getElementById('bitAdministrador').checked;
+
+    // Enviamos el payload redundante
     const body = {
-      strNombrePerfil: (document.getElementById('strNombrePerfil') as HTMLInputElement).value.trim(),
-      bitAdministrador: (document.getElementById('bitAdministrador') as HTMLInputElement).checked
+      strNombrePerfil: nombreVal,
+      strnombreperfil: nombreVal,
+      bitAdministrador: isAdmin,
+      bitadministrador: isAdmin
     };
 
     const token = localStorage.getItem('token');
     const method = id ? 'PUT' : 'POST';
     const url = id ? `${API_URL}/api/perfiles/${id}` : `${API_URL}/api/perfiles`;
 
+    btnGuardar.disabled = true;
+    btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+
     try {
+      console.log("Enviando datos al servidor:", body);
+
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(body)
       });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error(`💥 Error del Servidor (${res.status}):`, errorText);
+        showMsg('Error en BD. Revisa la consola F12', 'error');
+        btnGuardar.disabled = false;
+        btnGuardar.textContent = id ? 'Actualizar' : 'Guardar';
+        return;
+      }
 
       const data = await res.json();
       if (data.success) {
@@ -181,10 +203,15 @@ const pageTitle = "Gestión de Perfiles";
         window.closeModal();
         cargarDatos(currentPage);
       } else {
+        console.warn("⚠️ API respondió con error:", data);
         showMsg(data.message || 'Error al guardar', 'error');
       }
     } catch (err) {
+      console.error("🔥 Error de red:", err);
       showMsg('Error de conexión', 'error');
+    } finally {
+        btnGuardar.disabled = false;
+        btnGuardar.textContent = id ? 'Actualizar' : 'Guardar';
     }
   });
 

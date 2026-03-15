@@ -299,6 +299,7 @@ app.post('/api/login', async (req, res) => {
 });
 
 // --- 7. CRUD Perfiles ---
+// GET: Leer Perfiles (Ya lo tenías)
 app.get('/api/perfiles', authenticateToken, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -316,17 +317,97 @@ app.get('/api/perfiles', authenticateToken, async (req, res) => {
         res.json({
             success: true,
             data: result.rows,
-            pagination: {
-                page,
-                limit,
-                total,
-                totalPages: Math.ceil(total / limit)
-            }
+            pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
         });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Error al obtener perfiles' });
     }
 });
+
+// ==========================================
+// NUEVO: POST, PUT, DELETE PARA PERFILES
+// ==========================================
+
+// POST: Crear nuevo perfil
+app.post('/api/perfiles', authenticateToken, async (req, res) => {
+    try {
+        const { strNombrePerfil, strnombreperfil, bitAdministrador, bitadministrador } = req.body;
+        const nombre = strNombrePerfil || strnombreperfil;
+        // Validamos el boolean para evitar errores de undefined
+        const isAdmin = bitAdministrador !== undefined ? bitAdministrador : (bitadministrador || false);
+
+        if (!nombre) {
+            return res.status(400).json({ success: false, message: 'El nombre del perfil es requerido' });
+        }
+
+        const result = await pool.query(
+            'INSERT INTO perfiles (strNombrePerfil, bitAdministrador) VALUES ($1, $2) RETURNING *',
+            [nombre, isAdmin]
+        );
+        
+        res.status(201).json({ success: true, message: 'Perfil creado', data: result.rows[0] });
+    } catch (err) {
+        if (err.code === '23505') { // Error de duplicado en Postgres
+            return res.status(400).json({ success: false, message: 'Ya existe un perfil con este nombre' });
+        }
+        console.error('Error al crear perfil:', err);
+        res.status(500).json({ success: false, message: 'Error interno al crear perfil' });
+    }
+});
+
+// PUT: Actualizar perfil existente
+app.put('/api/perfiles/:id', authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { strNombrePerfil, strnombreperfil, bitAdministrador, bitadministrador } = req.body;
+        const nombre = strNombrePerfil || strnombreperfil;
+        const isAdmin = bitAdministrador !== undefined ? bitAdministrador : (bitadministrador || false);
+
+        if (!nombre) {
+            return res.status(400).json({ success: false, message: 'El nombre del perfil es requerido' });
+        }
+
+        const result = await pool.query(
+            'UPDATE perfiles SET strNombrePerfil = $1, bitAdministrador = $2 WHERE id = $3 RETURNING *',
+            [nombre, isAdmin, id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Perfil no encontrado' });
+        }
+        
+        res.json({ success: true, message: 'Perfil actualizado', data: result.rows[0] });
+    } catch (err) {
+        if (err.code === '23505') { 
+            return res.status(400).json({ success: false, message: 'Ya existe otro perfil con este nombre' });
+        }
+        console.error('Error al actualizar perfil:', err);
+        res.status(500).json({ success: false, message: 'Error interno al actualizar perfil' });
+    }
+});
+
+// DELETE: Eliminar perfil
+app.delete('/api/perfiles/:id', authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query('DELETE FROM perfiles WHERE id = $1 RETURNING id', [id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Perfil no encontrado' });
+        }
+        
+        res.json({ success: true, message: 'Perfil eliminado correctamente' });
+    } catch (err) {
+        // Error 23503: Intento de eliminar un perfil que ya está asignado a un usuario
+        if (err.code === '23503') {
+            return res.status(400).json({ success: false, message: 'No puedes eliminar este perfil porque hay usuarios asignados a él' });
+        }
+        console.error('Error al eliminar perfil:', err);
+        res.status(500).json({ success: false, message: 'Error interno al eliminar perfil' });
+    }
+});
+// ==========================================
+
 
 // --- 8. CRUD Módulos ---
 app.get('/api/modulos', authenticateToken, async (req, res) => {

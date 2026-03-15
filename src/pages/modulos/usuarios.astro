@@ -76,7 +76,7 @@ const API_URL = "https://extra-earth-production.up.railway.app";
           
           <div class="imagen-input" style="text-align: center;">
             <input type="file" id="imagenFile" accept="image/jpeg,image/png,image/gif" onchange="previsualizarImagen(event)">
-            <button type="button" class="btn-clear" onclick="limpiarImagen()" style="display: none; background: #fee2e2; color: #ef4444; border: none; padding: 5px 10px; border-radius: 4px; cursor: margin-top: 5px;" id="btnClearImagen">
+            <button type="button" class="btn-clear" onclick="limpiarImagen()" style="display: none; background: #fee2e2; color: #ef4444; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-top: 5px;" id="btnClearImagen">
               <i class="fas fa-times"></i> Quitar imagen
             </button>
           </div>
@@ -128,18 +128,23 @@ const API_URL = "https://extra-earth-production.up.railway.app";
   let currentPage = 1;
   const { permisos } = verificarPermisosModulo('Usuario');
 
+  // ============================================
+  // FUNCIÓN CORREGIDA - COMPRESIÓN EXTREMA
+  // ============================================
   window.previsualizarImagen = (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
+    // Validar tipo de archivo
     if (!file.type.match('image.*')) {
       alert('Por favor, seleccione una imagen válida');
       event.target.value = '';
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('La imagen es muy pesada. Máximo 5MB antes de comprimir.');
+    // Validar tamaño máximo (2MB antes de comprimir)
+    if (file.size > 2 * 1024 * 1024) {
+      alert('La imagen es muy pesada. Máximo 2MB.');
       event.target.value = '';
       return;
     }
@@ -150,23 +155,20 @@ const API_URL = "https://extra-earth-production.up.railway.app";
       img.src = e.target.result;
       
       img.onload = () => {
+        // Crear canvas para comprimir
         const canvas = document.createElement('canvas');
         let width = img.width;
         let height = img.height;
         
-        const MAX_WIDTH = 800;
-        const MAX_HEIGHT = 800;
+        // Redimensionar a 200px máximo (para vista previa de 120px)
+        const MAX_SIZE = 200;
         
-        if (width > height) {
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
-          }
-        } else {
-          if (height > MAX_HEIGHT) {
-            width *= MAX_HEIGHT / height;
-            height = MAX_HEIGHT;
-          }
+        if (width > height && width > MAX_SIZE) {
+          height = Math.round((height * MAX_SIZE) / width);
+          width = MAX_SIZE;
+        } else if (height > MAX_SIZE) {
+          width = Math.round((width * MAX_SIZE) / height);
+          height = MAX_SIZE;
         }
         
         canvas.width = width;
@@ -175,21 +177,44 @@ const API_URL = "https://extra-earth-production.up.railway.app";
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
         
-        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
-        document.getElementById('strImagenBase64').value = compressedBase64;
+        // Comprimir a JPEG con calidad bajísima
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.2);
         
-        const previewImg = document.getElementById('previewImg');
-        previewImg.src = compressedBase64;
-        previewImg.style.display = 'block';
-        previewImg.style.width = '100%';
-        previewImg.style.height = '100%';
-        previewImg.style.objectFit = 'cover';
-        
-        document.getElementById('previewPlaceholder').style.display = 'none';
-        document.getElementById('btnClearImagen').style.display = 'inline-block';
-        
+        // Calcular tamaño
         const sizeInKB = Math.round(compressedBase64.length * 0.75 / 1024);
-        console.log(`Imagen comprimida: ~${sizeInKB}KB`);
+        
+        // Si aún está grande, comprimir más
+        if (sizeInKB > 30) {
+          const extraCanvas = document.createElement('canvas');
+          extraCanvas.width = 100;
+          extraCanvas.height = 100;
+          const extraCtx = extraCanvas.getContext('2d');
+          extraCtx.drawImage(img, 0, 0, 100, 100);
+          const finalBase64 = extraCanvas.toDataURL('image/jpeg', 0.15);
+          
+          document.getElementById('strImagenBase64').value = finalBase64;
+          
+          const previewImg = document.getElementById('previewImg');
+          previewImg.src = finalBase64;
+          previewImg.style.display = 'block';
+          
+          document.getElementById('previewPlaceholder').style.display = 'none';
+          document.getElementById('btnClearImagen').style.display = 'inline-block';
+          
+          const finalSize = Math.round(finalBase64.length * 0.75 / 1024);
+          console.log(`Imagen ultra comprimida: ${finalSize}KB`);
+        } else {
+          document.getElementById('strImagenBase64').value = compressedBase64;
+          
+          const previewImg = document.getElementById('previewImg');
+          previewImg.src = compressedBase64;
+          previewImg.style.display = 'block';
+          
+          document.getElementById('previewPlaceholder').style.display = 'none';
+          document.getElementById('btnClearImagen').style.display = 'inline-block';
+          
+          console.log(`Imagen comprimida: ${sizeInKB}KB`);
+        }
       };
     };
     
@@ -241,27 +266,30 @@ const API_URL = "https://extra-earth-production.up.railway.app";
     }
   }
 
-  // LA CORRECCIÓN CLAVE ESTÁ AQUÍ (Estilos en línea forzados)
+  // Renderizado de tabla con estilos FORZADOS
   function renderizarTabla(usuarios) {
     const tbody = document.getElementById('tablaBody');
     tbody.innerHTML = usuarios.map(u => `
       <tr>
-        <td style="vertical-align: middle;">${u.id}</td>
-        <td style="vertical-align: middle;">
-          <div style="width: 45px; height: 45px; border-radius: 50%; overflow: hidden; border: 2px solid #e2e8f0; display: flex; align-items: center; justify-content: center; background: #f8fafc; flex-shrink: 0; margin: 0;">
-            <img src="${u.strimagen || 'https://ui-avatars.com/api/?name=' + u.username}" style="width: 100%; height: 100%; object-fit: cover;" alt="Avatar">
+        <td style="vertical-align: middle; padding: 0.5rem;">${u.id}</td>
+        <td style="vertical-align: middle; padding: 0.5rem;">
+          <div style="width: 40px; height: 40px; border-radius: 50%; overflow: hidden; background: #f1f5f9; border: 2px solid #e2e8f0; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+            <img src="${u.strimagen || 'https://ui-avatars.com/api/?name=' + u.username + '&size=40&background=random'}" 
+                 style="width: 40px; height: 40px; object-fit: cover; display: block;" 
+                 alt="Avatar"
+                 onerror="this.src='https://ui-avatars.com/api/?name=' + this.alt + '&size=40'">
           </div>
         </td>
-        <td style="vertical-align: middle;">${u.username}</td>
-        <td style="vertical-align: middle;">${u.nombre}</td>
-        <td style="vertical-align: middle;">${u.email}</td>
-        <td style="vertical-align: middle;">${u.strnombreperfil || 'Sin perfil'}</td>
-        <td style="vertical-align: middle;">
+        <td style="vertical-align: middle; padding: 0.5rem;">${u.username}</td>
+        <td style="vertical-align: middle; padding: 0.5rem;">${u.nombre}</td>
+        <td style="vertical-align: middle; padding: 0.5rem;">${u.email}</td>
+        <td style="vertical-align: middle; padding: 0.5rem;">${u.strnombreperfil || 'Sin perfil'}</td>
+        <td style="vertical-align: middle; padding: 0.5rem;">
           <span class="badge ${u.idestadousuario === 1 ? 'badge-active' : 'badge-inactive'}">
             ${u.idestadousuario === 1 ? 'Activo' : 'Inactivo'}
           </span>
         </td>
-        <td class="actions-cell" style="vertical-align: middle;">
+        <td class="actions-cell" style="vertical-align: middle; padding: 0.5rem;">
           ${permisos.detalle ? `<button class="btn-icon view" onclick="verDetalle(${u.id})"><i class="fas fa-eye"></i></button>` : ''}
           ${permisos.editar ? `<button class="btn-icon edit" onclick="editarUsuario(${u.id})"><i class="fas fa-edit"></i></button>` : ''}
           ${permisos.eliminar ? `<button class="btn-icon delete" onclick="eliminarUsuario(${u.id})"><i class="fas fa-trash"></i></button>` : ''}
@@ -293,6 +321,18 @@ const API_URL = "https://extra-earth-production.up.railway.app";
 
   window.cerrarModal = () => { document.getElementById('modalUsuario').style.display = 'none'; };
 
+  window.verDetalle = async (id) => {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_URL}/api/usuarios/${id}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await response.json();
+    if (data.success) {
+      const u = data.data;
+      alert(`Usuario: ${u.username}\nNombre: ${u.nombre}\nEmail: ${u.email}\nEstado: ${u.idestadousuario === 1 ? 'Activo' : 'Inactivo'}`);
+    }
+  };
+
   window.editarUsuario = async (id) => {
     const token = localStorage.getItem('token');
     const response = await fetch(`${API_URL}/api/usuarios/${id}`, {
@@ -310,6 +350,7 @@ const API_URL = "https://extra-earth-production.up.railway.app";
       document.getElementById('idPerfil').value = u.idperfil || '';
       document.getElementById('idEstadoUsuario').value = u.idestadousuario;
       document.getElementById('password').required = false;
+      document.getElementById('password').value = '';
       
       if (u.strimagen) {
         document.getElementById('strImagenBase64').value = u.strimagen;
@@ -330,16 +371,21 @@ const API_URL = "https://extra-earth-production.up.railway.app";
 
   window.guardarUsuario = async () => {
     const id = document.getElementById('usuarioId').value;
+    const password = document.getElementById('password').value;
+    
     const body = {
       username: document.getElementById('username').value,
       nombre: document.getElementById('nombre').value,
       email: document.getElementById('email').value,
-      password: document.getElementById('password').value,
-      idPerfil: document.getElementById('idPerfil').value,
-      idEstadoUsuario: document.getElementById('idEstadoUsuario').value,
-      strNumeroCelular: document.getElementById('strNumeroCelular').value,
-      strImagenBase64: document.getElementById('strImagenBase64').value
+      idPerfil: document.getElementById('idPerfil').value || null,
+      idEstadoUsuario: parseInt(document.getElementById('idEstadoUsuario').value),
+      strNumeroCelular: document.getElementById('strNumeroCelular').value || null,
+      strImagenBase64: document.getElementById('strImagenBase64').value || null
     };
+
+    if (password) {
+      body.password = password;
+    }
 
     const token = localStorage.getItem('token');
     const response = await fetch(id ? `${API_URL}/api/usuarios/${id}` : `${API_URL}/api/usuarios`, {
@@ -348,20 +394,26 @@ const API_URL = "https://extra-earth-production.up.railway.app";
       body: JSON.stringify(body)
     });
 
-    if ((await response.json()).success) {
+    const data = await response.json();
+    if (data.success) {
       cerrarModal();
       cargarUsuarios(currentPage);
+    } else {
+      alert(data.message || 'Error al guardar usuario');
     }
   };
 
   window.eliminarUsuario = async (id) => {
-    if (!confirm('¿Eliminar usuario?')) return;
+    if (!confirm('¿Está seguro de eliminar este usuario?')) return;
     const token = localStorage.getItem('token');
-    await fetch(`${API_URL}/api/usuarios/${id}`, {
+    const response = await fetch(`${API_URL}/api/usuarios/${id}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
     });
-    cargarUsuarios(currentPage);
+    const data = await response.json();
+    if (data.success) {
+      cargarUsuarios(currentPage);
+    }
   };
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -371,15 +423,19 @@ const API_URL = "https://extra-earth-production.up.railway.app";
   });
 </script>
 
-<style is:global>
+<style>
   .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
   .btn-add { background: #059669; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600; }
+  .btn-add:hover { background: #047857; }
   .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
   .modal-content { background: white; padding: 2rem; border-radius: 8px; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+  .close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; }
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
   .form-group { display: flex; flex-direction: column; margin-bottom: 1rem; }
-  .form-group label { font-weight: 600; margin-bottom: 0.5rem; }
-  .form-group input, .form-group select { padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; }
+  .form-group label { font-weight: 600; margin-bottom: 0.5rem; color: #475569; }
+  .form-group input, .form-group select { padding: 0.6rem; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 0.95rem; }
+  .form-group small { color: #94a3b8; font-size: 0.75rem; margin-top: 0.25rem; }
   
   .imagen-preview { 
     width: 120px; 
@@ -396,15 +452,27 @@ const API_URL = "https://extra-earth-production.up.railway.app";
 
   .preview-placeholder { height: 100%; width: 100%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; color: #94a3b8; }
   
-  .crud-table { width: 100%; border-collapse: collapse; background: white; }
-  .crud-table th, .crud-table td { padding: 1rem; border-bottom: 1px solid #eee; text-align: left; vertical-align: middle; }
-  .badge { padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem; }
+  .form-actions { display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem; }
+  .btn-primary { background: #1e293b; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 4px; cursor: pointer; }
+  .btn-secondary { background: #f1f5f9; color: #475569; border: none; padding: 0.6rem 1.2rem; border-radius: 4px; cursor: pointer; }
+  
+  .table-responsive { overflow-x: auto; background: white; border-radius: 8px; border: 1px solid #e2e8f0; }
+  .crud-table { width: 100%; border-collapse: collapse; }
+  .crud-table th { text-align: left; padding: 1rem; background: #f8fafc; border-bottom: 2px solid #e2e8f0; color: #475569; font-weight: 600; }
+  .crud-table td { padding: 0.75rem; border-bottom: 1px solid #e2e8f0; }
+  
+  .badge { padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: 500; }
   .badge-active { background: #dcfce7; color: #166534; }
   .badge-inactive { background: #fee2e2; color: #991b1b; }
-  .btn-icon { border: none; background: none; cursor: pointer; padding: 5px; }
+  
+  .actions-cell { display: flex; gap: 0.5rem; }
+  .btn-icon { border: none; background: none; cursor: pointer; padding: 5px; border-radius: 4px; }
+  .btn-icon:hover { background: #f1f5f9; }
   .edit { color: #f59e0b; } .delete { color: #ef4444; } .view { color: #3b82f6; }
+  
   .pagination { display: flex; justify-content: center; gap: 5px; margin-top: 1rem; }
-  .pagination button { padding: 5px 10px; cursor: pointer; border: 1px solid #ddd; background: white; }
+  .pagination button { padding: 0.5rem 0.8rem; cursor: pointer; border: 1px solid #e2e8f0; background: white; border-radius: 4px; }
   .pagination button.active { background: #1e293b; color: white; border-color: #1e293b; }
   .status-message { position: fixed; bottom: 20px; right: 20px; padding: 10px 20px; border-radius: 5px; display: none; }
+  .no-data { text-align: center; color: #94a3b8; padding: 2rem; }
 </style>

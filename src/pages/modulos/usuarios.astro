@@ -128,6 +128,9 @@ const API_URL = "https://extra-earth-production.up.railway.app";
   let currentPage = 1;
   const { permisos } = verificarPermisosModulo('Usuario');
 
+  // ============================================
+  // FUNCIÓN CORREGIDA - COMPRESIÓN DE IMAGEN
+  // ============================================
   window.previsualizarImagen = (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -157,20 +160,15 @@ const API_URL = "https://extra-earth-production.up.railway.app";
         let width = img.width;
         let height = img.height;
         
-        // Redimensionar si es muy grande (máximo 800px de ancho)
-        const MAX_WIDTH = 800;
-        const MAX_HEIGHT = 800;
+        // Redimensionar si es muy grande (máximo 800px)
+        const MAX_SIZE = 800;
         
-        if (width > height) {
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
-          }
-        } else {
-          if (height > MAX_HEIGHT) {
-            width *= MAX_HEIGHT / height;
-            height = MAX_HEIGHT;
-          }
+        if (width > height && width > MAX_SIZE) {
+          height = Math.round((height * MAX_SIZE) / width);
+          width = MAX_SIZE;
+        } else if (height > MAX_SIZE) {
+          width = Math.round((width * MAX_SIZE) / height);
+          height = MAX_SIZE;
         }
         
         canvas.width = width;
@@ -179,8 +177,8 @@ const API_URL = "https://extra-earth-production.up.railway.app";
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
         
-        // Comprimir a JPEG con calidad 0.7
-        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+        // Comprimir a JPEG con calidad 0.6 (balance entre calidad y tamaño)
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6);
         
         // Actualizar el input oculto con la imagen comprimida
         document.getElementById('strImagenBase64').value = compressedBase64;
@@ -196,7 +194,7 @@ const API_URL = "https://extra-earth-production.up.railway.app";
         document.getElementById('previewPlaceholder').style.display = 'none';
         document.getElementById('btnClearImagen').style.display = 'inline-block';
         
-        // Mostrar tamaño aproximado
+        // Mostrar tamaño aproximado en consola
         const sizeInKB = Math.round(compressedBase64.length * 0.75 / 1024);
         console.log(`Imagen comprimida: ~${sizeInKB}KB`);
       };

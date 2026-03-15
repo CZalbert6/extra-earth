@@ -1,9 +1,11 @@
 ---
+// src/layout/layout.astro
 interface Props {
 	title?: string;
+	moduloActual?: string; // Prop para Breadcrumbs y validación de permisos
 }
 
-const { title = "Sistema Corporativo" } = Astro.props;
+const { title = "Sistema Corporativo", moduloActual } = Astro.props;
 ---
 
 <!DOCTYPE html>
@@ -178,15 +180,10 @@ background:#fee2e2;
 }
 
 @media(max-width:768px){
-
 aside{transform:translateX(-100%)}
-
 aside.open{transform:translateX(0)}
-
 main{margin-left:0}
-
 .menu-toggle{display:block}
-
 }
 </style>
 </head>
@@ -198,51 +195,45 @@ main{margin-left:0}
 </button>
 
 <aside id="sidebar">
-
 <div class="sidebar-header">
 <i class="fas fa-building"></i>
 <span>CORP-DEV 2026</span>
 </div>
 
 <nav id="menu-container">
-
 <div style="text-align:center;padding:2rem;color:#94a3b8;">
 <i class="fas fa-spinner fa-spin"></i>
 Cargando menú...
 </div>
-
 </nav>
-
 </aside>
 
 <main>
-
 <header>
-
 <div id="page-title" style="font-weight:600">
-Panel de Control
+{moduloActual || "Panel de Control"}
 </div>
 
 <div class="user-info">
-
-<span id="user-name" style="font-size:.9rem">
-Invitado
-</span>
-
+<span id="user-name" style="font-size:.9rem">Invitado</span>
 <div class="user-avatar" id="userAvatar">
-<i class="fas fa-user"></i>
+<i class="fas fa-user" id="userIcon"></i>
+<img id="userImg" src="" style="display:none;" />
 </div>
-
-<button class="logout-btn" id="logoutBtn">
+<button class="logout-btn" id="logoutBtn" title="Cerrar Sesión">
 <i class="fas fa-sign-out-alt"></i>
 </button>
-
 </div>
-
 </header>
 
 <div class="breadcrumbs" id="breadcrumbs">
-Inicio
+<a href="/extra-earth/principal1/estatico1" style="text-decoration:none; color:inherit;">Inicio</a>
+{moduloActual && (
+    <>
+        <span> <i class="fas fa-chevron-right" style="font-size: 0.7rem;"></i> </span>
+        <span style="color: var(--accent); font-weight: 600;">{moduloActual}</span>
+    </>
+)}
 </div>
 
 <div class="content-wrapper">
@@ -250,163 +241,136 @@ Inicio
 <slot />
 </div>
 </div>
-
 </main>
 
 <script>
+import { verificarPermisosModulo } from '../utils/permisos';
 
 const API_URL="https://extra-earth-production.up.railway.app"
-
 const menuContainer=document.getElementById("menu-container")
 const userNameSpan=document.getElementById("user-name")
 const logoutBtn=document.getElementById("logoutBtn")
 
-/* =========================
-   VERIFICAR AUTENTICACIÓN
-   ========================= */
-
+/* =============================================
+   1. VERIFICAR AUTENTICACIÓN Y PROTECCIÓN DE RUTAS
+   ============================================= */
 function verificarAuth(){
+    const token = localStorage.getItem("token");
+    const path = window.location.pathname;
 
-let path=window.location.pathname
+    // Rutas que no requieren login
+    const publicRoutes = ["/extra-earth/login", "/extra-earth/register"];
+    const isPublic = publicRoutes.some(r => path.includes(r));
 
-/* normalizar */
-path=path.replace(/\/$/,"")
+    if (!token && !isPublic) {
+        window.location.href = "/extra-earth/login";
+        return;
+    }
 
-const token=localStorage.getItem("token")
+    // PROTECCIÓN DE RUTA POR PERMISO (Requisito PDF)
+    const moduloActual = "{moduloActual}"; // Inyectamos el valor de Astro
+    if (moduloActual && moduloActual !== "undefined" && moduloActual !== "") {
+        const { tieneAcceso } = verificarPermisosModulo(moduloActual);
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
 
-/* rutas públicas */
-
-const publicRoutes=[
-"/extra-earth",
-"/extra-earth/login",
-"/extra-earth/register"
-]
-
-const isPublic=publicRoutes.some(r=>path.startsWith(r))
-
-if(isPublic) return
-
-if(!token){
-
-window.location.href="/extra-earth/login"
-
-}
-
+        // Si no tiene permiso y NO es administrador global, lo sacamos
+        if (!tieneAcceso && !user.esAdmin) {
+            window.location.href = "/extra-earth/error?msg=No%20tienes%20permiso%20para%20este%20modulo";
+        }
+    }
 }
 
 /* =========================
-   CARGAR USUARIO
+   2. CARGAR INFO USUARIO (Muestra Imagen Requisito PDF)
    ========================= */
-
 function cargarInfoUsuario(){
-
-try{
-
-const user=JSON.parse(localStorage.getItem("user"))
-
-if(user){
-
-userNameSpan.textContent=user.username||"Usuario"
-
+    try {
+        const user = JSON.parse(localStorage.getItem("user"));
+        if (user) {
+            userNameSpan.textContent = user.nombre || user.username;
+            
+            // Mostrar imagen si existe
+            if (user.strImagen) {
+                const img = document.getElementById('userImg');
+                const icon = document.getElementById('userIcon');
+                img.src = user.strImagen;
+                img.style.display = 'block';
+                icon.style.display = 'none';
+            }
+        }
+    } catch(e) {
+        console.error("Error cargando usuario:", e);
+    }
 }
 
-}catch(e){
-
-console.error(e)
-
-}
-
-}
-
-/* =========================
-   MENÚ
-   ========================= */
-
+/* =============================================
+   3. MENÚ DINÁMICO (Ocultar si no hay acciones)
+   ============================================= */
 async function cargarMenu(){
+    const token = localStorage.getItem("token");
+    if(!token) return;
 
-const token=localStorage.getItem("token")
+    try {
+        const res = await fetch(`${API_URL}/api/menu`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
 
-if(!token){
+        if (!data.success) {
+            menuContainer.innerHTML = `<div style="padding:1rem; color:red;">Error al cargar menú</div>`;
+            return;
+        }
 
-menuContainer.innerHTML=`
-<a href="/extra-earth/"><i class="fas fa-home"></i> Inicio</a>
-<div style="padding:1rem;text-align:center;color:#94a3b8">
-Inicie sesión
-</div>
-`
-return
+        let html = `<a href="/extra-earth/principal1/estatico1"><i class="fas fa-home"></i> Inicio</a>`;
 
-}
+        // REQUISITO PDF: Solo mostrar grupos y módulos con acciones asociadas
+        Object.values(data.data).forEach(grupo => {
+            if (grupo.modulos && grupo.modulos.length > 0) {
+                html += `
+                <div class="menu-section">
+                    <div class="menu-section-title">${grupo.nombre}</div>`;
+                
+                grupo.modulos.forEach(mod => {
+                    // Generar slug de URL basándose en el nombre (ej: "Perfil" -> "perfil")
+                    const slug = mod.nombre.toLowerCase().replace(/\s+/g, '-').replace(/\./g, '');
+                    const url = `/extra-earth/modulos/${slug}`;
+                    const activeClass = window.location.pathname.includes(slug) ? 'active' : '';
+                    
+                    html += `<a href="${url}" class="${activeClass}">
+                                <i class="fas fa-chevron-right" style="font-size:0.7rem; opacity:0.5;"></i> 
+                                ${mod.nombre}
+                             </a>`;
+                });
 
-try{
+                html += `</div>`;
+            }
+        });
 
-const res=await fetch(`${API_URL}/api/menu`,{
-headers:{Authorization:`Bearer ${token}`}
-})
-
-const data=await res.json()
-
-if(!data.success){
-
-menuContainer.innerHTML="Error cargando menú"
-return
-
-}
-
-let html=`<a href="/extra-earth/"><i class="fas fa-home"></i> Inicio</a>`
-
-Object.values(data.data).forEach(menu=>{
-
-if(menu.modulos?.length){
-
-html+=`<div class="menu-section">
-<div class="menu-section-title">${menu.nombre}</div>`
-
-menu.modulos.forEach(mod=>{
-
-html+=`<a href="#">${mod.nombre}</a>`
-
-})
-
-html+=`</div>`
-
-}
-
-})
-
-menuContainer.innerHTML=html
-
-}catch(err){
-
-console.error(err)
-
-}
-
+        menuContainer.innerHTML = html;
+    } catch (err) {
+        console.error("Error en cargarMenu:", err);
+    }
 }
 
 /* =========================
-   LOGOUT
+   4. LOGOUT
    ========================= */
+logoutBtn.addEventListener("click", () => {
+    localStorage.clear();
+    window.location.href = "/extra-earth/login";
+});
 
-logoutBtn.addEventListener("click",()=>{
-
-localStorage.removeItem("token")
-localStorage.removeItem("user")
-
-window.location.href="/extra-earth/login"
-
-})
+// Toggle para móvil
+document.getElementById('menuToggle').onclick = () => {
+    document.getElementById('sidebar').classList.toggle('open');
+};
 
 /* ========================= */
-
-document.addEventListener("DOMContentLoaded",()=>{
-
-verificarAuth()
-cargarInfoUsuario()
-cargarMenu()
-
-})
-
+document.addEventListener("DOMContentLoaded", () => {
+    verificarAuth();
+    cargarInfoUsuario();
+    cargarMenu();
+});
 </script>
 
 </body>

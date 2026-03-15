@@ -3,15 +3,14 @@ import Layout from '../../layout/layout.astro';
 const API_URL = "https://extra-earth-production.up.railway.app";
 ---
 
-<Layout title="Gestión de Usuarios">
+<Layout title="Gestión de Usuarios" moduloActual="Usuario">
   <div class="page-header">
     <h1><i class="fas fa-users"></i> Gestión de Usuarios</h1>
-    <button class="btn-add" onclick="abrirModalNuevo()">
+    <button class="btn-add" id="btnNuevoUsuario" style="display: none;" onclick="abrirModalNuevo()">
       <i class="fas fa-plus"></i> Nuevo Usuario
     </button>
   </div>
 
-  <!-- Modal -->
   <div id="modalUsuario" class="modal" style="display: none;">
     <div class="modal-content">
       <div class="modal-header">
@@ -25,12 +24,17 @@ const API_URL = "https://extra-earth-production.up.railway.app";
         <div class="form-grid">
           <div class="form-group">
             <label>Usuario *</label>
-            <input type="text" id="strNombreUsuario" required maxlength="100">
+            <input type="text" id="username" required maxlength="100">
           </div>
           
           <div class="form-group">
+            <label>Nombre Completo *</label>
+            <input type="text" id="nombre" required>
+          </div>
+
+          <div class="form-group">
             <label>Correo *</label>
-            <input type="email" id="strCorreo" required>
+            <input type="email" id="email" required>
           </div>
           
           <div class="form-group">
@@ -53,14 +57,13 @@ const API_URL = "https://extra-earth-production.up.railway.app";
             </select>
           </div>
           
-          <div class="form-group">
+          <div class="form-group" style="grid-column: span 2;">
             <label>Contraseña</label>
-            <input type="password" id="strPwd" minlength="6">
-            <small>Mínimo 6 caracteres. Dejar vacío para no cambiar.</small>
+            <input type="password" id="password" minlength="6">
+            <small>Mínimo 6 caracteres. Dejar vacío para no cambiar en edición.</small>
           </div>
         </div>
         
-        <!-- Imagen -->
         <div class="form-group imagen-group">
           <label>Foto de Perfil</label>
           <div class="imagen-preview" id="imagenPreview">
@@ -81,15 +84,14 @@ const API_URL = "https://extra-earth-production.up.railway.app";
         
         <div class="form-actions">
           <button type="button" class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
-          <button type="submit" class="btn-primary">Guardar</button>
+          <button type="submit" class="btn-primary">Guardar Usuario</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Tabla -->
-  <div id="loading" style="display: none; text-align: center;">
-    <i class="fas fa-spinner fa-spin"></i> Cargando...
+  <div id="loading" style="display: none; text-align: center; padding: 2rem;">
+    <i class="fas fa-spinner fa-spin fa-2x"></i><br>Cargando usuarios...
   </div>
   
   <div class="table-responsive">
@@ -99,8 +101,8 @@ const API_URL = "https://extra-earth-production.up.railway.app";
           <th>ID</th>
           <th>Foto</th>
           <th>Usuario</th>
+          <th>Nombre</th>
           <th>Correo</th>
-          <th>Teléfono</th>
           <th>Perfil</th>
           <th>Estado</th>
           <th>Acciones</th>
@@ -108,7 +110,7 @@ const API_URL = "https://extra-earth-production.up.railway.app";
       </thead>
       <tbody id="tablaBody">
         <tr>
-          <td colspan="8" class="no-data">Cargando usuarios...</td>
+          <td colspan="8" class="no-data">Cargando...</td>
         </tr>
       </tbody>
     </table>
@@ -118,24 +120,23 @@ const API_URL = "https://extra-earth-production.up.railway.app";
   <div id="message" class="status-message"></div>
 </Layout>
 
-<script define:vars={{ API_URL }}>
+<script>
+  import { verificarPermisosModulo } from '../../utils/permisos';
+  const API_URL = "https://extra-earth-production.up.railway.app";
+
   let currentPage = 1;
   let currentItem = null;
-  let perfilesList = [];
+  
+  // 1. OBTENER PERMISOS PARA ESTE MÓDULO (Requisito PDF)
+  const { permisos, tieneAcceso } = verificarPermisosModulo('Usuario');
 
   window.previsualizarImagen = (event) => {
     const file = event.target.files[0];
     if (file) {
-      if (!file.type.match('image.*')) {
-        showMsg('Por favor, seleccione una imagen válida', 'error');
+      if (file.size > 2 * 1024 * 1024) { // Límite 2MB para Base64
+        alert('La imagen es muy pesada. Máximo 2MB.');
         return;
       }
-      
-      if (file.size > 5 * 1024 * 1024) {
-        showMsg('La imagen no debe superar 5MB', 'error');
-        return;
-      }
-      
       const reader = new FileReader();
       reader.onload = (e) => {
         const base64 = e.target.result;
@@ -158,40 +159,34 @@ const API_URL = "https://extra-earth-production.up.railway.app";
   };
 
   async function cargarPerfiles() {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/perfiles-lista`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      
-      if (data.success) {
-        perfilesList = data.data;
-        const select = document.getElementById('idPerfil');
-        select.innerHTML = '<option value="">Seleccione...</option>' + 
-          data.data.map(p => `<option value="${p.id}">${p.strnombreperfil}</option>`).join('');
-      }
-    } catch (error) {
-      console.error('Error cargando perfiles:', error);
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_URL}/api/perfiles-lista`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await response.json();
+    if (data.success) {
+      const select = document.getElementById('idPerfil');
+      select.innerHTML = '<option value="">Seleccione...</option>' + 
+        data.data.map(p => `<option value="${p.id}">${p.strnombreperfil}</option>`).join('');
     }
   }
 
   async function cargarUsuarios(page = 1) {
-    document.getElementById('loading').style.display = 'block';
+    if (!permisos.consulta) return; // Si no tiene permiso de consulta, no hace nada
     
+    document.getElementById('loading').style.display = 'block';
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/api/usuarios?page=${page}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
-      
       if (data.success) {
         renderizarTabla(data.data);
         renderizarPaginacion(data.pagination);
       }
     } catch (error) {
-      showMsg('Error al cargar usuarios', 'error');
+      console.error(error);
     } finally {
       document.getElementById('loading').style.display = 'none';
     }
@@ -199,23 +194,15 @@ const API_URL = "https://extra-earth-production.up.railway.app";
 
   function renderizarTabla(usuarios) {
     const tbody = document.getElementById('tablaBody');
-    
-    if (usuarios.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8" class="no-data">No hay usuarios registrados</td></tr>';
-      return;
-    }
-    
     tbody.innerHTML = usuarios.map(u => `
       <tr>
         <td>${u.id}</td>
         <td>
-          ${u.strimagen ? 
-            `<img src="${u.strimagen}" alt="Foto" class="foto-perfil-tabla">` : 
-            '<i class="fas fa-user-circle" style="font-size: 2rem; color: #94a3b8;"></i>'}
+          <img src="${u.strimagen || 'https://ui-avatars.com/api/?name=' + u.username}" class="foto-perfil-tabla">
         </td>
-        <td>${u.strnombreusuario}</td>
-        <td>${u.strcorreo}</td>
-        <td>${u.strnumerocelular || '-'}</td>
+        <td>${u.username}</td>
+        <td>${u.nombre}</td>
+        <td>${u.email}</td>
         <td>${u.strnombreperfil || 'Sin perfil'}</td>
         <td>
           <span class="badge ${u.idestadousuario === 1 ? 'badge-active' : 'badge-inactive'}">
@@ -223,50 +210,19 @@ const API_URL = "https://extra-earth-production.up.railway.app";
           </span>
         </td>
         <td class="actions-cell">
-          <button class="btn-icon view" onclick="verDetalle(${u.id})" title="Ver detalle">
-            <i class="fas fa-eye"></i>
-          </button>
-          <button class="btn-icon edit" onclick="editarUsuario(${u.id})" title="Editar">
-            <i class="fas fa-edit"></i>
-          </button>
-          <button class="btn-icon delete" onclick="eliminarUsuario(${u.id})" title="Eliminar">
-            <i class="fas fa-trash"></i>
-          </button>
+          ${permisos.detalle ? `<button class="btn-icon view" onclick="verDetalle(${u.id})"><i class="fas fa-eye"></i></button>` : ''}
+          ${permisos.editar ? `<button class="btn-icon edit" onclick="editarUsuario(${u.id})"><i class="fas fa-edit"></i></button>` : ''}
+          ${permisos.eliminar ? `<button class="btn-icon delete" onclick="eliminarUsuario(${u.id})"><i class="fas fa-trash"></i></button>` : ''}
         </td>
       </tr>
     `).join('');
   }
 
-  function renderizarPaginacion(pagination) {
-    const paginationDiv = document.getElementById('pagination');
-    if (pagination.totalPages <= 1) {
-      paginationDiv.innerHTML = '';
-      return;
-    }
-    
-    let html = '<div class="pagination">';
-    html += `<button ${pagination.page === 1 ? 'disabled' : ''} onclick="cargarUsuarios(${pagination.page - 1})">
-      <i class="fas fa-chevron-left"></i>
-    </button>`;
-    
-    for (let i = 1; i <= pagination.totalPages; i++) {
-      html += `<button class="${i === pagination.page ? 'active' : ''}" onclick="cargarUsuarios(${i})">${i}</button>`;
-    }
-    
-    html += `<button ${pagination.page === pagination.totalPages ? 'disabled' : ''} onclick="cargarUsuarios(${pagination.page + 1})">
-      <i class="fas fa-chevron-right"></i>
-    </button>`;
-    html += '</div>';
-    
-    paginationDiv.innerHTML = html;
-  }
-
   window.abrirModalNuevo = () => {
-    currentItem = null;
     document.getElementById('modalTitulo').textContent = 'Nuevo Usuario';
     document.getElementById('usuarioForm').reset();
     document.getElementById('usuarioId').value = '';
-    document.getElementById('strPwd').required = true;
+    document.getElementById('password').required = true;
     limpiarImagen();
     document.getElementById('modalUsuario').style.display = 'flex';
   };
@@ -276,539 +232,97 @@ const API_URL = "https://extra-earth-production.up.railway.app";
   };
 
   window.editarUsuario = async (id) => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/usuarios/${id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_URL}/api/usuarios/${id}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await response.json();
+    if (data.success) {
+      const u = data.data;
+      document.getElementById('modalTitulo').textContent = 'Editar Usuario';
+      document.getElementById('usuarioId').value = u.id;
+      document.getElementById('username').value = u.username;
+      document.getElementById('nombre').value = u.nombre;
+      document.getElementById('email').value = u.email;
+      document.getElementById('strNumeroCelular').value = u.strnumerocelular || '';
+      document.getElementById('idPerfil').value = u.idperfil || '';
+      document.getElementById('idEstadoUsuario').value = u.idestadousuario;
+      document.getElementById('password').required = false;
       
-      if (data.success) {
-        const user = data.data;
-        currentItem = user;
-        
-        document.getElementById('modalTitulo').textContent = 'Editar Usuario';
-        document.getElementById('usuarioId').value = user.id;
-        document.getElementById('strNombreUsuario').value = user.strnombreusuario;
-        document.getElementById('strCorreo').value = user.strcorreo;
-        document.getElementById('strNumeroCelular').value = user.strnumerocelular || '';
-        document.getElementById('idPerfil').value = user.idperfil || '';
-        document.getElementById('idEstadoUsuario').value = user.idestadousuario;
-        document.getElementById('strPwd').required = false;
-        document.getElementById('strPwd').value = '';
-        
-        if (user.strimagen) {
-          document.getElementById('strImagenBase64').value = user.strimagen;
-          document.getElementById('previewImg').src = user.strimagen;
-          document.getElementById('previewImg').style.display = 'block';
-          document.getElementById('previewPlaceholder').style.display = 'none';
-          document.getElementById('btnClearImagen').style.display = 'inline-block';
-        } else {
-          limpiarImagen();
-        }
-        
-        document.getElementById('modalUsuario').style.display = 'flex';
+      if (u.strimagen) {
+        document.getElementById('strImagenBase64').value = u.strimagen;
+        document.getElementById('previewImg').src = u.strimagen;
+        document.getElementById('previewImg').style.display = 'block';
+        document.getElementById('previewPlaceholder').style.display = 'none';
+        document.getElementById('btnClearImagen').style.display = 'inline-block';
       }
-    } catch (error) {
-      showMsg('Error al cargar usuario', 'error');
-    }
-  };
-
-  window.verDetalle = async (id) => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/usuarios/${id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      
-      if (data.success) {
-        const user = data.data;
-        alert(`
-          ID: ${user.id}
-          Usuario: ${user.strnombreusuario}
-          Correo: ${user.strcorreo}
-          Teléfono: ${user.strnumerocelular || 'N/A'}
-          Perfil: ${user.strnombreperfil || 'Sin perfil'}
-          Estado: ${user.idestadousuario === 1 ? 'Activo' : 'Inactivo'}
-        `);
-      }
-    } catch (error) {
-      showMsg('Error al cargar detalle', 'error');
+      document.getElementById('modalUsuario').style.display = 'flex';
     }
   };
 
   window.guardarUsuario = async () => {
-    const usuarioData = {
-      strNombreUsuario: document.getElementById('strNombreUsuario').value.trim(),
-      strCorreo: document.getElementById('strCorreo').value.trim(),
-      strNumeroCelular: document.getElementById('strNumeroCelular').value.trim() || null,
-      idPerfil: document.getElementById('idPerfil').value || null,
-      idEstadoUsuario: parseInt(document.getElementById('idEstadoUsuario').value),
-      strImagenBase64: document.getElementById('strImagenBase64').value || null
+    const id = document.getElementById('usuarioId').value;
+    const body = {
+      username: document.getElementById('username').value,
+      nombre: document.getElementById('nombre').value,
+      email: document.getElementById('email').value,
+      password: document.getElementById('password').value,
+      idPerfil: document.getElementById('idPerfil').value,
+      idEstadoUsuario: document.getElementById('idEstadoUsuario').value,
+      strNumeroCelular: document.getElementById('strNumeroCelular').value,
+      strImagenBase64: document.getElementById('strImagenBase64').value
     };
-    
-    const password = document.getElementById('strPwd').value;
-    const usuarioId = document.getElementById('usuarioId').value;
-    
-    if (!usuarioData.strNombreUsuario || !usuarioData.strCorreo) {
-      showMsg('Usuario y correo son requeridos', 'error');
-      return;
-    }
-    
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(usuarioData.strCorreo)) {
-      showMsg('Correo inválido', 'error');
-      return;
-    }
-    
-    if (!usuarioId && !password) {
-      showMsg('Contraseña requerida para nuevo usuario', 'error');
-      return;
-    }
-    
-    if (password && password.length < 6) {
-      showMsg('La contraseña debe tener al menos 6 caracteres', 'error');
-      return;
-    }
-    
-    if (password) {
-      usuarioData.strPwd = password;
-    }
-    
-    try {
-      const token = localStorage.getItem('token');
-      const url = usuarioId ? `${API_URL}/api/usuarios/${usuarioId}` : `${API_URL}/api/usuarios`;
-      const method = usuarioId ? 'PUT' : 'POST';
-      
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(usuarioData)
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        showMsg(usuarioId ? 'Usuario actualizado' : 'Usuario creado', 'success');
-        cerrarModal();
-        cargarUsuarios(currentPage);
-      } else {
-        showMsg(data.message, 'error');
-      }
-    } catch (error) {
-      showMsg('Error al guardar usuario', 'error');
+
+    const token = localStorage.getItem('token');
+    const response = await fetch(id ? `${API_URL}/api/usuarios/${id}` : `${API_URL}/api/usuarios`, {
+      method: id ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify(body)
+    });
+
+    if ((await response.json()).success) {
+      cerrarModal();
+      cargarUsuarios(currentPage);
     }
   };
 
   window.eliminarUsuario = async (id) => {
-    if (!confirm('¿Está seguro de eliminar este usuario?')) return;
-    
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/usuarios/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      
-      if (data.success) {
-        showMsg('Usuario eliminado', 'success');
-        cargarUsuarios(currentPage);
-      } else {
-        showMsg(data.message, 'error');
-      }
-    } catch (error) {
-      showMsg('Error al eliminar usuario', 'error');
-    }
+    if (!confirm('¿Eliminar usuario?')) return;
+    const token = localStorage.getItem('token');
+    await fetch(`${API_URL}/api/usuarios/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    cargarUsuarios(currentPage);
   };
 
-  function showMsg(text, type) {
-    const msgDiv = document.getElementById('message');
-    msgDiv.style.display = 'block';
-    msgDiv.style.background = type === 'success' ? '#dcfce7' : '#fee2e2';
-    msgDiv.style.color = type === 'success' ? '#166534' : '#991b1b';
-    msgDiv.textContent = text;
-    
-    setTimeout(() => {
-      msgDiv.style.display = 'none';
-    }, 3000);
-  }
-
+  // INICIALIZACIÓN
   document.addEventListener('DOMContentLoaded', () => {
+    if (permisos.agregar) document.getElementById('btnNuevoUsuario').style.display = 'block';
     cargarPerfiles();
     cargarUsuarios();
   });
 </script>
 
 <style>
-  .page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2rem;
-    flex-wrap: wrap;
-    gap: 1rem;
-  }
-
-  .page-header h1 {
-    margin: 0;
-    font-size: 1.75rem;
-    color: #1e293b;
-  }
-
-  .page-header h1 i {
-    margin-right: 0.5rem;
-    color: #3b82f6;
-  }
-
-  .btn-add {
-    background: #059669;
-    color: white;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 6px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-weight: 500;
-    font-size: 1rem;
-  }
-
-  .btn-add:hover {
-    background: #047857;
-  }
-
-  .modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0,0,0,0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    padding: 1rem;
-  }
-
-  .modal-content {
-    background: white;
-    border-radius: 8px;
-    max-width: 600px;
-    width: 100%;
-    max-height: 90vh;
-    overflow-y: auto;
-  }
-
-  .modal-header {
-    padding: 1.5rem;
-    border-bottom: 1px solid #e2e8f0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .modal-header h3 {
-    margin: 0;
-    color: #1e293b;
-  }
-
-  .close-btn {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    color: #64748b;
-  }
-
-  .form-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    padding: 1.5rem;
-  }
-
-  .form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .form-group label {
-    font-weight: 600;
-    color: #475569;
-  }
-
-  .form-group input, .form-group select {
-    padding: 0.75rem;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    font-size: 1rem;
-  }
-
-  .form-group input:focus, .form-group select:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  }
-
-  .imagen-group {
-    grid-column: span 2;
-    margin-top: 1rem;
-    padding: 1rem;
-    background: #f8fafc;
-    border-radius: 8px;
-  }
-
-  .imagen-preview {
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    margin: 0 auto 1rem;
-    overflow: hidden;
-    border: 3px solid #e2e8f0;
-  }
-
-  .imagen-preview img, .preview-placeholder {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  .preview-placeholder {
-    background: #e2e8f0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2rem;
-    color: #94a3b8;
-  }
-
-  .imagen-input {
-    display: flex;
-    gap: 0.5rem;
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-
-  .btn-clear {
-    background: #ef4444;
-    color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-
-  .btn-clear:hover {
-    background: #dc2626;
-  }
-
-  .form-actions {
-    padding: 1.5rem;
-    border-top: 1px solid #e2e8f0;
-    display: flex;
-    gap: 1rem;
-    justify-content: flex-end;
-  }
-
-  .btn-primary, .btn-secondary {
-    padding: 0.75rem 1.5rem;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 500;
-  }
-
-  .btn-primary {
-    background: #1e293b;
-    color: white;
-  }
-
-  .btn-primary:hover {
-    background: #334155;
-  }
-
-  .btn-secondary {
-    background: #f1f5f9;
-    color: #475569;
-  }
-
-  .btn-secondary:hover {
-    background: #e2e8f0;
-  }
-
-  .table-responsive {
-    overflow-x: auto;
-    background: white;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
-  }
-
-  .crud-table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  .crud-table th {
-    text-align: left;
-    padding: 1rem;
-    background: #f8fafc;
-    border-bottom: 2px solid #e2e8f0;
-    color: #475569;
-    font-weight: 600;
-    font-size: 0.9rem;
-  }
-
-  .crud-table td {
-    padding: 1rem;
-    border-bottom: 1px solid #e2e8f0;
-    color: #334155;
-  }
-
-  .crud-table tr:hover {
-    background: #f8fafc;
-  }
-
-  .foto-perfil-tabla {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    object-fit: cover;
-  }
-
-  .badge {
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.8rem;
-    font-weight: 600;
-  }
-
-  .badge-active {
-    background: #dcfce7;
-    color: #166534;
-  }
-
-  .badge-inactive {
-    background: #fee2e2;
-    color: #991b1b;
-  }
-
-  .actions-cell {
-    display: flex;
-    gap: 0.5rem;
-  }
-
-  .btn-icon {
-    background: none;
-    border: none;
-    padding: 0.5rem;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: all 0.2s;
-  }
-
-  .btn-icon.view {
-    color: #3b82f6;
-  }
-  
-  .btn-icon.edit {
-    color: #f59e0b;
-  }
-  
-  .btn-icon.delete {
-    color: #ef4444;
-  }
-
-  .btn-icon:hover {
-    background: #f1f5f9;
-    transform: scale(1.1);
-  }
-
-  .no-data {
-    text-align: center;
-    color: #94a3b8;
-    padding: 2rem;
-  }
-
-  .pagination {
-    display: flex;
-    justify-content: center;
-    gap: 0.5rem;
-    margin-top: 1.5rem;
-  }
-
-  .pagination button {
-    padding: 0.5rem 1rem;
-    border: 1px solid #e2e8f0;
-    background: white;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .pagination button:hover:not(:disabled) {
-    background: #f8fafc;
-    border-color: #94a3b8;
-  }
-
-  .pagination button.active {
-    background: #1e293b;
-    color: white;
-    border-color: #1e293b;
-  }
-
-  .pagination button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .status-message {
-    position: fixed;
-    bottom: 2rem;
-    right: 2rem;
-    padding: 1rem;
-    border-radius: 6px;
-    display: none;
-    z-index: 1100;
-    animation: slideInRight 0.3s ease;
-  }
-
-  @keyframes slideInRight {
-    from {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
-
-  @media (max-width: 768px) {
-    .form-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .imagen-group {
-      grid-column: span 1;
-    }
-
-    .page-header {
-      flex-direction: column;
-      align-items: stretch;
-    }
-
-    .status-message {
-      bottom: 1rem;
-      right: 1rem;
-      left: 1rem;
-    }
-  }
+  .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+  .btn-add { background: #059669; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer; }
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+  .modal-content { background: white; padding: 2rem; border-radius: 8px; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .form-group { display: flex; flex-direction: column; margin-bottom: 1rem; }
+  .form-group label { font-weight: 600; margin-bottom: 0.5rem; }
+  .form-group input, .form-group select { padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; }
+  .imagen-preview { width: 80px; height: 80px; border-radius: 50%; overflow: hidden; background: #eee; margin-bottom: 1rem; }
+  .imagen-preview img { width: 100%; height: 100%; object-fit: cover; }
+  .crud-table { width: 100%; border-collapse: collapse; background: white; }
+  .crud-table th, .crud-table td { padding: 1rem; border-bottom: 1px solid #eee; text-align: left; }
+  .foto-perfil-tabla { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; }
+  .badge { padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem; }
+  .badge-active { background: #dcfce7; color: #166534; }
+  .badge-inactive { background: #fee2e2; color: #991b1b; }
+  .btn-icon { border: none; background: none; cursor: pointer; margin-right: 0.5rem; }
+  .btn-icon.edit { color: #f59e0b; }
+  .btn-icon.delete { color: #ef4444; }
+  .btn-icon.view { color: #3b82f6; }
 </style>

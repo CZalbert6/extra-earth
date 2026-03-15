@@ -128,60 +128,82 @@ const API_URL = "https://extra-earth-production.up.railway.app";
   let currentPage = 1;
   const { permisos } = verificarPermisosModulo('Usuario');
 
-  // --- NUEVO MOTOR DE REDIMENSIONAMIENTO CON CANVAS ---
   window.previsualizarImagen = (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
+    // Validar tipo de archivo
+    if (!file.type.match('image.*')) {
+      alert('Por favor, seleccione una imagen válida');
+      event.target.value = '';
+      return;
+    }
+
+    // Validar tamaño máximo (5MB antes de comprimir)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('La imagen es muy pesada. Máximo 5MB antes de comprimir.');
+      event.target.value = '';
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new Image();
+      img.src = e.target.result;
+      
       img.onload = () => {
-        // 1. Crear un canvas virtual
+        // Crear canvas para comprimir
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 250; // Tamaño máximo ideal para perfil
-        const MAX_HEIGHT = 250;
         let width = img.width;
         let height = img.height;
-
-        // 2. Calcular nuevas medidas manteniendo proporción
+        
+        // Redimensionar si es muy grande (máximo 800px de ancho)
+        const MAX_WIDTH = 800;
+        const MAX_HEIGHT = 800;
+        
         if (width > height) {
           if (width > MAX_WIDTH) {
-            height = Math.round((height * MAX_WIDTH) / width);
+            height *= MAX_WIDTH / width;
             width = MAX_WIDTH;
           }
         } else {
           if (height > MAX_HEIGHT) {
-            width = Math.round((width * MAX_HEIGHT) / height);
+            width *= MAX_HEIGHT / height;
             height = MAX_HEIGHT;
           }
         }
-
-        // 3. Dibujar la imagen redimensionada
+        
         canvas.width = width;
         canvas.height = height;
+        
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
-
-        // 4. Obtener el nuevo Base64 comprimido (Calidad 0.8)
-        const base64Redimensionado = canvas.toDataURL('image/jpeg', 0.8);
-
-        // 5. Asignar al formulario y a la vista previa
-        document.getElementById('strImagenBase64').value = base64Redimensionado;
         
+        // Comprimir a JPEG con calidad 0.7
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+        
+        // Actualizar el input oculto con la imagen comprimida
+        document.getElementById('strImagenBase64').value = compressedBase64;
+        
+        // Mostrar la vista previa
         const previewImg = document.getElementById('previewImg');
-        previewImg.src = base64Redimensionado;
+        previewImg.src = compressedBase64;
         previewImg.style.display = 'block';
+        previewImg.style.width = '100%';
+        previewImg.style.height = '100%';
+        previewImg.style.objectFit = 'cover';
         
         document.getElementById('previewPlaceholder').style.display = 'none';
         document.getElementById('btnClearImagen').style.display = 'inline-block';
+        
+        // Mostrar tamaño aproximado
+        const sizeInKB = Math.round(compressedBase64.length * 0.75 / 1024);
+        console.log(`Imagen comprimida: ~${sizeInKB}KB`);
       };
-      // Iniciar la carga de la imagen original
-      img.src = e.target.result;
     };
+    
     reader.readAsDataURL(file);
   };
-  // ----------------------------------------------------
 
   window.limpiarImagen = () => {
     document.getElementById('imagenFile').value = '';
@@ -302,6 +324,9 @@ const API_URL = "https://extra-earth-production.up.railway.app";
         const img = document.getElementById('previewImg');
         img.src = u.strimagen;
         img.style.display = 'block';
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'cover';
         document.getElementById('previewPlaceholder').style.display = 'none';
         document.getElementById('btnClearImagen').style.display = 'inline-block';
       } else {

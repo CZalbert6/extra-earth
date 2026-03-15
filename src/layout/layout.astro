@@ -2,7 +2,7 @@
 // src/layout/layout.astro
 interface Props {
 	title?: string;
-	moduloActual?: string; 
+	moduloActual?: string; 
 }
 
 const { title = "Sistema Corporativo", moduloActual } = Astro.props;
@@ -92,10 +92,10 @@ header{background:white;height:60px;display:flex;align-items:center;justify-cont
 <div class="breadcrumbs" id="breadcrumbs">
 <a href="/extra-earth/modulos/principal-1-1" style="text-decoration:none; color:inherit;">Inicio</a>
 {moduloActual && (
-    <>
-        <span> <i class="fas fa-chevron-right" style="font-size: 0.7rem;"></i> </span>
-        <span style="color: var(--accent); font-weight: 600;">{moduloActual}</span>
-    </>
+    <>
+        <span> <i class="fas fa-chevron-right" style="font-size: 0.7rem;"></i> </span>
+        <span style="color: var(--accent); font-weight: 600;">{moduloActual}</span>
+    </>
 )}
 </div>
 
@@ -118,102 +118,100 @@ const logoutBtn=document.getElementById("logoutBtn")
 const metadata = document.getElementById("auth-metadata");
 
 function verificarAuth(){
-    const token = localStorage.getItem("token");
-    const path = window.location.pathname;
-    const publicRoutes = ["/extra-earth/login", "/extra-earth/register"];
-    const isPublic = publicRoutes.some(r => path.includes(r));
+    const token = localStorage.getItem("token");
+    const path = window.location.pathname;
+    const publicRoutes = ["/extra-earth/login", "/extra-earth/register"];
+    const isPublic = publicRoutes.some(r => path.includes(r));
 
-    if (!token && !isPublic) {
-        window.location.href = "/extra-earth/login";
-        return;
-    }
+    if (!token && !isPublic) {
+        window.location.href = "/extra-earth/login";
+        return;
+    }
 
-    const moduloActual = metadata?.dataset.modulo;
-    if (moduloActual && moduloActual !== "undefined" && moduloActual !== "") {
-        const { tieneAcceso } = verificarPermisosModulo(moduloActual);
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const moduloActual = metadata?.dataset.modulo;
+    if (moduloActual && moduloActual !== "undefined" && moduloActual !== "") {
+        const { tieneAcceso } = verificarPermisosModulo(moduloActual);
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
 
-        if (!tieneAcceso && !user.esAdmin) {
-            window.location.href = "/extra-earth/error?code=403&message=No%20tienes%20permiso%20para%20acceder%20a%20este%20módulo";
-        }
-    }
+        if (!tieneAcceso && !user.esAdmin) {
+            window.location.href = "/extra-earth/error?code=403&message=No%20tienes%20permiso%20para%20acceder%20a%20este%20módulo";
+        }
+    }
 }
 
 function cargarInfoUsuario(){
-    try {
-        const user = JSON.parse(localStorage.getItem("user"));
-        if (user) {
-            userNameSpan.textContent = user.nombre || user.username;
-            if (user.strImagen) {
-                const img = document.getElementById('userImg');
-                const icon = document.getElementById('userIcon');
-                if(img) { img.src = user.strImagen; img.style.display = 'block'; }
-                if(icon) icon.style.display = 'none';
-            }
-        }
-    } catch(e) { console.error(e); }
+    try {
+        const user = JSON.parse(localStorage.getItem("user"));
+        if (user) {
+            userNameSpan.textContent = user.nombre || user.username;
+            if (user.strImagen) {
+                const img = document.getElementById('userImg');
+                const icon = document.getElementById('userIcon');
+                if(img) { img.src = user.strImagen; img.style.display = 'block'; }
+                if(icon) icon.style.display = 'none';
+            }
+        }
+    } catch(e) { console.error(e); }
 }
 
 async function cargarMenu(){
-    const token = localStorage.getItem("token");
-    if(!token) return;
+    const token = localStorage.getItem("token");
+    if(!token) return;
 
-    try {
-        const res = await fetch(`${API_URL}/api/menu`, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
-        const data = await res.json();
-        if (!data.success) return;
+    try {
+        const res = await fetch(`${API_URL}/api/menu`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (!data.success) return;
 
-        // Link de Inicio forzado a la ruta que GitHub Pages reconoce
-        let html = `<a href="/extra-earth/modulos/principal-1-1"><i class="fas fa-home"></i> Inicio</a>`;
+        let html = `<a href="/extra-earth/modulos/principal-1-1"><i class="fas fa-home"></i> Inicio</a>`;
 
-        Object.values(data.data).forEach(grupo => {
-            if (grupo.modulos && grupo.modulos.length > 0) {
-                html += `<div class="menu-section"><div class="menu-section-title">${grupo.nombre}</div>`;
-                
-                grupo.modulos.forEach(mod => {
-                    // Normalizamos el slug para que coincida con tus rutas de producción
-                    let slug = mod.strNombreModulo.toLowerCase()
+        Object.values(data.data).forEach(grupo => {
+            if (grupo.modulos && grupo.modulos.length > 0) {
+                html += `<div class="menu-section"><div class="menu-section-title">${grupo.nombre}</div>`;
+                
+                grupo.modulos.forEach(mod => {
+                    // Slugificación limpia para archivos en carpeta /modulos/
+                    let slug = mod.strNombreModulo.toLowerCase()
                         .normalize("NFD")
-                        .replace(/[\u0300-\u036f]/g, "") 
-                        .replace(/\s+/g, '-')            
-                        .replace(/\./g, '-');            
+                        .replace(/[\u0300-\u036f]/g, "") // Quitar acentos
+                        .replace(/\s+/g, '-')            // Espacios -> guion
+                        .replace(/\./g, '-');            // Puntos -> guion (Principal 1.1 -> principal-1-1)
 
-                    // Mapeo manual según las URLs de tu hosting
-                    let finalRoute = slug;
-                    if (slug === "usuario")          finalRoute = "usuario";
-                    if (slug === "perfil")           finalRoute = "perfil";
-                    if (slug === "modulo")           finalRoute = "modulos";
-                    if (slug === "permisos-perfil")  finalRoute = "permisos";
+                    // Casos especiales según tus nombres de archivos reales
+                    if (slug === "modulo") slug = "modulos";
+                    if (slug === "permisos-perfil") slug = "permisos";
+                    if (slug === "usuario") slug = "usuarios";
+                    if (slug === "perfil") slug = "perfiles";
 
-                    const url = `/extra-earth/modulos/${finalRoute}`;
-                    const activeClass = window.location.pathname.includes(finalRoute) ? 'active' : '';
+                    const url = `/extra-earth/modulos/${slug}`;
+                    const activeClass = window.location.pathname.includes(slug) ? 'active' : '';
                     
                     html += `<a href="${url}" class="${activeClass}">
                                 <i class="fas fa-chevron-right" style="font-size:0.7rem; opacity:0.5;"></i> ${mod.strNombreModulo}
                              </a>`;
-                });
-                html += `</div>`;
-            }
-        });
-        menuContainer.innerHTML = html;
-    } catch (err) { console.error(err); }
+                });
+                html += `</div>`;
+            }
+        });
+        menuContainer.innerHTML = html;
+    } catch (err) { console.error(err); }
 }
 
 logoutBtn.addEventListener("click", () => {
-    localStorage.clear();
-    window.location.href = "/extra-earth/login";
+    localStorage.clear();
+    window.location.href = "/extra-earth/login";
 });
 
 document.getElementById('menuToggle').onclick = () => {
-    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('sidebar').classList.toggle('open');
 };
 
 document.addEventListener("DOMContentLoaded", () => {
-    verificarAuth();
-    cargarInfoUsuario();
-    cargarMenu();
+    verificarAuth();
+    cargarInfoUsuario();
+    cargarMenu();
 });
 </script>
 

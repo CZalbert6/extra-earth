@@ -18,7 +18,7 @@ const API_URL = "https://extra-earth-production.up.railway.app";
         <label for="loginIdentifier">Usuario o Email</label>
         <div class="input-wrapper">
           <i class="fas fa-user"></i>
-          <input type="text" id="loginIdentifier" name="username" placeholder="Ej: admin" required>
+          <input type="text" id="loginIdentifier" name="username" placeholder="admin" required>
         </div>
       </div>
 
@@ -41,31 +41,20 @@ const API_URL = "https://extra-earth-production.up.railway.app";
     </form>
 
     <div id="message" class="status-message"></div>
-
-    <div class="login-footer">
-      ¿No tiene cuenta? <a href="/extra-earth/register">Regístrese aquí</a>
-    </div>
   </div>
 </Layout>
 
 <style>
-.login-card { max-width: 420px; margin: 2rem auto; padding: 1rem; }
-.login-header { text-align: center; margin-bottom: 2rem; }
-.login-header i { font-size: 3.5rem; color: #3b82f6; margin-bottom: 1rem; }
-.login-header h2 { font-size: 1.75rem; color: #1e293b; margin: 0; }
-.login-header p { color: #64748b; font-size: 0.9rem; }
-.input-group { margin-bottom: 1.25rem; }
-.input-group label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; color: #475569; }
-.input-wrapper { position: relative; display: flex; align-items: center; }
-.input-wrapper i { position: absolute; left: 1rem; color: #94a3b8; }
-.input-wrapper input { width: 100%; padding: 0.75rem 1rem 0.75rem 2.5rem; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 1rem; transition: all .2s; }
-.input-wrapper input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, .1); }
-button { width: 100%; padding: 0.8rem; background: #1e293b; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px; }
-button:hover { background: #334155; }
-button:disabled { background: #94a3b8; cursor: not-allowed; }
-.status-message { margin-top: 1.5rem; padding: 0.8rem; border-radius: 6px; font-size: 0.9rem; display: none; text-align: center; }
-.login-footer { text-align: center; margin-top: 2rem; font-size: 0.85rem; color: #64748b; }
-.login-footer a { color: #3b82f6; text-decoration: none; font-weight: 600; }
+    .login-card { max-width: 420px; margin: 4rem auto; padding: 2rem; background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .login-header { text-align: center; margin-bottom: 2rem; }
+    .login-header i { font-size: 3.5rem; color: #3b82f6; margin-bottom: 1rem; }
+    .input-group { margin-bottom: 1.25rem; }
+    .input-group label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; color: #475569; }
+    .input-wrapper { position: relative; display: flex; align-items: center; }
+    .input-wrapper i { position: absolute; left: 1rem; color: #94a3b8; }
+    .input-wrapper input { width: 100%; padding: 0.75rem 1rem 0.75rem 2.5rem; border: 1px solid #e2e8f0; border-radius: 8px; }
+    button { width: 100%; padding: 0.8rem; background: #1e293b; color: white; border: none; border-radius: 8px; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px; font-weight: 600; }
+    .status-message { margin-top: 1.5rem; padding: 0.8rem; border-radius: 6px; display: none; text-align: center; font-size: 0.9rem; }
 </style>
 
 <script>
@@ -77,75 +66,50 @@ button:disabled { background: #94a3b8; cursor: not-allowed; }
     const btnSubmit = document.getElementById("btnSubmit") as HTMLButtonElement;
     const apiUrl = form.dataset.apiUrl;
 
-    const showMsg = (text, type) => {
+    const showMsg = (text: string, type: string) => {
       if (!messageDiv) return;
       messageDiv.style.display = "block";
       messageDiv.style.background = type === "success" ? "#dcfce7" : "#fee2e2";
       messageDiv.style.color = type === "success" ? "#166534" : "#991b1b";
       messageDiv.textContent = text;
-      setTimeout(() => { messageDiv.style.display = "none"; }, 5000);
     };
 
     form.onsubmit = async (e) => {
       e.preventDefault();
-
-      const usernameInput = document.getElementById("loginIdentifier") as HTMLInputElement;
-      const passwordInput = document.getElementById("loginPassword") as HTMLInputElement;
-      
-      const username = usernameInput.value.trim();
-      const password = passwordInput.value;
-
       const hcaptchaElement = document.querySelector('[name="h-captcha-response"]') as HTMLTextAreaElement;
-      const hcaptchaToken = hcaptchaElement ? hcaptchaElement.value : '';
-
-      if (!hcaptchaToken) {
-          showMsg("Por favor, resuelva el captcha.", "error"); return;
-      }
-      if (!username || !password) {
-        showMsg("Complete todos los campos", "error"); return;
-      }
+      if (!hcaptchaElement?.value) { showMsg("Resuelva el captcha", "error"); return; }
 
       btnSubmit.disabled = true;
-      btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Validando...';
+      btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Entrando...';
 
       try {
-        const response = await fetch(`${apiUrl}/api/login`, {
+        const res = await fetch(`${apiUrl}/api/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            username: username,
-            password: password
+            username: (document.getElementById("loginIdentifier") as HTMLInputElement).value,
+            password: (document.getElementById("loginPassword") as HTMLInputElement).value
           })
         });
 
-        const data = await response.json();
-
-        if (response.ok && data.success) {
-          showMsg("Acceso concedido", "success");
+        const data = await res.json();
+        if (res.ok && data.success) {
+          localStorage.clear();
           localStorage.setItem("token", data.token);
           localStorage.setItem("user", JSON.stringify(data.user));
-          localStorage.setItem("permisos", JSON.stringify(data.permisos || []));
-
-          // REDIRECCIÓN CORREGIDA PARA EVITAR 404
-          setTimeout(() => {
-            window.location.href = "/extra-earth/modulos/principal-1-1";
-          }, 1200);
+          showMsg("Bienvenido", "success");
+          setTimeout(() => { window.location.href = "/extra-earth/modulos/principal-1-1"; }, 1000);
         } else {
-          showMsg(data.message || "Credenciales incorrectas", "error");
-          if (typeof window.hcaptcha !== 'undefined') window.hcaptcha.reset();
+          showMsg(data.message || "Error", "error");
           btnSubmit.disabled = false;
-          btnSubmit.innerHTML = '<span>Ingresar al Sistema</span><i class="fas fa-arrow-right"></i>';
+          btnSubmit.innerHTML = '<span>Ingresar</span>';
         }
       } catch (err) {
-        console.error("Error en fetch login:", err);
-        showMsg("Error de conexión con el servidor", "error");
-        if (typeof window.hcaptcha !== 'undefined') window.hcaptcha.reset();
+        showMsg("Error de conexión", "error");
         btnSubmit.disabled = false;
-        btnSubmit.innerHTML = '<span>Ingresar al Sistema</span><i class="fas fa-arrow-right"></i>';
       }
     };
   };
 
   document.addEventListener('DOMContentLoaded', setupLoginForm);
-  document.addEventListener('astro:page-load', setupLoginForm);
 </script>

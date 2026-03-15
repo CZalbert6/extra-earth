@@ -11,186 +11,171 @@ const { title = "Sistema Corporativo", moduloActual } = Astro.props;
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{title}</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{title}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-
-<style is:global>
-:root{ --primary:#1e293b; --accent:#3b82f6; --bg-main:#f8fafc; --text-main:#334155; --sidebar-width:260px; }
-*{box-sizing:border-box}
-body{font-family:'Inter',sans-serif;margin:0;background:var(--bg-main);color:var(--text-main);display:flex;min-height:100vh;}
-aside{width:var(--sidebar-width);background:var(--primary);color:white;display:flex;flex-direction:column;position:fixed;height:100vh;transition:.3s;z-index:100;}
-.sidebar-header{padding:1.5rem;font-weight:600;font-size:1.2rem;border-bottom:1px solid rgba(255,255,255,.1);display:flex;gap:10px;align-items:center;}
-nav{flex:1;padding:1rem 0;overflow-y:auto}
-.menu-section{margin-bottom:1rem}
-.menu-section-title{padding:.5rem 1.5rem;font-size:.7rem;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;}
-nav a{display:flex;align-items:center;padding:.8rem 1.5rem;color:#cbd5e1;text-decoration:none;font-size:.95rem;transition:.2s;}
-nav a:hover, nav a.active{background:rgba(255,255,255,.05);color:white;border-left:4px solid var(--accent);}
-nav a i{width:25px}
-.menu-toggle{display:none;position:fixed;top:1rem;left:1rem;z-index:101;background:var(--primary);color:white;border:none;padding:.5rem 1rem;border-radius:4px;cursor:pointer;}
-main{margin-left:var(--sidebar-width);flex:1;display:flex;flex-direction:column;min-height:100vh;}
-header{background:white;height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 2rem;box-shadow:0 1px 3px rgba(0,0,0,.1);}
-.breadcrumbs{padding:1rem 2rem;font-size:.85rem;color:#64748b;background:white;border-bottom:1px solid #e2e8f0;}
-.breadcrumbs span{margin:0 .5rem;color:#94a3b8}
-.content-wrapper{padding:2rem;flex:1}
-.card{background:white;border-radius:8px;padding:1.5rem;box-shadow:0 1px 3px rgba(0,0,0,.05);border:1px solid #e2e8f0;}
-.user-info{display:flex;align-items:center;gap:10px;}
-.user-avatar{width:35px;height:35px;background:#e2e8f0;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;}
-.user-avatar img{width:100%;height:100%;object-fit:cover;}
-.logout-btn{background:none;border:none;color:#ef4444;cursor:pointer;padding:.5rem;border-radius:4px;}
-.logout-btn:hover{background:#fee2e2;}
-@media(max-width:768px){aside{transform:translateX(-100%)} aside.open{transform:translateX(0)} main{margin-left:0} .menu-toggle{display:block}}
-</style>
+    <style is:global>
+        :root{ --primary:#1e293b; --accent:#3b82f6; --bg-main:#f8fafc; --text-main:#334155; --sidebar-width:260px; }
+        *{box-sizing:border-box}
+        body{font-family:'Inter',sans-serif;margin:0;background:var(--bg-main);color:var(--text-main);display:flex;min-height:100vh;}
+        aside{width:var(--sidebar-width);background:var(--primary);color:white;display:flex;flex-direction:column;position:fixed;height:100vh;transition:.3s;z-index:100;}
+        .sidebar-header{padding:1.5rem;font-weight:600;font-size:1.2rem;border-bottom:1px solid rgba(255,255,255,.1);display:flex;gap:10px;align-items:center;}
+        nav{flex:1;padding:1rem 0;overflow-y:auto}
+        .menu-section{margin-bottom:1rem}
+        .menu-section-title{padding:.5rem 1.5rem;font-size:.7rem;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;}
+        nav a{display:flex;align-items:center;padding:.8rem 1.5rem;color:#cbd5e1;text-decoration:none;font-size:.95rem;transition:.2s;}
+        nav a:hover, nav a.active{background:rgba(255,255,255,.05);color:white;border-left:4px solid var(--accent);}
+        nav a i{width:25px}
+        .menu-toggle{display:none;position:fixed;top:1rem;left:1rem;z-index:101;background:var(--primary);color:white;border:none;padding:.5rem 1rem;border-radius:4px;cursor:pointer;}
+        main{margin-left:var(--sidebar-width);flex:1;display:flex;flex-direction:column;min-height:100vh;}
+        header{background:white;height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 2rem;box-shadow:0 1px 3px rgba(0,0,0,.1);}
+        .breadcrumbs{padding:1rem 2rem;font-size:.85rem;color:#64748b;background:white;border-bottom:1px solid #e2e8f0;}
+        .breadcrumbs span{margin:0 .5rem;color:#94a3b8}
+        .content-wrapper{padding:2rem;flex:1}
+        .card{background:white;border-radius:8px;padding:1.5rem;box-shadow:0 1px 3px rgba(0,0,0,.05);border:1px solid #e2e8f0;}
+        .user-info{display:flex;align-items:center;gap:10px;}
+        .user-avatar{width:35px;height:35px;background:#e2e8f0;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+        .user-avatar img{width:100%;height:100%;object-fit:cover;}
+        .logout-btn{background:none;border:none;color:#ef4444;cursor:pointer;padding:.5rem;border-radius:4px;}
+        .logout-btn:hover{background:#fee2e2;}
+        @media(max-width:768px){aside{transform:translateX(-100%)} aside.open{transform:translateX(0)} main{margin-left:0} .menu-toggle{display:block}}
+    </style>
 </head>
 
 <body>
+    <button class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></button>
 
-<button class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></button>
+    <aside id="sidebar">
+        <div class="sidebar-header"><i class="fas fa-building"></i><span>CORP-DEV 2026</span></div>
+        <nav id="menu-container">
+            <div style="text-align:center;padding:2rem;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i> Cargando menú...</div>
+        </nav>
+    </aside>
 
-<aside id="sidebar">
-  <div class="sidebar-header"><i class="fas fa-building"></i><span>CORP-DEV 2026</span></div>
-  <nav id="menu-container">
-    <div style="text-align:center;padding:2rem;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i> Cargando menú...</div>
-  </nav>
-</aside>
+    <main>
+        <header>
+            <div id="page-title" style="font-weight:600">{moduloActual || "Panel de Control"}</div>
+            <div class="user-info">
+                <span id="user-name" style="font-size:.9rem">Invitado</span>
+                <div class="user-avatar" id="userAvatar">
+                    <i class="fas fa-user" id="userIcon"></i>
+                    <img id="userImg" src="" style="display:none;" />
+                </div>
+                <button class="logout-btn" id="logoutBtn" title="Cerrar Sesión"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+        </header>
 
-<main>
-  <header>
-    <div id="page-title" style="font-weight:600">{moduloActual || "Panel de Control"}</div>
-    <div class="user-info">
-      <span id="user-name" style="font-size:.9rem">Invitado</span>
-      <div class="user-avatar" id="userAvatar">
-        <i class="fas fa-user" id="userIcon"></i>
-        <img id="userImg" src="" style="display:none;" />
-      </div>
-      <button class="logout-btn" id="logoutBtn" title="Cerrar Sesión"><i class="fas fa-sign-out-alt"></i></button>
-    </div>
-  </header>
+        <div class="breadcrumbs">
+            <a href="/extra-earth/modulos/principal-1-1" style="text-decoration:none; color:inherit;">Inicio</a>
+            {moduloActual && (
+                <>
+                    <span> <i class="fas fa-chevron-right" style="font-size: 0.7rem;"></i> </span>
+                    <span style="color: var(--accent); font-weight: 600;">{moduloActual}</span>
+                </>
+            )}
+        </div>
 
-  <div class="breadcrumbs" id="breadcrumbs">
-    <a href="/extra-earth/modulos/principal-1-1" style="text-decoration:none; color:inherit;">Inicio</a>
-    {moduloActual && (
-        <>
-            <span> <i class="fas fa-chevron-right" style="font-size: 0.7rem;"></i> </span>
-            <span style="color: var(--accent); font-weight: 600;">{moduloActual}</span>
-        </>
-    )}
-  </div>
+        <div class="content-wrapper"><div class="card"><slot /></div></div>
+    </main>
 
-  <div class="content-wrapper"><div class="card"><slot /></div></div>
-</main>
+    <div id="auth-metadata" data-modulo={moduloActual}></div>
 
-<div id="auth-metadata" data-modulo={moduloActual}></div>
+    <script>
+        import { verificarPermisosModulo } from '../utils/permisos';
 
-<script>
-import { verificarPermisosModulo } from '../utils/permisos';
+        const API_URL = "https://extra-earth-production.up.railway.app";
+        const menuContainer = document.getElementById("menu-container");
+        const userNameSpan = document.getElementById("user-name");
+        const logoutBtn = document.getElementById("logoutBtn");
+        const metadata = document.getElementById("auth-metadata");
 
-const API_URL="https://extra-earth-production.up.railway.app"
-const menuContainer=document.getElementById("menu-container")
-const userNameSpan=document.getElementById("user-name")
-const logoutBtn=document.getElementById("logoutBtn")
-const metadata = document.getElementById("auth-metadata");
-
-function verificarAuth(){
-    const token = localStorage.getItem("token");
-    if (!token && !window.location.pathname.includes('/login')) {
-        window.location.href = "/extra-earth/login";
-        return;
-    }
-
-    const modName = metadata?.dataset.modulo;
-    if (modName && modName !== "undefined" && modName !== "") {
-        const { tieneAcceso } = verificarPermisosModulo(modName);
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        if (!tieneAcceso && !user.esAdmin) {
-            window.location.href = "/extra-earth/error?code=403&message=Acceso%20Denegado";
-        }
-    }
-}
-
-function cargarInfoUsuario(){
-    try {
-        const user = JSON.parse(localStorage.getItem("user"));
-        if (user) {
-            userNameSpan.textContent = user.nombre || user.username;
-            if (user.strImagen) {
-                const img = document.getElementById('userImg');
-                const icon = document.getElementById('userIcon');
-                if(img) { img.src = user.strImagen; img.style.display = 'block'; }
-                if(icon) icon.style.display = 'none';
+        function verificarAuth() {
+            const token = localStorage.getItem("token");
+            if (!token && !window.location.pathname.includes('/login')) {
+                window.location.href = "/extra-earth/login";
             }
         }
-    } catch(e) { console.error(e); }
-}
 
-async function cargarMenu(){
-    const token = localStorage.getItem("token");
-    if(!token) return;
-
-    try {
-        const res = await fetch(`${API_URL}/api/menu`, {
-            method: 'GET',
-            headers: { 
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        if (res.status === 401) {
-            localStorage.clear();
-            window.location.href = "/extra-earth/login";
-            return;
+        function cargarInfoUsuario() {
+            try {
+                const user = JSON.parse(localStorage.getItem("user") || "null");
+                if (user) {
+                    if(userNameSpan) userNameSpan.textContent = user.nombre || user.username;
+                    const img = document.getElementById('userImg') as HTMLImageElement;
+                    const icon = document.getElementById('userIcon');
+                    if (user.strImagen && img && icon) {
+                        img.src = user.strImagen;
+                        img.style.display = 'block';
+                        icon.style.display = 'none';
+                    }
+                }
+            } catch(e) { console.error(e); }
         }
 
-        const data = await res.json();
-        if (!data.success) {
-            menuContainer.innerHTML = `<div style="padding:1rem; color:#ef4444; font-size:0.8rem;">${data.message || 'Error en menú'}</div>`;
-            return;
-        }
+        async function cargarMenu() {
+            const token = localStorage.getItem("token");
+            if (!token || !menuContainer) return;
 
-        let html = `<a href="/extra-earth/modulos/principal-1-1"><i class="fas fa-home"></i> Inicio</a>`;
-
-        Object.values(data.data).forEach(grupo => {
-            if (grupo.modulos && grupo.modulos.length > 0) {
-                html += `<div class="menu-section"><div class="menu-section-title">${grupo.nombre}</div>`;
-                grupo.modulos.forEach(mod => {
-                    // Usar mod.nombre o mod.strNombreModulo dependiendo de lo que devuelva tu API
-                    const nombreModulo = mod.nombre || mod.strNombreModulo;
-                    let slug = nombreModulo.toLowerCase()
-                        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-                        .replace(/\s+/g, '-').replace(/\./g, '-');
-
-                    if (slug === "modulo") slug = "modulos";
-                    if (slug === "perfil") slug = "perfiles";
-                    if (slug === "usuario") slug = "usuarios";
-                    if (slug === "permisos-perfil") slug = "permisos";
-
-                    const url = `/extra-earth/modulos/${slug}`;
-                    const activeClass = window.location.pathname.includes(slug) ? 'active' : '';
-                    html += `<a href="${url}" class="${activeClass}"><i class="fas fa-chevron-right" style="font-size:0.7rem; opacity:0.5;"></i> ${nombreModulo}</a>`;
+            try {
+                const res = await fetch(`${API_URL}/api/menu`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
-                html += `</div>`;
+
+                if (res.status === 401 || res.status === 403) {
+                    localStorage.clear();
+                    window.location.href = "/extra-earth/login";
+                    return;
+                }
+
+                const data = await res.json();
+                if (!data.success) {
+                    menuContainer.innerHTML = `<div style="padding:1rem; color:red;">Error de acceso</div>`;
+                    return;
+                }
+
+                let html = `<a href="/extra-earth/modulos/principal-1-1"><i class="fas fa-home"></i> Inicio</a>`;
+
+                Object.values(data.data).forEach((grupo: any) => {
+                    if (grupo.modulos?.length > 0) {
+                        html += `<div class="menu-section"><div class="menu-section-title">${grupo.nombre}</div>`;
+                        grupo.modulos.forEach((mod: any) => {
+                            const nombre = mod.strNombreModulo || mod.nombre;
+                            let slug = nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-').replace(/\./g, '-');
+                            
+                            // Mapeo manual para archivos físicos
+                            if (slug === "modulo") slug = "modulos";
+                            if (slug === "perfil") slug = "perfiles";
+                            if (slug === "usuario") slug = "usuarios";
+                            if (slug === "permisos-perfil") slug = "permisos";
+
+                            const url = `/extra-earth/modulos/${slug}`;
+                            const activeClass = window.location.pathname.includes(slug) ? 'active' : '';
+                            html += `<a href="${url}" class="${activeClass}"><i class="fas fa-chevron-right" style="font-size:0.7rem; opacity:0.5;"></i> ${nombre}</a>`;
+                        });
+                        html += `</div>`;
+                    }
+                });
+                menuContainer.innerHTML = html;
+            } catch (err) {
+                console.error(err);
+                menuContainer.innerHTML = `<div style="padding:1rem; color:gray;">Error de conexión</div>`;
             }
+        }
+
+        logoutBtn?.addEventListener("click", () => { localStorage.clear(); window.location.href = "/extra-earth/login"; });
+        
+        document.getElementById('menuToggle')!.onclick = () => {
+            document.getElementById('sidebar')!.classList.toggle('open');
+        };
+
+        document.addEventListener("DOMContentLoaded", () => {
+            verificarAuth();
+            cargarInfoUsuario();
+            cargarMenu();
         });
-        menuContainer.innerHTML = html;
-    } catch (err) { 
-        console.error("Error cargando menú:", err);
-        menuContainer.innerHTML = `<div style="padding:1rem; color:gray; font-size:0.8rem;">Error de conexión</div>`;
-    }
-}
-
-logoutBtn.addEventListener("click", () => { localStorage.clear(); window.location.href = "/extra-earth/login"; });
-document.getElementById('menuToggle').onclick = () => { document.getElementById('sidebar').classList.toggle('open'); };
-
-document.addEventListener("DOMContentLoaded", () => {
-    verificarAuth();
-    cargarInfoUsuario();
-    cargarMenu();
-});
-</script>
-
+    </script>
 </body>
 </html>

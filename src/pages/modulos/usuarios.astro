@@ -76,7 +76,7 @@ const API_URL = "https://extra-earth-production.up.railway.app";
           
           <div class="imagen-input" style="text-align: center;">
             <input type="file" id="imagenFile" accept="image/jpeg,image/png,image/gif" onchange="previsualizarImagen(event)">
-            <button type="button" class="btn-clear" onclick="limpiarImagen()" style="display: none; background: #fee2e2; color: #ef4444; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-top: 5px;" id="btnClearImagen">
+            <button type="button" class="btn-clear" onclick="limpiarImagen()" style="display: none; background: #fee2e2; color: #ef4444; border: none; padding: 5px 10px; border-radius: 4px; cursor: margin-top: 5px;" id="btnClearImagen">
               <i class="fas fa-times"></i> Quitar imagen
             </button>
           </div>
@@ -128,21 +128,16 @@ const API_URL = "https://extra-earth-production.up.railway.app";
   let currentPage = 1;
   const { permisos } = verificarPermisosModulo('Usuario');
 
-  // ============================================
-  // FUNCIÓN CORREGIDA - COMPRESIÓN DE IMAGEN
-  // ============================================
   window.previsualizarImagen = (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
-    // Validar tipo de archivo
     if (!file.type.match('image.*')) {
       alert('Por favor, seleccione una imagen válida');
       event.target.value = '';
       return;
     }
 
-    // Validar tamaño máximo (5MB antes de comprimir)
     if (file.size > 5 * 1024 * 1024) {
       alert('La imagen es muy pesada. Máximo 5MB antes de comprimir.');
       event.target.value = '';
@@ -155,20 +150,23 @@ const API_URL = "https://extra-earth-production.up.railway.app";
       img.src = e.target.result;
       
       img.onload = () => {
-        // Crear canvas para comprimir
         const canvas = document.createElement('canvas');
         let width = img.width;
         let height = img.height;
         
-        // Redimensionar si es muy grande (máximo 800px)
-        const MAX_SIZE = 800;
+        const MAX_WIDTH = 800;
+        const MAX_HEIGHT = 800;
         
-        if (width > height && width > MAX_SIZE) {
-          height = Math.round((height * MAX_SIZE) / width);
-          width = MAX_SIZE;
-        } else if (height > MAX_SIZE) {
-          width = Math.round((width * MAX_SIZE) / height);
-          height = MAX_SIZE;
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
         }
         
         canvas.width = width;
@@ -177,13 +175,9 @@ const API_URL = "https://extra-earth-production.up.railway.app";
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
         
-        // Comprimir a JPEG con calidad 0.6 (balance entre calidad y tamaño)
-        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6);
-        
-        // Actualizar el input oculto con la imagen comprimida
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
         document.getElementById('strImagenBase64').value = compressedBase64;
         
-        // Mostrar la vista previa
         const previewImg = document.getElementById('previewImg');
         previewImg.src = compressedBase64;
         previewImg.style.display = 'block';
@@ -194,7 +188,6 @@ const API_URL = "https://extra-earth-production.up.railway.app";
         document.getElementById('previewPlaceholder').style.display = 'none';
         document.getElementById('btnClearImagen').style.display = 'inline-block';
         
-        // Mostrar tamaño aproximado en consola
         const sizeInKB = Math.round(compressedBase64.length * 0.75 / 1024);
         console.log(`Imagen comprimida: ~${sizeInKB}KB`);
       };
@@ -248,26 +241,27 @@ const API_URL = "https://extra-earth-production.up.railway.app";
     }
   }
 
+  // LA CORRECCIÓN CLAVE ESTÁ AQUÍ (Estilos en línea forzados)
   function renderizarTabla(usuarios) {
     const tbody = document.getElementById('tablaBody');
     tbody.innerHTML = usuarios.map(u => `
       <tr>
-        <td>${u.id}</td>
-        <td>
-          <div class="foto-container-tabla">
-            <img src="${u.strimagen || 'https://ui-avatars.com/api/?name=' + u.username}" class="foto-perfil-tabla" alt="Avatar">
+        <td style="vertical-align: middle;">${u.id}</td>
+        <td style="vertical-align: middle;">
+          <div style="width: 45px; height: 45px; border-radius: 50%; overflow: hidden; border: 2px solid #e2e8f0; display: flex; align-items: center; justify-content: center; background: #f8fafc; flex-shrink: 0; margin: 0;">
+            <img src="${u.strimagen || 'https://ui-avatars.com/api/?name=' + u.username}" style="width: 100%; height: 100%; object-fit: cover;" alt="Avatar">
           </div>
         </td>
-        <td>${u.username}</td>
-        <td>${u.nombre}</td>
-        <td>${u.email}</td>
-        <td>${u.strnombreperfil || 'Sin perfil'}</td>
-        <td>
+        <td style="vertical-align: middle;">${u.username}</td>
+        <td style="vertical-align: middle;">${u.nombre}</td>
+        <td style="vertical-align: middle;">${u.email}</td>
+        <td style="vertical-align: middle;">${u.strnombreperfil || 'Sin perfil'}</td>
+        <td style="vertical-align: middle;">
           <span class="badge ${u.idestadousuario === 1 ? 'badge-active' : 'badge-inactive'}">
             ${u.idestadousuario === 1 ? 'Activo' : 'Inactivo'}
           </span>
         </td>
-        <td class="actions-cell">
+        <td class="actions-cell" style="vertical-align: middle;">
           ${permisos.detalle ? `<button class="btn-icon view" onclick="verDetalle(${u.id})"><i class="fas fa-eye"></i></button>` : ''}
           ${permisos.editar ? `<button class="btn-icon edit" onclick="editarUsuario(${u.id})"><i class="fas fa-edit"></i></button>` : ''}
           ${permisos.eliminar ? `<button class="btn-icon delete" onclick="eliminarUsuario(${u.id})"><i class="fas fa-trash"></i></button>` : ''}
@@ -377,7 +371,7 @@ const API_URL = "https://extra-earth-production.up.railway.app";
   });
 </script>
 
-<style>
+<style is:global>
   .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
   .btn-add { background: #059669; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600; }
   .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
@@ -387,7 +381,6 @@ const API_URL = "https://extra-earth-production.up.railway.app";
   .form-group label { font-weight: 600; margin-bottom: 0.5rem; }
   .form-group input, .form-group select { padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; }
   
-  /* CONTENEDORES ESTRICTOS PARA IMÁGENES */
   .imagen-preview { 
     width: 120px; 
     height: 120px; 
@@ -399,24 +392,6 @@ const API_URL = "https://extra-earth-production.up.railway.app";
     display: flex;
     align-items: center;
     justify-content: center;
-  }
-
-  .foto-container-tabla {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    overflow: hidden;
-    background: #eee;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .foto-perfil-tabla { 
-    width: 40px; 
-    height: 40px; 
-    object-fit: cover; 
-    border-radius: 50%;
   }
 
   .preview-placeholder { height: 100%; width: 100%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; color: #94a3b8; }

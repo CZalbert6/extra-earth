@@ -5,7 +5,11 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
+import dns from 'dns';
 import 'dotenv/config';
+
+// --- EVITAR ERROR ENETUNREACH DE IPv6 EN RAILWAY ---
+dns.setDefaultResultOrder('ipv4first');
 
 const { Pool } = pkg;
 const app = express();
@@ -324,7 +328,6 @@ app.post('/api/login', async (req, res) => {
 // --- 6.5 RECUPERACIÓN DE CONTRASEÑA ---
 // =======================================================
 
-// Solicitar token al correo
 app.post('/api/forgot-password', async (req, res) => {
     try {
         const { email } = req.body;
@@ -378,7 +381,6 @@ app.post('/api/forgot-password', async (req, res) => {
     }
 });
 
-// Validar token y cambiar la contraseña
 app.post('/api/reset-password', async (req, res) => {
     try {
         const { token, newPassword } = req.body;
@@ -977,5 +979,15 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log('='.repeat(50));
     console.log(`✅ SERVIDOR INICIADO CORRECTAMENTE`);
     console.log(`📡 Puerto: ${PORT}`);
+    console.log('='.repeat(50));
+    console.log('🗑️ TABLA ANTIGUA ELIMINADA - Solo existe usuarios1');
+    console.log('📝 ESTRUCTURA DE USUARIOS (usuarios1):');
+    console.log('   - username: nombre de usuario');
+    console.log('   - email: correo electrónico');
+    console.log('   - nombre: nombre real');
+    console.log('   - sername: apellido (opcional)');
+    console.log('   - password: contraseña encriptada');
+    console.log('='.repeat(50));
+    console.log('👑 El PRIMER usuario registrado será ADMINISTRADOR');
     console.log('='.repeat(50));
 });

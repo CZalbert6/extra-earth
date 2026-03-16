@@ -2,27 +2,27 @@
 import Layout from '../../layout/layout.astro';
 ---
 
-<Layout title="Principal 2.1 | Sistema Corporativo" moduloActual="Principal 1.2">
+<Layout title="Principal 2.1 | Sistema Corporativo" moduloActual="Principal 2.1">
   <div class="static-module">
     <div class="module-header">
-      <h2><i class="fas fa-file-alt"></i> Módulo Principal 1.2</h2>
+      <h2><i class="fas fa-file-alt"></i> Módulo Principal 2.1</h2>
       <p>Este es un módulo estático para validar la gestión de permisos en tiempo real.</p>
     </div>
 
     <div class="crud-actions" id="actionsContainer">
-      <button class="btn-add" id="btn-agregar" style="display: none;" onclick="alert('Acción: Agregar en 1.2')">
+      <button class="btn-add" id="btn-agregar" style="display: none;" onclick="alert('Acción: Agregar en 2.1')">
         <i class="fas fa-plus"></i> Agregar
       </button>
-      <button class="btn-edit" id="btn-editar" style="display: none;" onclick="alert('Acción: Editar en 1.2')">
+      <button class="btn-edit" id="btn-editar" style="display: none;" onclick="alert('Acción: Editar en 2.1')">
         <i class="fas fa-edit"></i> Editar
       </button>
-      <button class="btn-delete" id="btn-eliminar" style="display: none;" onclick="alert('Acción: Eliminar en 1.2')">
+      <button class="btn-delete" id="btn-eliminar" style="display: none;" onclick="alert('Acción: Eliminar en 2.1')">
         <i class="fas fa-trash"></i> Eliminar
       </button>
-      <button class="btn-view" id="btn-consulta" style="display: none;" onclick="alert('Acción: Consultar en 1.2')">
+      <button class="btn-view" id="btn-consulta" style="display: none;" onclick="alert('Acción: Consultar en 2.1')">
         <i class="fas fa-eye"></i> Consultar
       </button>
-      <button class="btn-detail" id="btn-detalle" style="display: none;" onclick="alert('Acción: Detalle en 1.2')">
+      <button class="btn-detail" id="btn-detalle" style="display: none;" onclick="alert('Acción: Detalle en 2.1')">
         <i class="fas fa-info-circle"></i> Detalle
       </button>
     </div>
@@ -40,8 +40,8 @@ import Layout from '../../layout/layout.astro';
   import { verificarPermisosModulo } from '../../utils/permisos';
 
   function aplicarPermisos() {
-    // CAMBIO 3: El nombre exacto que tienes en tu Base de Datos
-    const { permisos, tieneAcceso } = verificarPermisosModulo('Principal 1.2');
+    // AHORA SÍ: Pedimos los permisos para el módulo 2.1
+    const { permisos, tieneAcceso } = verificarPermisosModulo('Principal 2.1');
     const statusSpan = document.getElementById('access-status');
 
     if (!tieneAcceso) {
@@ -65,7 +65,6 @@ import Layout from '../../layout/layout.astro';
 </script>
 
 <style>
-  /* Tus mismos estilos de siempre */
   .static-module { padding: 1rem; }
   .module-header { margin-bottom: 2rem; }
   .module-header h2 { margin: 0 0 0.5rem 0; color: #1e293b; }

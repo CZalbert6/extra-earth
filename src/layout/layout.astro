@@ -39,7 +39,6 @@ const { title = "Sistema Corporativo", moduloActual } = Astro.props;
         
         .user-info{display:flex;align-items:center;gap:10px;}
         
-        /* CORRECCIÓN DE IMAGEN DE USUARIO EN CABECERA */
         .user-avatar {
             width: 35px;
             height: 35px;
@@ -48,14 +47,14 @@ const { title = "Sistema Corporativo", moduloActual } = Astro.props;
             display: flex;
             align-items: center;
             justify-content: center;
-            overflow: hidden; /* Corta cualquier exceso de imagen */
+            overflow: hidden;
             border: 1px solid #cbd5e1;
-            flex-shrink: 0; /* Evita que el contenedor se deforme */
+            flex-shrink: 0;
         }
         .user-avatar img {
             width: 100%;
             height: 100%;
-            object-fit: cover; /* Ajusta la imagen al círculo sin estirarla */
+            object-fit: cover;
         }
         .user-avatar i {
             font-size: 1.1rem;
@@ -92,7 +91,7 @@ const { title = "Sistema Corporativo", moduloActual } = Astro.props;
         </header>
 
         <div class="breadcrumbs">
-            <a href="/extra-earth/modulos/principal-1-1" style="text-decoration:none; color:inherit;">Inicio</a>
+            <a href="/extra-earth/modulos/principal-1-1/" style="text-decoration:none; color:inherit;">Inicio</a>
             {moduloActual && (
                 <>
                     <span> <i class="fas fa-chevron-right" style="font-size: 0.7rem;"></i> </span>
@@ -107,13 +106,10 @@ const { title = "Sistema Corporativo", moduloActual } = Astro.props;
     <div id="auth-metadata" data-modulo={moduloActual}></div>
 
     <script>
-        import { verificarPermisosModulo } from '../utils/permisos';
-
         const API_URL = "https://extra-earth-production.up.railway.app";
         const menuContainer = document.getElementById("menu-container");
         const userNameSpan = document.getElementById("user-name");
         const logoutBtn = document.getElementById("logoutBtn");
-        const metadata = document.getElementById("auth-metadata");
 
         function verificarAuth() {
             const token = localStorage.getItem("token");
@@ -162,21 +158,29 @@ const { title = "Sistema Corporativo", moduloActual } = Astro.props;
                     return;
                 }
 
-                let html = `<a href="/extra-earth/modulos/principal-1-1"><i class="fas fa-home"></i> Inicio</a>`;
+                // CORRECCIÓN: Se agrega la barra diagonal al final del Inicio
+                let html = `<a href="/extra-earth/modulos/principal-1-1/"><i class="fas fa-home"></i> Inicio</a>`;
 
                 Object.values(data.data).forEach((grupo: any) => {
                     if (grupo.modulos?.length > 0) {
                         html += `<div class="menu-section"><div class="menu-section-title">${grupo.nombre}</div>`;
                         grupo.modulos.forEach((mod: any) => {
                             const nombre = mod.strNombreModulo || mod.nombre;
-                            let slug = nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-').replace(/\./g, '-');
+                            
+                            let slug = nombre.toLowerCase()
+                                .normalize("NFD")
+                                .replace(/[\u0300-\u036f]/g, "")
+                                .replace(/[\s.]+/g, '-')
+                                .replace(/-+/g, '-');
                             
                             if (slug === "modulo") slug = "modulos";
                             if (slug === "perfil") slug = "perfiles";
                             if (slug === "usuario") slug = "usuarios";
                             if (slug === "permisos-perfil") slug = "permisos";
 
-                            const url = `/extra-earth/modulos/${slug}`;
+                            // CORRECCIÓN CRÍTICA: Se agrega la barra diagonal al final de cada URL dinámica
+                            const url = `/extra-earth/modulos/${slug}/`;
+                            
                             const activeClass = window.location.pathname.includes(slug) ? 'active' : '';
                             html += `<a href="${url}" class="${activeClass}"><i class="fas fa-chevron-right" style="font-size:0.7rem; opacity:0.5;"></i> ${nombre}</a>`;
                         });

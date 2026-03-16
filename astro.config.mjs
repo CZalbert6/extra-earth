@@ -2,30 +2,31 @@
 import { defineConfig } from 'astro/config';
 
 export default defineConfig({
+  /* 1. Cambiamos a minúsculas para coincidir con el estándar de GitHub */
+  site: 'https://czalbert6.github.io',
 
-  /* URL de tu sitio en GitHub Pages */
-  site: 'https://CZalbert6.github.io',
-
-  /* Nombre EXACTO del repositorio */
+  /* 2. Base del repositorio intacta */
   base: '/extra-earth',
 
-  /* Genera sitio estático para GitHub Pages */
+  /* 3. Genera sitio estático */
   output: 'static',
 
-  /* Configuración del servidor de desarrollo */
+  /* 4. Forzamos el uso de barras diagonales al final. 
+     Esto es CLAVE para que GitHub Pages encuentre carpetas internas. */
+  trailingSlash: 'always',
+
   server: {
     port: 4321,
     host: true
   },
 
-  /* Build */
   build: {
+    /* 5. Crea carpetas (ej: /modulos/principal-2-1/index.html). 
+       Es la forma más compatible con los servidores de GitHub. */
     format: 'directory'
   },
 
-  /* Prefetch opcional (mejora navegación) */
   prefetch: {
     prefetchAll: true
   }
-
 });

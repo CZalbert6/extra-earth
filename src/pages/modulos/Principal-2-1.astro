@@ -1,0 +1,83 @@
+---
+import Layout from '../../layout/layout.astro';
+---
+
+<Layout title="Principal 2.1 | Sistema Corporativo" moduloActual="Principal 1.2">
+  <div class="static-module">
+    <div class="module-header">
+      <h2><i class="fas fa-file-alt"></i> Módulo Principal 1.2</h2>
+      <p>Este es un módulo estático para validar la gestión de permisos en tiempo real.</p>
+    </div>
+
+    <div class="crud-actions" id="actionsContainer">
+      <button class="btn-add" id="btn-agregar" style="display: none;" onclick="alert('Acción: Agregar en 1.2')">
+        <i class="fas fa-plus"></i> Agregar
+      </button>
+      <button class="btn-edit" id="btn-editar" style="display: none;" onclick="alert('Acción: Editar en 1.2')">
+        <i class="fas fa-edit"></i> Editar
+      </button>
+      <button class="btn-delete" id="btn-eliminar" style="display: none;" onclick="alert('Acción: Eliminar en 1.2')">
+        <i class="fas fa-trash"></i> Eliminar
+      </button>
+      <button class="btn-view" id="btn-consulta" style="display: none;" onclick="alert('Acción: Consultar en 1.2')">
+        <i class="fas fa-eye"></i> Consultar
+      </button>
+      <button class="btn-detail" id="btn-detalle" style="display: none;" onclick="alert('Acción: Detalle en 1.2')">
+        <i class="fas fa-info-circle"></i> Detalle
+      </button>
+    </div>
+
+    <div class="static-content">
+      <p><strong>Estado del Módulo:</strong> <span id="access-status">Validando permisos...</span></p>
+      <div id="no-access-msg" style="display: none; color: #ef4444; margin-top: 1rem;">
+        <i class="fas fa-exclamation-triangle"></i> No tienes acciones asignadas en este módulo.
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  import { verificarPermisosModulo } from '../../utils/permisos';
+
+  function aplicarPermisos() {
+    // CAMBIO 3: El nombre exacto que tienes en tu Base de Datos
+    const { permisos, tieneAcceso } = verificarPermisosModulo('Principal 1.2');
+    const statusSpan = document.getElementById('access-status');
+
+    if (!tieneAcceso) {
+      statusSpan.textContent = "Sin acceso";
+      statusSpan.style.color = "#ef4444";
+      document.getElementById('no-access-msg').style.display = 'block';
+      return;
+    }
+
+    statusSpan.textContent = "Acceso concedido";
+    statusSpan.style.color = "#059669";
+
+    if (permisos.agregar) document.getElementById('btn-agregar').style.display = 'flex';
+    if (permisos.editar) document.getElementById('btn-editar').style.display = 'flex';
+    if (permisos.eliminar) document.getElementById('btn-eliminar').style.display = 'flex';
+    if (permisos.consulta) document.getElementById('btn-consulta').style.display = 'flex';
+    if (permisos.detalle) document.getElementById('btn-detalle').style.display = 'flex';
+  }
+
+  document.addEventListener('DOMContentLoaded', aplicarPermisos);
+</script>
+
+<style>
+  /* Tus mismos estilos de siempre */
+  .static-module { padding: 1rem; }
+  .module-header { margin-bottom: 2rem; }
+  .module-header h2 { margin: 0 0 0.5rem 0; color: #1e293b; }
+  .module-header h2 i { color: #3b82f6; margin-right: 0.5rem; }
+  .module-header p { color: #64748b; margin: 0; }
+  .crud-actions { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 2rem; padding: 1rem; background: #f8fafc; border-radius: 8px; min-height: 60px; }
+  .crud-actions button { padding: 0.75rem 1.5rem; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-weight: 500; transition: all 0.2s; }
+  .btn-add { background: #059669; color: white; }
+  .btn-edit { background: #f59e0b; color: white; }
+  .btn-delete { background: #ef4444; color: white; }
+  .btn-view { background: #3b82f6; color: white; }
+  .btn-detail { background: #8b5cf6; color: white; }
+  .static-content { padding: 2rem; background: white; border: 1px solid #e2e8f0; border-radius: 8px; text-align: center; color: #64748b; }
+  @media (max-width: 640px) { .crud-actions { flex-direction: column; } .crud-actions button { width: 100%; justify-content: center; } }
+</style>

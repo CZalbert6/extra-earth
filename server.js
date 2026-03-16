@@ -3,6 +3,8 @@ import cors from 'cors';
 import pkg from 'pg';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import nodemailer from 'nodemailer';
+import crypto from 'crypto';
 import 'dotenv/config';
 
 const { Pool } = pkg;
@@ -27,6 +29,15 @@ const pool = new Pool({
 });
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secreto_super_seguro_2026';
+
+// Configuración de Nodemailer para enviar correos
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    }
+});
 
 // --- 3. Health Check ---
 app.get('/', (req, res) => res.status(200).send('OK'));
@@ -73,10 +84,16 @@ const initDB = async () => {
                 idEstadoUsuario INTEGER DEFAULT 1,
                 strNumeroCelular VARCHAR(20),
                 strImagen TEXT,
+                reset_token VARCHAR(255),
+                reset_token_expires TIMESTAMP,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
-        console.log('✅ Tabla usuarios1 creada');
+        
+        // Agregar columnas para recuperar contraseña por si la tabla ya existía
+        await pool.query(`ALTER TABLE usuarios1 ADD COLUMN IF NOT EXISTS reset_token VARCHAR(255);`);
+        await pool.query(`ALTER TABLE usuarios1 ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMP;`);
+        console.log('✅ Tabla usuarios1 creada y configurada para recuperación de contraseñas');
 
         // Tabla permisos_perfil
         await pool.query(`
@@ -142,7 +159,7 @@ const initDB = async () => {
         }
         console.log('✅ Menú inicial insertado');
 
-        console.log('✅ Base de datos inicializada con usuarios1 como única tabla');
+        console.log('✅ Base de datos inicializada');
     } catch (err) {
         console.error('❌ Error iniciando DB:', err);
     }
@@ -155,10 +172,14 @@ const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
     
-    if (!token) return res.status(401).json({ success: false, message: 'Token requerido' });
+    if (!token) {
+        return res.status(401).json({ success: false, message: 'Token requerido' });
+    }
 
     jwt.verify(token, JWT_SECRET, (err, user) => {
-        if (err) return res.status(403).json({ success: false, message: 'Token inválido' });
+        if (err) {
+            return res.status(403).json({ success: false, message: 'Token inválido' });
+        }
         req.userId = user.id;
         next();
     });
@@ -169,7 +190,6 @@ app.post('/api/register', async (req, res) => {
     try {
         const { username, email, nombre, sername, password } = req.body;
         
-        // Validaciones
         if (!username || !email || !nombre || !password) {
             return res.status(400).json({ 
                 success: false, 
@@ -186,7 +206,6 @@ app.post('/api/register', async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
         
-        // Verificar si es el primer usuario
         const userCount = await pool.query('SELECT COUNT(*) FROM usuarios1');
         const esPrimerUsuario = parseInt(userCount.rows[0].count) === 0;
         
@@ -213,7 +232,6 @@ app.post('/api/register', async (req, res) => {
             }
         }
 
-        // Insertar en usuarios1
         const result = await pool.query(
             `INSERT INTO usuarios1 (username, email, nombre, sername, password, idPerfil, idEstadoUsuario) 
              VALUES ($1, $2, $3, $4, $5, $6, 1) 
@@ -244,7 +262,6 @@ app.post('/api/login', async (req, res) => {
     try {
         const { username, password } = req.body;
         
-        // Consultar en usuarios1
         const result = await pool.query(
             `SELECT u.*, p.strNombrePerfil, p.bitAdministrador 
              FROM usuarios1 u 
@@ -295,6 +312,101 @@ app.post('/api/login', async (req, res) => {
     } catch (err) {
         console.error('Error en login:', err);
         res.status(500).json({ success: false, message: 'Error interno del servidor' });
+    }
+});
+
+// =======================================================
+// --- 6.5 RECUPERACIÓN DE CONTRASEÑA ---
+// =======================================================
+
+// Solicitar token al correo
+app.post('/api/forgot-password', async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) {
+            return res.status(400).json({ success: false, message: 'Correo requerido' });
+        }
+
+        const userResult = await pool.query('SELECT id, nombre FROM usuarios1 WHERE LOWER(email) = LOWER($1)', [email]);
+        
+        if (userResult.rows.length === 0) {
+            return res.json({ success: true, message: 'Si el correo existe en nuestro sistema, recibirás un enlace de recuperación.' });
+        }
+
+        const user = userResult.rows[0];
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        
+        const expireTime = new Date();
+        expireTime.setMinutes(expireTime.getMinutes() + 15);
+
+        await pool.query(
+            'UPDATE usuarios1 SET reset_token = $1, reset_token_expires = $2 WHERE id = $3',
+            [resetToken, expireTime, user.id]
+        );
+
+        const frontendUrl = process.env.FRONTEND_URL || 'https://czalbert6.github.io';
+        const resetLink = `${frontendUrl}/extra-earth/reset-password?token=${resetToken}`;
+
+        const mailOptions = {
+            from: `"Sistema Corporativo ERP" <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: '🔒 Restablecimiento de Contraseña',
+            html: `
+                <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+                    <h2 style="color: #0f172a;">Hola, ${user.nombre}</h2>
+                    <p style="color: #475569; line-height: 1.5;">Hemos recibido una solicitud para restablecer la contraseña de tu cuenta en el Sistema Corporativo.</p>
+                    <p style="color: #475569; line-height: 1.5;">Haz clic en el siguiente botón para asignar una nueva contraseña. Este enlace es válido por <b>15 minutos</b>.</p>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="${resetLink}" style="background-color: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Restablecer Contraseña</a>
+                    </div>
+                    <p style="color: #94a3b8; font-size: 0.85rem;">Si no solicitaste este cambio, puedes ignorar este correo con seguridad.</p>
+                </div>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
+        res.json({ success: true, message: 'Si el correo existe en nuestro sistema, recibirás un enlace de recuperación.' });
+
+    } catch (err) {
+        console.error('Error en forgot-password:', err);
+        res.status(500).json({ success: false, message: 'Error interno al procesar la solicitud de correo.' });
+    }
+});
+
+// Validar token y cambiar la contraseña
+app.post('/api/reset-password', async (req, res) => {
+    try {
+        const { token, newPassword } = req.body;
+        
+        if (!token || !newPassword) {
+            return res.status(400).json({ success: false, message: 'Token y contraseña requeridos' });
+        }
+        if (newPassword.length < 6) {
+            return res.status(400).json({ success: false, message: 'La contraseña debe tener al menos 6 caracteres' });
+        }
+
+        const userResult = await pool.query(
+            'SELECT id FROM usuarios1 WHERE reset_token = $1 AND reset_token_expires > CURRENT_TIMESTAMP',
+            [token]
+        );
+
+        if (userResult.rows.length === 0) {
+            return res.status(400).json({ success: false, message: 'El enlace es inválido o ya caducó (15 min de límite).' });
+        }
+
+        const userId = userResult.rows[0].id;
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        await pool.query(
+            'UPDATE usuarios1 SET password = $1, reset_token = NULL, reset_token_expires = NULL WHERE id = $2',
+            [hashedPassword, userId]
+        );
+
+        res.json({ success: true, message: 'Contraseña actualizada correctamente. Redirigiendo...' });
+
+    } catch (err) {
+        console.error('Error en reset-password:', err);
+        res.status(500).json({ success: false, message: 'Error al restablecer la contraseña.' });
     }
 });
 
@@ -427,7 +539,6 @@ app.get('/api/modulos', authenticateToken, async (req, res) => {
     }
 });
 
-// NUEVAS RUTAS DE MÓDULOS INTEGRADAS
 app.get('/api/modulos/:id', authenticateToken, async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM modulos WHERE id = $1', [req.params.id]);
@@ -498,7 +609,6 @@ app.delete('/api/modulos/:id', authenticateToken, async (req, res) => {
         res.status(500).json({ success: false, message: 'Error interno al eliminar módulo' });
     }
 });
-
 
 // --- 9. CRUD Usuarios1 ---
 app.get('/api/usuarios', authenticateToken, async (req, res) => {
@@ -710,7 +820,6 @@ app.get('/api/permisos-perfil', authenticateToken, async (req, res) => {
     }
 });
 
-// NUEVAS RUTAS DE PERMISOS INTEGRADAS
 app.get('/api/permisos-perfil/:id', authenticateToken, async (req, res) => {
     try {
         const result = await pool.query(
@@ -863,15 +972,5 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log('='.repeat(50));
     console.log(`✅ SERVIDOR INICIADO CORRECTAMENTE`);
     console.log(`📡 Puerto: ${PORT}`);
-    console.log('='.repeat(50));
-    console.log('🗑️ TABLA ANTIGUA ELIMINADA - Solo existe usuarios1');
-    console.log('📝 ESTRUCTURA DE USUARIOS (usuarios1):');
-    console.log('   - username: nombre de usuario');
-    console.log('   - email: correo electrónico');
-    console.log('   - nombre: nombre real');
-    console.log('   - sername: apellido (opcional)');
-    console.log('   - password: contraseña encriptada');
-    console.log('='.repeat(50));
-    console.log('👑 El PRIMER usuario registrado será ADMINISTRADOR');
     console.log('='.repeat(50));
 });

@@ -12,7 +12,7 @@ const pageTitle = "Gestión de Permisos por Perfil";
       <p>Configura el nivel de acceso de cada perfil a los diferentes módulos</p>
     </div>
     <button class="btn-add" id="btnNuevoPermiso" style="display: none;" onclick="abrirModalNuevo()">
-      <i class="fas fa-plus"></i> Nuevo Permiso
+      <i class="fas fa-shield-alt"></i> Asignar Permisos
     </button>
   </div>
 
@@ -42,7 +42,10 @@ const pageTitle = "Gestión de Permisos por Perfil";
         <tbody id="tablaBody">
           <tr>
             <td colspan="9" class="no-data">
-              <i class="fas fa-spinner fa-spin"></i> Cargando permisos...
+              <div class="loader-container">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Cargando matriz de permisos...</p>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -65,46 +68,79 @@ const pageTitle = "Gestión de Permisos por Perfil";
         <div class="form-grid">
           <div class="form-group">
             <label>Módulo *</label>
-            <select id="idModulo" required>
-              <option value="">Seleccione módulo...</option>
-            </select>
+            <div class="select-wrapper">
+              <select id="idModulo" required>
+                <option value="">Seleccione módulo...</option>
+              </select>
+              <i class="fas fa-chevron-down select-icon"></i>
+            </div>
           </div>
           
           <div class="form-group">
             <label>Perfil *</label>
-            <select id="idPerfil" required>
-              <option value="">Seleccione perfil...</option>
-            </select>
+            <div class="select-wrapper">
+              <select id="idPerfil" required>
+                <option value="">Seleccione perfil...</option>
+              </select>
+              <i class="fas fa-chevron-down select-icon"></i>
+            </div>
           </div>
         </div>
 
-        <div class="permisos-section-title"><i class="fas fa-sliders-h"></i> Nivel de Acceso</div>
+        <div class="permisos-section-title">
+          <i class="fas fa-sliders-h"></i> Nivel de Acceso y Privilegios
+        </div>
+        
         <div class="permisos-grid">
           <label class="permiso-item">
             <input type="checkbox" id="bitConsulta"> 
-            <span class="checkmark"></span> Consultar
+            <span class="checkmark check-blue"></span> 
+            <div class="permiso-text">
+              <span class="p-title">Consultar</span>
+              <span class="p-desc">Ver listas de datos</span>
+            </div>
           </label>
+          
           <label class="permiso-item">
             <input type="checkbox" id="bitAgregar"> 
-            <span class="checkmark"></span> Agregar
+            <span class="checkmark check-green"></span> 
+            <div class="permiso-text">
+              <span class="p-title">Agregar</span>
+              <span class="p-desc">Crear nuevos registros</span>
+            </div>
           </label>
+          
           <label class="permiso-item">
             <input type="checkbox" id="bitEditar"> 
-            <span class="checkmark"></span> Editar
+            <span class="checkmark check-yellow"></span> 
+            <div class="permiso-text">
+              <span class="p-title">Editar</span>
+              <span class="p-desc">Modificar existentes</span>
+            </div>
           </label>
+          
           <label class="permiso-item">
             <input type="checkbox" id="bitDetalle"> 
-            <span class="checkmark"></span> Ver Detalle
+            <span class="checkmark check-purple"></span> 
+            <div class="permiso-text">
+              <span class="p-title">Ver Detalle</span>
+              <span class="p-desc">Información completa</span>
+            </div>
           </label>
+          
           <label class="permiso-item permiso-danger">
             <input type="checkbox" id="bitEliminar"> 
-            <span class="checkmark"></span> Eliminar
+            <span class="checkmark check-red"></span> 
+            <div class="permiso-text">
+              <span class="p-title">Eliminar</span>
+              <span class="p-desc">Borrar del sistema</span>
+            </div>
           </label>
         </div>
         
         <div class="form-actions">
           <button type="button" class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
-          <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Guardar</button>
+          <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Guardar Permisos</button>
         </div>
       </form>
     </div>
@@ -219,29 +255,36 @@ const pageTitle = "Gestión de Permisos por Perfil";
     if (!tbody) return;
     
     if (listaPermisos.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="9" class="no-data"><i class="fas fa-search-minus"></i> No se encontraron permisos.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" class="no-data"><i class="fas fa-folder-open" style="font-size: 2rem; display:block; margin-bottom:10px;"></i> No se encontraron permisos.</td></tr>';
       return;
     }
     
-    const iconCheck = '<i class="fas fa-check-circle" style="color: #10b981; font-size: 1.1rem;"></i>';
-    const iconCross = '<i class="fas fa-times-circle" style="color: #cbd5e1; font-size: 1.1rem;"></i>';
+    const iconCheck = '<div class="check-badge true"><i class="fas fa-check"></i></div>';
+    const iconCross = '<div class="check-badge false"><i class="fas fa-times"></i></div>';
 
     tbody.innerHTML = listaPermisos.map(p => `
       <tr>
-        <td style="vertical-align: middle; padding: 1rem 0.5rem; color: #64748b; font-weight: 500;">#${p.id}</td>
-        <td style="vertical-align: middle; padding: 1rem 0.5rem; font-weight: 600; color: #1e293b;">${p.strnombremodulo}</td>
-        <td style="vertical-align: middle; padding: 1rem 0.5rem;">
-          <span class="role-badge"><i class="fas fa-user-shield"></i> ${p.strnombreperfil}</span>
+        <td style="vertical-align: middle; color: #64748b; font-weight: 600;">#${p.id}</td>
+        <td style="vertical-align: middle; font-weight: 700; color: #1e293b;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div style="width:30px; height:30px; border-radius:6px; background:#eff6ff; display:flex; align-items:center; justify-content:center; color:#3b82f6;">
+              <i class="fas fa-box"></i>
+            </div>
+            ${p.strnombremodulo}
+          </div>
+        </td>
+        <td style="vertical-align: middle;">
+          <span class="role-badge"><i class="fas fa-id-badge"></i> ${p.strnombreperfil}</span>
         </td>
         <td class="text-center" style="vertical-align: middle;">${p.bitconsulta ? iconCheck : iconCross}</td>
         <td class="text-center" style="vertical-align: middle;">${p.bitagregar ? iconCheck : iconCross}</td>
         <td class="text-center" style="vertical-align: middle;">${p.biteditar ? iconCheck : iconCross}</td>
         <td class="text-center" style="vertical-align: middle;">${p.bitdetalle ? iconCheck : iconCross}</td>
         <td class="text-center" style="vertical-align: middle;">${p.biteliminar ? iconCheck : iconCross}</td>
-        <td class="actions-cell" style="vertical-align: middle; padding: 1rem 0.5rem;">
-          ${permisos.detalle ? `<button class="action-btn view" onclick="verDetalle(${p.id})" title="Ver Detalles"><i class="fas fa-eye"></i></button>` : ''}
-          ${permisos.editar ? `<button class="action-btn edit" onclick="editarPermiso(${p.id})" title="Editar"><i class="fas fa-edit"></i></button>` : ''}
-          ${permisos.eliminar ? `<button class="action-btn delete" onclick="eliminarPermiso(${p.id})" title="Eliminar"><i class="fas fa-trash"></i></button>` : ''}
+        <td class="actions-cell" style="vertical-align: middle;">
+          ${permisos.detalle ? `<button class="action-btn view" onclick="verDetalle(${p.id})" title="Ver Detalles"><i class="fas fa-list-ul"></i></button>` : ''}
+          ${permisos.editar ? `<button class="action-btn edit" onclick="editarPermiso(${p.id})" title="Editar"><i class="fas fa-pen"></i></button>` : ''}
+          ${permisos.eliminar ? `<button class="action-btn delete" onclick="eliminarPermiso(${p.id})" title="Eliminar"><i class="fas fa-trash-alt"></i></button>` : ''}
         </td>
       </tr>
     `).join('');
@@ -262,7 +305,7 @@ const pageTitle = "Gestión de Permisos por Perfil";
   // FUNCIONES DE MODAL Y CRUD
   // ============================================
   window.abrirModalNuevo = () => {
-    document.getElementById('modalTitulo').textContent = 'Nuevo Permiso';
+    document.getElementById('modalTitulo').textContent = 'Configurar Permisos';
     const form = document.getElementById('permisoForm') as HTMLFormElement;
     if(form) form.reset();
     document.getElementById('permisoId').value = '';
@@ -277,7 +320,7 @@ const pageTitle = "Gestión de Permisos por Perfil";
     const data = await res.json();
     if (data.success) {
       const p = data.data;
-      document.getElementById('modalTitulo').textContent = 'Editar Permiso';
+      document.getElementById('modalTitulo').textContent = 'Modificar Permisos';
       (document.getElementById('permisoId') as HTMLInputElement).value = p.id;
       (document.getElementById('idModulo') as HTMLSelectElement).value = p.idmodulo;
       (document.getElementById('idPerfil') as HTMLSelectElement).value = p.idperfil;
@@ -296,7 +339,7 @@ const pageTitle = "Gestión de Permisos por Perfil";
     const data = await res.json();
     if (data.success) {
       const p = data.data;
-      alert(`Módulo: ${p.strnombremodulo}\nPerfil: ${p.strnombreperfil}\n\nPermisos:\n- Consultar: ${p.bitconsulta ? 'SÍ':'NO'}\n- Agregar: ${p.bitagregar ? 'SÍ':'NO'}\n- Editar: ${p.biteditar ? 'SÍ':'NO'}\n- Detalle: ${p.bitdetalle ? 'SÍ':'NO'}\n- Eliminar: ${p.biteliminar ? 'SÍ':'NO'}`);
+      alert(`Matriz de Acceso:\n\nMódulo: ${p.strnombremodulo}\nPerfil: ${p.strnombreperfil}\n\nPermisos Otorgados:\n- Consultar: ${p.bitconsulta ? 'SÍ':'NO'}\n- Agregar: ${p.bitagregar ? 'SÍ':'NO'}\n- Editar: ${p.biteditar ? 'SÍ':'NO'}\n- Detalle: ${p.bitdetalle ? 'SÍ':'NO'}\n- Eliminar: ${p.biteliminar ? 'SÍ':'NO'}`);
     }
   };
 
@@ -330,14 +373,14 @@ const pageTitle = "Gestión de Permisos por Perfil";
   };
 
   window.eliminarPermiso = async (id) => {
-    if (!confirm('¿Eliminar permiso de este perfil?')) return;
+    if (!confirm('¿Revocar completamente el acceso a este módulo para este perfil?')) return;
     const token = localStorage.getItem('token');
     const res = await fetch(`${API_URL}/api/permisos-perfil/${id}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
     });
     if ((await res.json()).success) {
-        mostrarMensaje('Permiso eliminado', 'success');
+        mostrarMensaje('Acceso revocado', 'success');
         cargarTodosLosPermisos();
     }
   };
@@ -388,19 +431,25 @@ const pageTitle = "Gestión de Permisos por Perfil";
   .crud-table tbody tr { transition: background-color 0.2s; border-bottom: 1px solid #f1f5f9; }
   .crud-table tbody tr:hover { background-color: #f8fafc; }
   .text-center { text-align: center !important; }
-  .no-data { text-align: center; color: #94a3b8; padding: 3rem !important; font-size: 1.1rem; }
+  .no-data { text-align: center; color: #94a3b8; padding: 3rem !important; }
+  
+  /* Iconos de check en tabla */
+  .check-badge { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; margin: 0 auto; }
+  .check-badge.true { background: #dcfce7; color: #10b981; }
+  .check-badge.false { background: #f1f5f9; color: #cbd5e1; }
 
   /* --- ESTILOS VISUALES CELDAS --- */
-  .role-badge { display: inline-flex; align-items: center; gap: 5px; background: #f8fafc; color: #334155; padding: 0.4rem 0.8rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600; border: 1px solid #e2e8f0; }
+  .role-badge { display: inline-flex; align-items: center; gap: 8px; background: white; color: #334155; padding: 0.4rem 1rem; border-radius: 8px; font-size: 0.9rem; font-weight: 600; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.05);}
+  .role-badge i { color: #6366f1; }
 
   /* --- BOTONES DE ACCIÓN --- */
   .actions-cell { display: flex; gap: 8px; justify-content: flex-start; }
   .action-btn { width: 35px; height: 35px; border-radius: 8px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; font-size: 1rem; }
-  .action-btn.view { background: #eff6ff; color: #3b82f6; }
-  .action-btn.view:hover { background: #3b82f6; color: white; }
-  .action-btn.edit { background: #fef3c7; color: #d97706; }
-  .action-btn.edit:hover { background: #f59e0b; color: white; }
-  .action-btn.delete { background: #fef2f2; color: #ef4444; }
+  .action-btn.view { background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; }
+  .action-btn.view:hover { background: #475569; color: white; border-color: #475569; }
+  .action-btn.edit { background: #eff6ff; color: #3b82f6; border: 1px solid #bfdbfe; }
+  .action-btn.edit:hover { background: #3b82f6; color: white; }
+  .action-btn.delete { background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; }
   .action-btn.delete:hover { background: #ef4444; color: white; }
 
   /* --- PAGINACIÓN ESTÁTICA --- */
@@ -409,34 +458,52 @@ const pageTitle = "Gestión de Permisos por Perfil";
   .page-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
   .page-btn.active { background: #2563eb; color: white; border-color: #2563eb; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2); }
 
-  /* --- MODAL FORMULARIO Y CHECKBOXES MODERNOS --- */
+  /* --- MODAL FORMULARIO Y SELECTS MODERNOS --- */
   .modal { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
-  .modal-content { background: white; padding: 2rem; border-radius: 16px; width: 100%; max-width: 600px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
+  .modal-content { background: white; padding: 2rem; border-radius: 16px; width: 100%; max-width: 650px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
   .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 1rem; }
   .modal-header h3 { margin: 0; color: #0f172a; font-size: 1.4rem; }
   .close-btn { background: #f1f5f9; border: none; width: 35px; height: 35px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; color: #64748b; transition: all 0.2s; }
   .close-btn:hover { background: #fee2e2; color: #ef4444; }
   
-  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; margin-bottom: 1.5rem; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; margin-bottom: 2rem; }
   .form-group { display: flex; flex-direction: column; }
-  .form-group label { font-weight: 600; margin-bottom: 0.5rem; color: #475569; font-size: 0.9rem; }
-  .form-group select { padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.95rem; transition: border-color 0.2s; cursor: pointer; background: #f8fafc; }
-  .form-group select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); background: white;}
-
-  .permisos-section-title { font-weight: 700; color: #334155; font-size: 1.1rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #e2e8f0; }
-  .permisos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; background: #f8fafc; padding: 1.5rem; border-radius: 12px; border: 1px solid #e2e8f0; }
+  .form-group label { font-weight: 700; margin-bottom: 0.5rem; color: #334155; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px;}
   
-  /* Custom Checkbox */
-  .permiso-item { display: flex; align-items: center; position: relative; padding-left: 30px; cursor: pointer; font-size: 0.95rem; font-weight: 500; color: #475569; user-select: none; }
-  .permiso-item input { position: absolute; opacity: 0; cursor: pointer; height: 0; width: 0; }
-  .checkmark { position: absolute; top: 0; left: 0; height: 20px; width: 20px; background-color: white; border: 2px solid #cbd5e1; border-radius: 6px; transition: all 0.2s; }
-  .permiso-item:hover input ~ .checkmark { border-color: #3b82f6; }
-  .permiso-item input:checked ~ .checkmark { background-color: #10b981; border-color: #10b981; }
-  .permiso-danger input:checked ~ .checkmark { background-color: #ef4444; border-color: #ef4444; }
-  .checkmark:after { content: ""; position: absolute; display: none; left: 6px; top: 2px; width: 5px; height: 10px; border: solid white; border-width: 0 2px 2px 0; transform: rotate(45deg); }
-  .permiso-item input:checked ~ .checkmark:after { display: block; }
+  .select-wrapper { position: relative; }
+  .select-icon { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; }
+  .select-wrapper select { width: 100%; padding: 0.9rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.95rem; font-weight: 500; color: #1e293b; transition: all 0.2s; cursor: pointer; background: #f8fafc; appearance: none; -webkit-appearance: none; }
+  .select-wrapper select:focus { outline: none; border-color: #3b82f6; background: white; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);}
 
-  .form-actions { display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem; }
+  /* --- CHECKBOXES COMO TARJETAS (NUEVO DISEÑO) --- */
+  .permisos-section-title { font-weight: 700; color: #334155; font-size: 1.1rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #e2e8f0; display: flex; align-items: center; gap: 8px;}
+  .permisos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  
+  .permiso-item { display: flex; align-items: flex-start; position: relative; padding: 12px 15px 12px 45px; cursor: pointer; background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 8px; transition: all 0.2s; user-select: none; }
+  .permiso-item:hover { border-color: #cbd5e1; background: white; }
+  .permiso-item input { position: absolute; opacity: 0; cursor: pointer; height: 0; width: 0; }
+  
+  .permiso-text { display: flex; flex-direction: column; }
+  .p-title { font-weight: 700; color: #1e293b; font-size: 0.95rem; margin-bottom: 2px; }
+  .p-desc { font-size: 0.75rem; color: #64748b; }
+
+  .checkmark { position: absolute; top: 50%; transform: translateY(-50%); left: 12px; height: 22px; width: 22px; background-color: white; border: 2px solid #cbd5e1; border-radius: 6px; transition: all 0.2s; }
+  .checkmark:after { content: ""; position: absolute; display: none; left: 6px; top: 2px; width: 5px; height: 10px; border: solid white; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  
+  /* Colores dinámicos al hacer check */
+  .permiso-item input:checked ~ .checkmark.check-blue { background-color: #3b82f6; border-color: #3b82f6; }
+  .permiso-item input:checked ~ .checkmark.check-green { background-color: #10b981; border-color: #10b981; }
+  .permiso-item input:checked ~ .checkmark.check-yellow { background-color: #f59e0b; border-color: #f59e0b; }
+  .permiso-item input:checked ~ .checkmark.check-purple { background-color: #8b5cf6; border-color: #8b5cf6; }
+  .permiso-item input:checked ~ .checkmark.check-red { background-color: #ef4444; border-color: #ef4444; }
+  
+  .permiso-item input:checked ~ .checkmark:after { display: block; }
+  .permiso-item input:checked ~ .permiso-text .p-title { color: #0f172a; }
+
+  /* Borde de la tarjeta al seleccionar */
+  .permiso-item:has(input:checked) { background: white; border-color: #94a3b8; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+
+  .form-actions { display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem; border-top: 2px solid #f1f5f9; padding-top: 1.5rem;}
   .btn-primary { background: #10b981; color: white; border: none; padding: 0.8rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: background 0.2s; }
   .btn-primary:hover { background: #059669; }
   .btn-secondary { background: #f1f5f9; color: #475569; border: none; padding: 0.8rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 600; }
@@ -445,6 +512,9 @@ const pageTitle = "Gestión de Permisos por Perfil";
   .status-message { position: fixed; bottom: 20px; right: 20px; padding: 12px 24px; border-radius: 8px; display: none; font-weight: 600; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); z-index: 9999; animation: slideUp 0.3s ease-out; }
   .msg-success { background: #10b981; color: white; border-left: 4px solid #047857; }
   .msg-error { background: #ef4444; color: white; border-left: 4px solid #b91c1c; }
+
+  .loader-container { padding: 2rem; text-align: center; color: #64748b; }
+  .loader-container i { font-size: 2rem; margin-bottom: 10px; color: #3b82f6; }
 
   @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 </style>

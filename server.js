@@ -3,13 +3,9 @@ import cors from 'cors';
 import pkg from 'pg';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import nodemailer from 'nodemailer';
 import crypto from 'crypto';
-import dns from 'dns';
+import { Resend } from 'resend'; // <-- 1. Importamos Resend
 import 'dotenv/config';
-
-// --- EVITAR ERROR ENETUNREACH DE IPv6 EN RAILWAY ---
-dns.setDefaultResultOrder('ipv4first');
 
 const { Pool } = pkg;
 const app = express();
@@ -26,7 +22,7 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '10mb' }));
 
-// --- 2. Conexión a Base de Datos ---
+// --- 2. Conexión a Base de Datos e Inicialización de Resend ---
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false }
@@ -34,25 +30,8 @@ const pool = new Pool({
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secreto_super_seguro_2026';
 
-// CONFIGURACIÓN DE NODEMAILER PARA GMAIL (Puerto 587 - Anti Bloqueos)
-const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, // Usar STARTTLS en lugar de SSL directo
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    },
-    tls: {
-        rejectUnauthorized: false
-    },
-    connectionTimeout: 10000 // Si falla, aborta en 10 segundos y no se queda colgado
-});
-
-// VERIFICADOR DE CONEXIÓN (El truco maestro)
-transporter.verify()
-    .then(() => console.log('📧 ✅ Servidor de correos (Gmail) conectado y listo para enviar!'))
-    .catch(err => console.error('📧 ❌ Error conectando con Gmail:', err.message));
+// <-- 2. Inicializamos Resend con tu variable de entorno
+const resend = new Resend(process.env.RESEND_API_KEY); 
 
 // --- 3. Health Check ---
 app.get('/', (req, res) => res.status(200).send('OK'));
@@ -331,7 +310,7 @@ app.post('/api/login', async (req, res) => {
 });
 
 // =======================================================
-// --- 6.5 RECUPERACIÓN DE CONTRASEÑA ---
+// --- 6.5 RECUPERACIÓN DE CONTRASEÑA (RESEND) ---
 // =======================================================
 
 app.post('/api/forgot-password', async (req, res) => {
@@ -361,10 +340,11 @@ app.post('/api/forgot-password', async (req, res) => {
         const frontendUrl = process.env.FRONTEND_URL || 'https://czalbert6.github.io';
         const resetLink = `${frontendUrl}/extra-earth/reset-password?token=${resetToken}`;
 
-        const mailOptions = {
-            from: `"Sistema Corporativo ERP" <${process.env.EMAIL_USER}>`,
+        // <-- 3. Enviar correo usando Resend en lugar de Nodemailer
+        const { data, error } = await resend.emails.send({
+            from: 'Sistema ERP <onboarding@resend.dev>', // Correo especial para sandbox
             to: email,
-            subject: '🔒 Restablecimiento de Contraseña',
+            subject: '🔒 Restablecimiento de Contraseña - Sistema Corporativo',
             html: `
                 <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px;">
                     <h2 style="color: #0f172a;">Hola, ${user.nombre}</h2>
@@ -376,9 +356,13 @@ app.post('/api/forgot-password', async (req, res) => {
                     <p style="color: #94a3b8; font-size: 0.85rem;">Si no solicitaste este cambio, puedes ignorar este correo con seguridad.</p>
                 </div>
             `
-        };
+        });
 
-        await transporter.sendMail(mailOptions);
+        if (error) {
+            console.error('Error enviando correo con Resend:', error);
+            return res.status(500).json({ success: false, message: 'Error al enviar el correo con Resend.' });
+        }
+
         res.json({ success: true, message: 'Si el correo existe en nuestro sistema, recibirás un enlace de recuperación.' });
 
     } catch (err) {

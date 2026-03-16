@@ -7,10 +7,44 @@ const pageTitle = "Gestión de Módulos";
 
 <Layout title={`${pageTitle} | Sistema Corporativo`} moduloActual="Módulo">
   <div class="page-header">
-    <h1><i class="fas fa-puzzle-piece"></i> {pageTitle}</h1>
+    <div class="header-title">
+      <h1><i class="fas fa-puzzle-piece"></i> {pageTitle}</h1>
+      <p>Administra las secciones y componentes del sistema</p>
+    </div>
     <button class="btn-add" id="btnNuevoModulo" style="display: none;" onclick="abrirModalNuevo()">
       <i class="fas fa-plus"></i> Nuevo Módulo
     </button>
+  </div>
+
+  <div class="card-container">
+    <div class="table-toolbar">
+      <div class="search-box">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" id="searchInput" placeholder="Buscar por nombre de módulo o ID...">
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="crud-table" id="tablaModulos">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nombre del Módulo</th>
+            <th>Fecha Creación</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tablaBody">
+          <tr>
+            <td colspan="4" class="no-data">
+              <i class="fas fa-spinner fa-spin"></i> Cargando módulos...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <div id="pagination" class="pagination"></div>
   </div>
 
   <div id="modalModulo" class="modal" style="display: none;">
@@ -25,119 +59,151 @@ const pageTitle = "Gestión de Módulos";
         
         <div class="form-group">
           <label for="strNombreModulo">Nombre del Módulo *</label>
-          <input type="text" id="strNombreModulo" required maxlength="100">
+          <input type="text" id="strNombreModulo" required maxlength="100" placeholder="Ej. Inventario">
         </div>
         
         <div class="form-actions">
           <button type="button" class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
-          <button type="submit" class="btn-primary">Guardar</button>
+          <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Guardar</button>
         </div>
       </form>
     </div>
   </div>
 
-  <div id="loading" style="display: none; text-align: center; padding: 2rem;">
-    <i class="fas fa-spinner fa-spin fa-2x"></i>
-  </div>
-  
-  <div class="table-responsive">
-    <table class="crud-table" id="tablaModulos">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Nombre</th>
-          <th>Fecha Creación</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody id="tablaBody">
-        <tr>
-          <td colspan="4" class="no-data">Cargando módulos...</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-  
-  <div id="pagination" class="pagination"></div>
   <div id="message" class="status-message"></div>
 </Layout>
 
 <script>
-  // RUTA CORREGIDA: Subimos dos niveles (../../) para llegar de /modulos/ a /utils/
   import { verificarPermisosModulo } from '../../utils/permisos';
   const API_URL = "https://extra-earth-production.up.railway.app";
 
-  let currentPage = 1;
-  // 1. Obtener permisos del usuario logueado para este módulo
   const { permisos } = verificarPermisosModulo('Módulo');
 
-  async function cargarModulos(page = 1) {
-    if (!permisos.consulta) return;
-    currentPage = page;
-    
-    const loading = document.getElementById('loading');
-    if(loading) loading.style.display = 'block';
+  // --- VARIABLES PARA EL MODO ESTÁTICO (Frontend Paginación y Búsqueda) ---
+  let modulosLocales = []; 
+  let modulosFiltrados = []; 
+  let paginaActual = 1;
+  const limitePorPagina = 5; 
+
+  // ============================================
+  // CARGA ESTÁTICA TOTAL Y BÚSQUEDA INSTANTÁNEA
+  // ============================================
+  async function cargarTodosLosModulos() {
+    if (!permisos.consulta) {
+      document.getElementById('tablaBody').innerHTML = '<tr><td colspan="4" class="no-data" style="color: #ef4444; font-weight: 600;">❌ No tienes permisos para consultar información.</td></tr>';
+      return;
+    }
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/modulos?page=${page}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
+      // 1. Pedimos la página 1 para saber cuántas páginas hay
+      let res = await fetch(`${API_URL}/api/modulos?page=1`, { headers: { 'Authorization': `Bearer ${token}` } });
+      let data = await res.json();
       
       if (data.success) {
-        renderizarTabla(data.data);
-        renderizarPaginacion(data.pagination);
+        let totalPages = data.pagination.totalPages;
+        let todos = [...data.data];
+        
+        // 2. Descargamos las demás páginas de golpe en segundo plano
+        if (totalPages > 1) {
+          let promesas = [];
+          for (let i = 2; i <= totalPages; i++) {
+            promesas.push(fetch(`${API_URL}/api/modulos?page=${i}`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json()));
+          }
+          let extras = await Promise.all(promesas);
+          extras.forEach(p => { if (p.success) todos.push(...p.data); });
+        }
+        
+        // Guardamos en memoria
+        modulosLocales = todos;
+        aplicarFiltroInstantaneo(); 
       }
     } catch (error) {
-      showMsg('Error al cargar módulos', 'error');
-    } finally {
-      if(loading) loading.style.display = 'none';
+      console.error(error);
+      mostrarMensaje('Error al cargar módulos', 'error');
     }
   }
 
-  function renderizarTabla(modulos) {
+  // Se activa cada vez que el usuario presiona una tecla
+  function aplicarFiltroInstantaneo() {
+    const termino = document.getElementById('searchInput').value.toLowerCase();
+    
+    modulosFiltrados = modulosLocales.filter(m => 
+      m.strnombremodulo.toLowerCase().includes(termino) ||
+      m.id.toString().includes(termino)
+    );
+
+    // Regresamos a la página 1 al buscar
+    paginaActual = 1;
+    dibujarVistaEstatica();
+  }
+
+  // Dibuja la página actual
+  function dibujarVistaEstatica() {
+    const inicio = (paginaActual - 1) * limitePorPagina;
+    const fin = inicio + limitePorPagina;
+    const modulosPagina = modulosFiltrados.slice(inicio, fin);
+    
+    renderizarTablaHTML(modulosPagina);
+    
+    const totalPaginas = Math.ceil(modulosFiltrados.length / limitePorPagina);
+    renderizarPaginacionHTML(totalPaginas);
+  }
+
+  window.cambiarPagina = (numPagina) => {
+    paginaActual = numPagina;
+    dibujarVistaEstatica();
+  };
+
+  // ============================================
+  // RENDERIZADO DE INTERFAZ
+  // ============================================
+  function renderizarTablaHTML(modulos) {
     const tbody = document.getElementById('tablaBody');
     if (!tbody) return;
 
     if (modulos.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="4" class="no-data">No hay módulos registrados</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" class="no-data"><i class="fas fa-search-minus"></i> No se encontraron módulos.</td></tr>';
       return;
     }
     
     tbody.innerHTML = modulos.map(m => `
       <tr>
-        <td>${m.id}</td>
-        <td><strong>${m.strnombremodulo}</strong></td>
-        <td>${new Date(m.created_at).toLocaleDateString()}</td>
-        <td class="actions-cell">
-          ${permisos.detalle ? `<button class="btn-icon view" onclick="verDetalle(${m.id})" title="Ver detalle"><i class="fas fa-eye"></i></button>` : ''}
-          ${permisos.editar ? `<button class="btn-icon edit" onclick="editarModulo(${m.id})" title="Editar"><i class="fas fa-edit"></i></button>` : ''}
-          ${permisos.eliminar ? `<button class="btn-icon delete" onclick="eliminarModulo(${m.id})" title="Eliminar"><i class="fas fa-trash"></i></button>` : ''}
+        <td style="vertical-align: middle; padding: 1rem; color: #64748b; font-weight: 500;">#${m.id}</td>
+        <td style="vertical-align: middle; padding: 1rem; font-weight: 600; color: #1e293b;">
+          <i class="fas fa-folder" style="color: #cbd5e1; margin-right: 8px;"></i> ${m.strnombremodulo}
+        </td>
+        <td style="vertical-align: middle; padding: 1rem; color: #64748b;">
+          <span class="badge-date"><i class="far fa-calendar-alt"></i> ${new Date(m.created_at).toLocaleDateString()}</span>
+        </td>
+        <td class="actions-cell" style="vertical-align: middle; padding: 1rem;">
+          ${permisos.detalle ? `<button class="action-btn view" onclick="verDetalle(${m.id})" title="Ver detalle"><i class="fas fa-eye"></i></button>` : ''}
+          ${permisos.editar ? `<button class="action-btn edit" onclick="editarModulo(${m.id})" title="Editar"><i class="fas fa-edit"></i></button>` : ''}
+          ${permisos.eliminar ? `<button class="action-btn delete" onclick="eliminarModulo(${m.id})" title="Eliminar"><i class="fas fa-trash"></i></button>` : ''}
         </td>
       </tr>
     `).join('');
   }
 
-  function renderizarPaginacion(pagination) {
+  function renderizarPaginacionHTML(totalPages) {
     const div = document.getElementById('pagination');
-    if (!div) return;
-    if (pagination.totalPages <= 1) { div.innerHTML = ''; return; }
+    if (totalPages <= 1) { div.innerHTML = ''; return; }
     
     let html = '';
-    for (let i = 1; i <= pagination.totalPages; i++) {
-      html += `<button class="${i === pagination.page ? 'active' : ''}" onclick="window.cargarModulos(${i})">${i}</button>`;
+    for (let i = 1; i <= totalPages; i++) {
+      html += `<button class="page-btn ${i === paginaActual ? 'active' : ''}" onclick="window.cambiarPagina(${i})">${i}</button>`;
     }
     div.innerHTML = html;
   }
 
-  // Hacer funciones disponibles globalmente para los eventos onclick
-  window.cargarModulos = cargarModulos;
-
+  // ============================================
+  // FUNCIONES DE MODAL Y CRUD
+  // ============================================
   window.abrirModalNuevo = () => {
     document.getElementById('modalTitulo').textContent = 'Nuevo Módulo';
-    (document.getElementById('moduloForm') as HTMLFormElement).reset();
-    (document.getElementById('moduloId') as HTMLInputElement).value = '';
+    const form = document.getElementById('moduloForm') as HTMLFormElement;
+    if(form) form.reset();
+    document.getElementById('moduloId').value = '';
     document.getElementById('modalModulo').style.display = 'flex';
   };
 
@@ -155,11 +221,11 @@ const pageTitle = "Gestión de Módulos";
       if (data.success) {
         const m = data.data;
         document.getElementById('modalTitulo').textContent = 'Editar Módulo';
-        (document.getElementById('moduloId') as HTMLInputElement).value = m.id;
-        (document.getElementById('strNombreModulo') as HTMLInputElement).value = m.strnombremodulo;
+        document.getElementById('moduloId').value = m.id;
+        document.getElementById('strNombreModulo').value = m.strnombremodulo;
         document.getElementById('modalModulo').style.display = 'flex';
       }
-    } catch (error) { showMsg('Error al cargar', 'error'); }
+    } catch (error) { mostrarMensaje('Error al cargar datos del módulo', 'error'); }
   };
 
   window.verDetalle = async (id) => {
@@ -169,70 +235,147 @@ const pageTitle = "Gestión de Módulos";
     });
     const data = await res.json();
     if (data.success) {
-      alert(`ID: ${data.data.id}\nNombre: ${data.data.strnombremodulo}\nCreado: ${new Date(data.data.created_at).toLocaleString()}`);
+      alert(`Información del Módulo:\n\nID: ${data.data.id}\nNombre: ${data.data.strnombremodulo}\nCreado: ${new Date(data.data.created_at).toLocaleString()}`);
     }
   };
 
   window.guardarModulo = async () => {
-    const id = (document.getElementById('moduloId') as HTMLInputElement).value;
-    const nombre = (document.getElementById('strNombreModulo') as HTMLInputElement).value.trim();
+    const id = document.getElementById('moduloId').value;
+    const nombre = document.getElementById('strNombreModulo').value.trim();
     const token = localStorage.getItem('token');
     
-    const response = await fetch(id ? `${API_URL}/api/modulos/${id}` : `${API_URL}/api/modulos`, {
-      method: id ? 'PUT' : 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ strNombreModulo: nombre })
-    });
-    
-    if ((await response.json()).success) {
-      showMsg(id ? 'Actualizado' : 'Creado', 'success');
-      cerrarModal();
-      cargarModulos(currentPage);
+    try {
+      const response = await fetch(id ? `${API_URL}/api/modulos/${id}` : `${API_URL}/api/modulos`, {
+        method: id ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ strNombreModulo: nombre })
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        mostrarMensaje(id ? 'Módulo actualizado' : 'Módulo creado', 'success');
+        cerrarModal();
+        cargarTodosLosModulos(); // Refrescar la tabla global
+      } else {
+        mostrarMensaje(data.message || 'Error al guardar', 'error');
+      }
+    } catch(err) {
+      mostrarMensaje('Error de red', 'error');
     }
   };
 
   window.eliminarModulo = async (id) => {
-    if (!confirm('¿Eliminar módulo?')) return;
+    if (!confirm('¿Estás seguro de eliminar este módulo?')) return;
     const token = localStorage.getItem('token');
-    const res = await fetch(`${API_URL}/api/modulos/${id}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    if ((await res.json()).success) {
-      showMsg('Eliminado', 'success');
-      cargarModulos(currentPage);
+    
+    try {
+      const res = await fetch(`${API_URL}/api/modulos/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        mostrarMensaje('Módulo eliminado', 'success');
+        cargarTodosLosModulos(); // Refrescar la tabla global
+      } else {
+        mostrarMensaje(data.message || 'Error al eliminar', 'error');
+      }
+    } catch(err) {
+      mostrarMensaje('Error de red', 'error');
     }
   };
 
-  function showMsg(text, type) {
-    const msgDiv = document.getElementById('message');
-    if (!msgDiv) return;
-    msgDiv.style.display = 'block';
-    msgDiv.style.background = type === 'success' ? '#dcfce7' : '#fee2e2';
-    msgDiv.textContent = text;
-    setTimeout(() => { if(msgDiv) msgDiv.style.display = 'none'; }, 3000);
+  function mostrarMensaje(texto, tipo) {
+    const msj = document.getElementById('message');
+    msj.textContent = texto;
+    msj.className = `status-message msg-${tipo}`;
+    msj.style.display = 'block';
+    setTimeout(() => { msj.style.display = 'none'; }, 3000);
   }
 
+  // ============================================
+  // EVENTOS INICIALES
+  // ============================================
   document.addEventListener('DOMContentLoaded', () => {
     if (permisos.agregar) {
         const btn = document.getElementById('btnNuevoModulo');
-        if(btn) btn.style.display = 'block';
+        if(btn) btn.style.display = 'flex';
     }
-    cargarModulos();
+    
+    // Escuchador de la barra de búsqueda (Fetch instantáneo estático)
+    document.getElementById('searchInput').addEventListener('input', aplicarFiltroInstantaneo);
+    
+    cargarTodosLosModulos();
   });
 </script>
 
-<style>
+<style is:global>
+  /* --- CABECERA --- */
   .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
-  .btn-add { background: #059669; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600; }
-  .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 2000; }
-  .modal-content { background: white; padding: 2rem; border-radius: 8px; width: 100%; max-width: 450px; }
-  .form-group { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.5rem; }
-  .form-group input { padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; }
-  .form-actions { display: flex; justify-content: flex-end; gap: 10px; }
-  .crud-table { width: 100%; border-collapse: collapse; background: white; }
-  .crud-table th, .crud-table td { padding: 1rem; border-bottom: 1px solid #eee; text-align: left; }
-  .btn-icon { border: none; background: none; cursor: pointer; padding: 5px; }
-  .edit { color: #f59e0b; } .delete { color: #ef4444; } .view { color: #3b82f6; }
-  .status-message { position: fixed; bottom: 20px; right: 20px; padding: 10px 20px; border-radius: 5px; display: none; z-index: 3000; }
+  .header-title h1 { margin: 0; color: #0f172a; font-size: 1.8rem; display: flex; align-items: center; gap: 10px; }
+  .header-title p { margin: 5px 0 0 0; color: #64748b; font-size: 0.95rem; }
+  
+  .btn-add { background: #2563eb; color: white; border: none; padding: 0.8rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2); transition: all 0.2s; }
+  .btn-add:hover { background: #1d4ed8; transform: translateY(-2px); }
+
+  /* --- TARJETA Y BUSCADOR --- */
+  .card-container { background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 1.5rem; border: 1px solid #f1f5f9; }
+  
+  .table-toolbar { margin-bottom: 1.5rem; display: flex; justify-content: flex-end; }
+  .search-box { position: relative; width: 100%; max-width: 400px; }
+  .search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 1.1rem; }
+  .search-box input { width: 100%; padding: 0.9rem 1rem 0.9rem 2.8rem; border: 2px solid #e2e8f0; border-radius: 30px; font-size: 0.95rem; transition: border-color 0.2s; background: #f8fafc; color: #334155; }
+  .search-box input:focus { outline: none; border-color: #3b82f6; background: white; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
+
+  /* --- TABLA --- */
+  .table-responsive { overflow-x: auto; }
+  .crud-table { width: 100%; border-collapse: collapse; min-width: 600px; }
+  .crud-table th { text-align: left; padding: 1rem 0.5rem; color: #475569; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0; background: white; }
+  .crud-table tbody tr { transition: background-color 0.2s; border-bottom: 1px solid #f1f5f9; }
+  .crud-table tbody tr:hover { background-color: #f8fafc; }
+  .no-data { text-align: center; color: #94a3b8; padding: 3rem !important; font-size: 1.1rem; }
+
+  /* --- ESTILOS VISUALES CELDAS --- */
+  .badge-date { display: inline-flex; align-items: center; gap: 5px; background: #f8fafc; color: #64748b; padding: 0.3rem 0.8rem; border-radius: 6px; font-size: 0.85rem; font-weight: 500; border: 1px solid #e2e8f0; }
+
+  /* --- BOTONES DE ACCIÓN --- */
+  .actions-cell { display: flex; gap: 8px; }
+  .action-btn { width: 35px; height: 35px; border-radius: 8px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; font-size: 1rem; }
+  .action-btn.view { background: #eff6ff; color: #3b82f6; }
+  .action-btn.view:hover { background: #3b82f6; color: white; }
+  .action-btn.edit { background: #fef3c7; color: #d97706; }
+  .action-btn.edit:hover { background: #f59e0b; color: white; }
+  .action-btn.delete { background: #fef2f2; color: #ef4444; }
+  .action-btn.delete:hover { background: #ef4444; color: white; }
+
+  /* --- PAGINACIÓN ESTÁTICA --- */
+  .pagination { display: flex; justify-content: center; gap: 8px; margin-top: 2rem; }
+  .page-btn { width: 35px; height: 35px; border-radius: 8px; border: 1px solid #e2e8f0; background: white; color: #475569; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
+  .page-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
+  .page-btn.active { background: #2563eb; color: white; border-color: #2563eb; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2); }
+
+  /* --- MODAL FORMULARIO --- */
+  .modal { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
+  .modal-content { background: white; padding: 2rem; border-radius: 16px; width: 100%; max-width: 450px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 1rem; }
+  .modal-header h3 { margin: 0; color: #0f172a; font-size: 1.4rem; }
+  .close-btn { background: #f1f5f9; border: none; width: 35px; height: 35px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; color: #64748b; transition: all 0.2s; }
+  .close-btn:hover { background: #fee2e2; color: #ef4444; }
+  
+  .form-group { display: flex; flex-direction: column; margin-bottom: 1.5rem; }
+  .form-group label { font-weight: 600; margin-bottom: 0.5rem; color: #475569; font-size: 0.9rem; }
+  .form-group input { padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.95rem; transition: border-color 0.2s; }
+  .form-group input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+
+  .form-actions { display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1rem; }
+  .btn-primary { background: #10b981; color: white; border: none; padding: 0.8rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: background 0.2s; }
+  .btn-primary:hover { background: #059669; }
+  .btn-secondary { background: #f1f5f9; color: #475569; border: none; padding: 0.8rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 600; }
+  .btn-secondary:hover { background: #e2e8f0; }
+
+  .status-message { position: fixed; bottom: 20px; right: 20px; padding: 12px 24px; border-radius: 8px; display: none; font-weight: 600; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); z-index: 9999; animation: slideUp 0.3s ease-out; }
+  .msg-success { background: #10b981; color: white; border-left: 4px solid #047857; }
+  .msg-error { background: #ef4444; color: white; border-left: 4px solid #b91c1c; }
+
+  @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 </style>

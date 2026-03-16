@@ -8,8 +8,42 @@ const pageTitle = "Gestión de Perfiles";
 
 <Layout title={`${pageTitle} | Sistema Corporativo`} moduloActual="Perfil">
   <div class="page-header">
-    <h1><i class="fas fa-user-shield"></i> {pageTitle}</h1>
+    <div class="header-title">
+      <h1><i class="fas fa-user-shield"></i> {pageTitle}</h1>
+      <p>Administra los roles y niveles de acceso general del sistema</p>
+    </div>
     <div id="header-actions"></div> 
+  </div>
+
+  <div class="card-container">
+    <div class="table-toolbar">
+      <div class="search-box">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" id="searchInput" placeholder="Buscar por nombre de perfil...">
+      </div>
+    </div>
+
+    <div id="tableContainer" class="table-responsive">
+      <table class="crud-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nombre del Perfil</th>
+            <th>Administrador Global</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tablaBody">
+          <tr>
+            <td colspan="4" class="no-data">
+              <i class="fas fa-spinner fa-spin"></i> Cargando perfiles...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="pagination" class="pagination"></div>
   </div>
 
   <div id="modalFormContainer" class="modal" style="display:none;">
@@ -23,32 +57,26 @@ const pageTitle = "Gestión de Perfiles";
         <input type="hidden" id="perfilId">
         <div class="form-group">
           <label for="strNombrePerfil">Nombre del Perfil *</label>
-          <input type="text" id="strNombrePerfil" required maxlength="100" />
+          <input type="text" id="strNombrePerfil" required maxlength="100" placeholder="Ej. Gerente de Ventas" />
         </div>
 
-        <div class="form-group checkbox-group">
-          <label>
+        <div class="permisos-section-title" style="margin-top: 1rem;"><i class="fas fa-shield-alt"></i> Nivel de Poder</div>
+        <div class="permisos-grid" style="grid-template-columns: 1fr;">
+          <label class="permiso-item permiso-danger">
             <input type="checkbox" id="bitAdministrador" />
-            ¿Es Administrador? (Acceso total)
+            <span class="checkmark"></span>
+            ¿Es Administrador? (Acceso total e irrestricto al sistema)
           </label>
         </div>
 
         <div class="form-actions">
           <button type="button" class="btn-secondary" onclick="window.closeModal()">Cancelar</button>
-          <button type="submit" class="btn-primary" id="btnGuardar">Guardar</button>
+          <button type="submit" class="btn-primary" id="btnGuardar"><i class="fas fa-save"></i> Guardar</button>
         </div>
       </form>
     </div>
   </div>
 
-  <div id="loading" style="display: none; text-align: center; padding: 2rem;">
-    <i class="fas fa-spinner fa-spin fa-2x"></i>
-  </div>
-
-  <div id="tableContainer" class="table-responsive">
-    </div>
-
-  <div id="pagination" class="pagination"></div>
   <div id="message" class="status-message"></div>
 </Layout>
 
@@ -56,115 +84,158 @@ const pageTitle = "Gestión de Perfiles";
   import { verificarPermisosModulo } from '../../utils/permisos';
   const API_URL = "https://extra-earth-production.up.railway.app";
   
-  let currentPage = 1;
   const { permisos } = verificarPermisosModulo('Perfil');
-
   const messageDiv = document.getElementById('message');
   const perfilForm = document.getElementById('perfilForm');
 
-  async function cargarDatos(page = 1) {
-    if (!permisos.consulta) return;
-    currentPage = page;
-    
-    const loading = document.getElementById('loading');
-    if(loading) loading.style.display = 'block';
+  // --- VARIABLES ESTÁTICAS PARA PAGINACIÓN Y BÚSQUEDA ---
+  let perfilesLocales = []; 
+  let perfilesFiltrados = []; 
+  let paginaActual = 1;
+  const limitePorPagina = 5;
 
+  // ============================================
+  // CARGA ESTÁTICA TOTAL Y BÚSQUEDA INSTANTÁNEA
+  // ============================================
+  async function cargarTodosLosPerfiles() {
+    if (!permisos.consulta) {
+      document.getElementById('tablaBody').innerHTML = '<tr><td colspan="4" class="no-data" style="color: #ef4444; font-weight: 600;">❌ No tienes permisos para consultar información.</td></tr>';
+      return;
+    }
+    
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/api/perfiles?page=${page}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await res.json();
-
+      let res = await fetch(`${API_URL}/api/perfiles?page=1`, { headers: { 'Authorization': `Bearer ${token}` } });
+      let data = await res.json();
+      
       if (data.success) {
-        renderizarTabla(data.data);
-        renderizarPaginacion(data.pagination);
+        let totalPages = data.pagination.totalPages;
+        let todos = [...data.data];
+        
+        if (totalPages > 1) {
+          let promesas = [];
+          for (let i = 2; i <= totalPages; i++) {
+            promesas.push(fetch(`${API_URL}/api/perfiles?page=${i}`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json()));
+          }
+          let extras = await Promise.all(promesas);
+          extras.forEach(p => { if (p.success) todos.push(...p.data); });
+        }
+        
+        perfilesLocales = todos;
+        aplicarFiltroInstantaneo();
       }
-    } catch (error) {
-      showMsg('Error al conectar con el servidor', 'error');
-    } finally {
-      if(loading) loading.style.display = 'none';
+    } catch (error) { 
+      showMsg('Error al cargar perfiles', 'error'); 
+    } 
+  }
+
+  function aplicarFiltroInstantaneo() {
+    const termino = document.getElementById('searchInput').value.toLowerCase();
+    
+    perfilesFiltrados = perfilesLocales.filter(p => 
+      p.strnombreperfil.toLowerCase().includes(termino) ||
+      (termino === 'admin' && p.bitadministrador) ||
+      p.id.toString().includes(termino)
+    );
+
+    paginaActual = 1;
+    dibujarVistaEstatica();
+  }
+
+  function dibujarVistaEstatica() {
+    const inicio = (paginaActual - 1) * limitePorPagina;
+    const fin = inicio + limitePorPagina;
+    const perfilesPagina = perfilesFiltrados.slice(inicio, fin);
+    
+    renderizarTablaHTML(perfilesPagina);
+    
+    const totalPaginas = Math.ceil(perfilesFiltrados.length / limitePorPagina);
+    renderizarPaginacionHTML(totalPaginas);
+  }
+
+  window.cambiarPagina = (numPagina) => {
+    paginaActual = numPagina;
+    dibujarVistaEstatica();
+  };
+
+  // ============================================
+  // RENDERIZADO DE INTERFAZ
+  // ============================================
+  function renderizarTablaHTML(perfiles) {
+    const tbody = document.getElementById('tablaBody');
+    if(!tbody) return;
+
+    if (perfiles.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" class="no-data"><i class="fas fa-search-minus"></i> No se encontraron perfiles.</td></tr>';
+      return;
     }
+
+    tbody.innerHTML = perfiles.map(p => `
+      <tr>
+        <td style="vertical-align: middle; padding: 1rem 0.5rem; color: #64748b; font-weight: 500;">#${p.id}</td>
+        <td style="vertical-align: middle; padding: 1rem 0.5rem;">
+          <span class="role-badge"><i class="fas fa-user-shield"></i> ${p.strnombreperfil}</span>
+        </td>
+        <td style="vertical-align: middle; padding: 1rem 0.5rem;">
+          ${p.bitadministrador 
+            ? '<span class="status-badge status-active"><i class="fas fa-check"></i> Sí, tiene acceso total</span>' 
+            : '<span class="status-badge" style="background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0;">No</span>'}
+        </td>
+        <td class="actions-cell" style="vertical-align: middle; padding: 1rem 0.5rem;">
+          ${permisos.editar ? `<button onclick="window.prepararEdicion(${p.id}, '${p.strnombreperfil}', ${p.bitadministrador})" class="action-btn edit" title="Editar"><i class="fas fa-edit"></i></button>` : ''}
+          ${permisos.eliminar ? `<button onclick="window.eliminarPerfil(${p.id})" class="action-btn delete" title="Eliminar"><i class="fas fa-trash"></i></button>` : ''}
+        </td>
+      </tr>
+    `).join('');
   }
 
-  function renderizarTabla(perfiles) {
-    const container = document.getElementById('tableContainer');
-    if(!container) return;
-
-    container.innerHTML = `
-      <table class="crud-table">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Perfil</th>
-            <th>Admin</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${perfiles.map(p => `
-            <tr>
-              <td>${p.id}</td>
-              <td><strong>${p.strnombreperfil}</strong></td>
-              <td>${p.bitadministrador ? '<span style="color: green;">✅ Sí</span>' : '<span style="color: gray;">❌ No</span>'}</td>
-              <td class="actions-cell">
-                ${permisos.editar ? `<button onclick="window.prepararEdicion(${p.id}, '${p.strnombreperfil}', ${p.bitadministrador})" class="btn-icon edit" title="Editar"><i class="fas fa-edit"></i></button>` : ''}
-                ${permisos.eliminar ? `<button onclick="window.eliminarPerfil(${p.id})" class="btn-icon delete" title="Eliminar"><i class="fas fa-trash"></i></button>` : ''}
-              </td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    `;
-  }
-
-  function renderizarPaginacion(pagination) {
+  function renderizarPaginacionHTML(totalPages) {
     const div = document.getElementById('pagination');
     if (!div) return;
-    if (pagination.totalPages <= 1) { div.innerHTML = ''; return; }
+    if (totalPages <= 1) { div.innerHTML = ''; return; }
     
     let html = '';
-    for (let i = 1; i <= pagination.totalPages; i++) {
-      html += `<button class="${i === pagination.page ? 'active' : ''}" onclick="window.cargarDatos(${i})">${i}</button>`;
+    for (let i = 1; i <= totalPages; i++) {
+      html += `<button class="page-btn ${i === paginaActual ? 'active' : ''}" onclick="window.cambiarPagina(${i})">${i}</button>`;
     }
     div.innerHTML = html;
   }
 
-  window.cargarDatos = cargarDatos;
-  
+  // ============================================
+  // FUNCIONES DE MODAL Y CRUD
+  // ============================================
   window.closeModal = () => {
     const modal = document.getElementById('modalFormContainer');
     if(modal) modal.style.display = 'none';
-    if(perfilForm) perfilForm.reset();
+    if(perfilForm) (perfilForm as HTMLFormElement).reset();
   };
 
   window.agregarNuevo = () => {
-    document.getElementById('perfilId').value = '';
+    (document.getElementById('perfilId') as HTMLInputElement).value = '';
     document.getElementById('modalTitulo').textContent = 'Nuevo Perfil';
-    document.getElementById('btnGuardar').textContent = 'Guardar';
+    document.getElementById('btnGuardar').innerHTML = '<i class="fas fa-save"></i> Guardar';
     const modal = document.getElementById('modalFormContainer');
     if(modal) modal.style.display = 'flex';
   };
 
   window.prepararEdicion = (id, nombre, isAdmin) => {
-    document.getElementById('perfilId').value = id;
-    document.getElementById('strNombrePerfil').value = nombre;
-    document.getElementById('bitAdministrador').checked = isAdmin;
+    (document.getElementById('perfilId') as HTMLInputElement).value = id;
+    (document.getElementById('strNombrePerfil') as HTMLInputElement).value = nombre;
+    (document.getElementById('bitAdministrador') as HTMLInputElement).checked = isAdmin;
     document.getElementById('modalTitulo').textContent = 'Editar Perfil';
-    document.getElementById('btnGuardar').textContent = 'Actualizar';
+    document.getElementById('btnGuardar').innerHTML = '<i class="fas fa-save"></i> Actualizar';
     const modal = document.getElementById('modalFormContainer');
     if(modal) modal.style.display = 'flex';
   };
 
   perfilForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const btnGuardar = document.getElementById('btnGuardar');
+    const btnGuardar = document.getElementById('btnGuardar') as HTMLButtonElement;
     
-    const id = document.getElementById('perfilId').value;
-    const nombreVal = document.getElementById('strNombrePerfil').value.trim();
-    const isAdmin = document.getElementById('bitAdministrador').checked;
+    const id = (document.getElementById('perfilId') as HTMLInputElement).value;
+    const nombreVal = (document.getElementById('strNombrePerfil') as HTMLInputElement).value.trim();
+    const isAdmin = (document.getElementById('bitAdministrador') as HTMLInputElement).checked;
 
-    // Enviamos el payload redundante
     const body = {
       strNombrePerfil: nombreVal,
       strnombreperfil: nombreVal,
@@ -180,8 +251,6 @@ const pageTitle = "Gestión de Perfiles";
     btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
 
     try {
-      console.log("Enviando datos al servidor:", body);
-
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -189,11 +258,9 @@ const pageTitle = "Gestión de Perfiles";
       });
 
       if (!res.ok) {
-        const errorText = await res.text();
-        console.error(`💥 Error del Servidor (${res.status}):`, errorText);
         showMsg('Error en BD. Revisa la consola F12', 'error');
         btnGuardar.disabled = false;
-        btnGuardar.textContent = id ? 'Actualizar' : 'Guardar';
+        btnGuardar.innerHTML = id ? '<i class="fas fa-save"></i> Actualizar' : '<i class="fas fa-save"></i> Guardar';
         return;
       }
 
@@ -201,22 +268,20 @@ const pageTitle = "Gestión de Perfiles";
       if (data.success) {
         showMsg(id ? 'Actualizado correctamente' : 'Creado correctamente', 'success');
         window.closeModal();
-        cargarDatos(currentPage);
+        cargarTodosLosPerfiles(); // Recargamos toda la data
       } else {
-        console.warn("⚠️ API respondió con error:", data);
         showMsg(data.message || 'Error al guardar', 'error');
       }
     } catch (err) {
-      console.error("🔥 Error de red:", err);
       showMsg('Error de conexión', 'error');
     } finally {
         btnGuardar.disabled = false;
-        btnGuardar.textContent = id ? 'Actualizar' : 'Guardar';
+        btnGuardar.innerHTML = id ? '<i class="fas fa-save"></i> Actualizar' : '<i class="fas fa-save"></i> Guardar';
     }
   });
 
   window.eliminarPerfil = async (id) => {
-    if (!confirm('¿Desea eliminar este perfil?')) return;
+    if (!confirm('¿Desea eliminar este perfil de forma permanente?')) return;
     const token = localStorage.getItem('token');
     
     try {
@@ -227,7 +292,7 @@ const pageTitle = "Gestión de Perfiles";
       const data = await res.json();
       if (data.success) {
         showMsg('Perfil eliminado', 'success');
-        cargarDatos(currentPage);
+        cargarTodosLosPerfiles();
       } else {
         showMsg(data.message || 'Error al eliminar', 'error');
       }
@@ -239,65 +304,108 @@ const pageTitle = "Gestión de Perfiles";
   function showMsg(text, type) {
     if(!messageDiv) return;
     messageDiv.style.display = 'block';
-    messageDiv.style.background = type === 'success' ? '#dcfce7' : '#fee2e2';
-    messageDiv.style.color = type === 'success' ? '#166534' : '#991b1b';
+    messageDiv.className = `status-message msg-${type}`;
     messageDiv.textContent = text;
     setTimeout(() => { if(messageDiv) messageDiv.style.display = 'none'; }, 3000);
   }
 
+  // ============================================
+  // EVENTOS INICIALES
+  // ============================================
   document.addEventListener('DOMContentLoaded', () => {
     if (permisos.agregar) {
       const btn = document.createElement('button');
-      btn.className = 'btn-add-global';
+      btn.className = 'btn-add';
       btn.innerHTML = '<i class="fas fa-plus"></i> Nuevo Perfil';
       btn.onclick = window.agregarNuevo;
       document.getElementById('header-actions')?.appendChild(btn);
     }
-    cargarDatos();
+    
+    document.getElementById('searchInput').addEventListener('input', aplicarFiltroInstantaneo);
+    
+    cargarTodosLosPerfiles();
   });
 </script>
 
 <style is:global>
+  /* --- CABECERA --- */
   .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
-  .btn-add-global { background: #059669; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600; }
-  .btn-add-global:hover { background: #047857; }
+  .header-title h1 { margin: 0; color: #0f172a; font-size: 1.8rem; display: flex; align-items: center; gap: 10px; }
+  .header-title p { margin: 5px 0 0 0; color: #64748b; font-size: 0.95rem; }
   
-  /* ESTILOS DEL MODAL NATIVO */
-  .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 3000; display: flex; align-items: center; justify-content: center; }
-  .modal-content { background: white; padding: 2rem; border-radius: 8px; width: 100%; max-width: 500px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
-  .modal-header h3 { margin: 0; color: #1e293b; font-size: 1.25rem; }
-  .close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #94a3b8; }
-  .close-btn:hover { color: #ef4444; }
+  .btn-add { background: #2563eb; color: white; border: none; padding: 0.8rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2); transition: all 0.2s; }
+  .btn-add:hover { background: #1d4ed8; transform: translateY(-2px); }
+
+  /* --- TARJETA Y BUSCADOR --- */
+  .card-container { background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 1.5rem; border: 1px solid #f1f5f9; }
   
-  .modal-form { display: flex; flex-direction: column; gap: 1.2rem; }
-  .form-group { display: flex; flex-direction: column; gap: 0.5rem; }
-  .form-group label { font-weight: 600; color: #475569; font-size: 0.9rem; }
-  .form-group input[type="text"] { padding: 0.8rem; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 1rem; }
-  .form-group input[type="text"]:focus { outline: none; border-color: #3b82f6; }
+  .table-toolbar { margin-bottom: 1.5rem; display: flex; justify-content: flex-end; }
+  .search-box { position: relative; width: 100%; max-width: 400px; }
+  .search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 1.1rem; }
+  .search-box input { width: 100%; padding: 0.9rem 1rem 0.9rem 2.8rem; border: 2px solid #e2e8f0; border-radius: 30px; font-size: 0.95rem; transition: border-color 0.2s; background: #f8fafc; color: #334155; }
+  .search-box input:focus { outline: none; border-color: #3b82f6; background: white; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
+
+  /* --- TABLA --- */
+  .table-responsive { overflow-x: auto; }
+  .crud-table { width: 100%; border-collapse: collapse; min-width: 600px; }
+  .crud-table th { text-align: left; padding: 1rem 0.5rem; color: #475569; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0; background: white; }
+  .crud-table tbody tr { transition: background-color 0.2s; border-bottom: 1px solid #f1f5f9; }
+  .crud-table tbody tr:hover { background-color: #f8fafc; }
+  .no-data { text-align: center; color: #94a3b8; padding: 3rem !important; font-size: 1.1rem; }
+
+  /* --- ESTILOS VISUALES CELDAS --- */
+  .role-badge { display: inline-flex; align-items: center; gap: 5px; background: #f1f5f9; color: #1e293b; padding: 0.4rem 0.8rem; border-radius: 20px; font-size: 0.9rem; font-weight: 600; border: 1px solid #e2e8f0; }
+  .status-badge { padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.8rem; font-weight: 700; display: inline-block; }
+  .status-active { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+
+  /* --- BOTONES DE ACCIÓN --- */
+  .actions-cell { display: flex; gap: 8px; justify-content: flex-start; }
+  .action-btn { width: 35px; height: 35px; border-radius: 8px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; font-size: 1rem; }
+  .action-btn.edit { background: #fef3c7; color: #d97706; }
+  .action-btn.edit:hover { background: #f59e0b; color: white; }
+  .action-btn.delete { background: #fef2f2; color: #ef4444; }
+  .action-btn.delete:hover { background: #ef4444; color: white; }
+
+  /* --- PAGINACIÓN ESTÁTICA --- */
+  .pagination { display: flex; justify-content: center; gap: 8px; margin-top: 2rem; }
+  .page-btn { width: 35px; height: 35px; border-radius: 8px; border: 1px solid #e2e8f0; background: white; color: #475569; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
+  .page-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
+  .page-btn.active { background: #2563eb; color: white; border-color: #2563eb; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2); }
+
+  /* --- MODAL FORMULARIO Y CHECKBOXES MODERNOS --- */
+  .modal { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
+  .modal-content { background: white; padding: 2rem; border-radius: 16px; width: 100%; max-width: 500px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 1rem; }
+  .modal-header h3 { margin: 0; color: #0f172a; font-size: 1.4rem; }
+  .close-btn { background: #f1f5f9; border: none; width: 35px; height: 35px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; color: #64748b; transition: all 0.2s; }
+  .close-btn:hover { background: #fee2e2; color: #ef4444; }
   
-  .checkbox-group label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.95rem; font-weight: normal; }
-  .checkbox-group input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+  .form-group { display: flex; flex-direction: column; margin-bottom: 1rem;}
+  .form-group label { font-weight: 600; margin-bottom: 0.5rem; color: #475569; font-size: 0.9rem; }
+  .form-group input[type="text"] { padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.95rem; transition: border-color 0.2s; }
+  .form-group input[type="text"]:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+
+  .permisos-section-title { font-weight: 700; color: #334155; font-size: 1.1rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #e2e8f0; }
+  .permisos-grid { display: grid; background: #f8fafc; padding: 1.5rem; border-radius: 12px; border: 1px solid #e2e8f0; }
   
-  .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 1rem; }
-  .btn-primary { background: #1e293b; color: white; border: none; padding: 0.7rem 1.5rem; border-radius: 4px; cursor: pointer; font-weight: 600; }
-  .btn-primary:hover { background: #334155; }
-  .btn-secondary { background: #f1f5f9; color: #475569; border: none; padding: 0.7rem 1.5rem; border-radius: 4px; cursor: pointer; font-weight: 600; }
+  /* Custom Checkbox */
+  .permiso-item { display: flex; align-items: center; position: relative; padding-left: 30px; cursor: pointer; font-size: 0.95rem; font-weight: 600; color: #ef4444; user-select: none; }
+  .permiso-item input { position: absolute; opacity: 0; cursor: pointer; height: 0; width: 0; }
+  .checkmark { position: absolute; top: 0; left: 0; height: 20px; width: 20px; background-color: white; border: 2px solid #cbd5e1; border-radius: 6px; transition: all 0.2s; }
+  .permiso-item:hover input ~ .checkmark { border-color: #ef4444; }
+  .permiso-danger input:checked ~ .checkmark { background-color: #ef4444; border-color: #ef4444; }
+  .checkmark:after { content: ""; position: absolute; display: none; left: 6px; top: 2px; width: 5px; height: 10px; border: solid white; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  .permiso-item input:checked ~ .checkmark:after { display: block; }
+
+  .form-actions { display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem; border-top: 2px solid #f1f5f9; padding-top: 1.5rem;}
+  .btn-primary { background: #10b981; color: white; border: none; padding: 0.8rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: background 0.2s; }
+  .btn-primary:hover { background: #059669; }
+  .btn-secondary { background: #f1f5f9; color: #475569; border: none; padding: 0.8rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 600; }
   .btn-secondary:hover { background: #e2e8f0; }
-  
-  .crud-table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0; }
-  .crud-table th, .crud-table td { padding: 1rem; border-bottom: 1px solid #e2e8f0; text-align: left; }
-  .crud-table th { background: #f8fafc; color: #475569; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
-  .actions-cell { display: flex; gap: 8px; }
-  .btn-icon { border: none; background: none; cursor: pointer; padding: 0.5rem; border-radius: 4px; transition: background 0.2s; }
-  .btn-icon:hover { background: #f1f5f9; }
-  .edit { color: #f59e0b; }
-  .delete { color: #ef4444; }
-  
-  .pagination { display: flex; justify-content: center; gap: 5px; margin-top: 1.5rem; }
-  .pagination button { padding: 5px 12px; border: 1px solid #e2e8f0; background: white; cursor: pointer; border-radius: 4px; font-weight: 500; }
-  .pagination button:hover { background: #f8fafc; }
-  .pagination button.active { background: #1e293b; color: white; border-color: #1e293b; }
-  
-  .status-message { position: fixed; bottom: 2rem; right: 2rem; padding: 1rem 2rem; border-radius: 6px; display: none; z-index: 4000; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-weight: 500; }
+
+  .status-message { position: fixed; bottom: 20px; right: 20px; padding: 12px 24px; border-radius: 8px; display: none; font-weight: 600; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); z-index: 9999; animation: slideUp 0.3s ease-out; }
+  .msg-success { background: #10b981; color: white; border-left: 4px solid #047857; }
+  .msg-error { background: #ef4444; color: white; border-left: 4px solid #b91c1c; }
+
+  @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 </style>

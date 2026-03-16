@@ -7,10 +7,49 @@ const pageTitle = "Gestión de Permisos por Perfil";
 
 <Layout title={`${pageTitle} | Sistema Corporativo`} moduloActual="Permisos-Perfil">
   <div class="page-header">
-    <h1><i class="fas fa-key"></i> {pageTitle}</h1>
+    <div class="header-title">
+      <h1><i class="fas fa-key"></i> {pageTitle}</h1>
+      <p>Configura el nivel de acceso de cada perfil a los diferentes módulos</p>
+    </div>
     <button class="btn-add" id="btnNuevoPermiso" style="display: none;" onclick="abrirModalNuevo()">
       <i class="fas fa-plus"></i> Nuevo Permiso
     </button>
+  </div>
+
+  <div class="card-container">
+    <div class="table-toolbar">
+      <div class="search-box">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" id="searchInput" placeholder="Buscar por módulo o perfil...">
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="crud-table" id="tablaPermisos">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Módulo</th>
+            <th>Perfil</th>
+            <th class="text-center" title="Consulta">C</th> 
+            <th class="text-center" title="Agregar">A</th> 
+            <th class="text-center" title="Editar">E</th> 
+            <th class="text-center" title="Detalle">D</th> 
+            <th class="text-center" title="Eliminar">X</th> 
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tablaBody">
+          <tr>
+            <td colspan="9" class="no-data">
+              <i class="fas fa-spinner fa-spin"></i> Cargando permisos...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <div id="pagination" class="pagination"></div>
   </div>
 
   <div id="modalPermiso" class="modal" style="display: none;">
@@ -39,65 +78,52 @@ const pageTitle = "Gestión de Permisos por Perfil";
           </div>
         </div>
 
+        <div class="permisos-section-title"><i class="fas fa-sliders-h"></i> Nivel de Acceso</div>
         <div class="permisos-grid">
-          <div class="permiso-item">
-            <label><input type="checkbox" id="bitAgregar"> Agregar</label>
-          </div>
-          <div class="permiso-item">
-            <label><input type="checkbox" id="bitEditar"> Editar</label>
-          </div>
-          <div class="permiso-item">
-            <label><input type="checkbox" id="bitConsulta"> Consultar</label>
-          </div>
-          <div class="permiso-item">
-            <label><input type="checkbox" id="bitEliminar"> Eliminar</label>
-          </div>
-          <div class="permiso-item">
-            <label><input type="checkbox" id="bitDetalle"> Ver Detalle</label>
-          </div>
+          <label class="permiso-item">
+            <input type="checkbox" id="bitConsulta"> 
+            <span class="checkmark"></span> Consultar
+          </label>
+          <label class="permiso-item">
+            <input type="checkbox" id="bitAgregar"> 
+            <span class="checkmark"></span> Agregar
+          </label>
+          <label class="permiso-item">
+            <input type="checkbox" id="bitEditar"> 
+            <span class="checkmark"></span> Editar
+          </label>
+          <label class="permiso-item">
+            <input type="checkbox" id="bitDetalle"> 
+            <span class="checkmark"></span> Ver Detalle
+          </label>
+          <label class="permiso-item permiso-danger">
+            <input type="checkbox" id="bitEliminar"> 
+            <span class="checkmark"></span> Eliminar
+          </label>
         </div>
         
         <div class="form-actions">
           <button type="button" class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
-          <button type="submit" class="btn-primary">Guardar</button>
+          <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Guardar</button>
         </div>
       </form>
     </div>
   </div>
 
-  <div id="loading" style="display: none; text-align: center; padding: 1rem;">
-    <i class="fas fa-spinner fa-spin fa-2x"></i>
-  </div>
-  
-  <div class="table-responsive">
-    <table class="crud-table" id="tablaPermisos">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Módulo</th>
-          <th>Perfil</th>
-          <th>C</th> <th>A</th> <th>E</th> <th>D</th> <th>X</th> <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody id="tablaBody">
-        <tr>
-          <td colspan="9" class="no-data">Cargando permisos...</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-  
-  <div id="pagination" class="pagination"></div>
   <div id="message" class="status-message"></div>
 </Layout>
 
 <script>
-  // RUTA CORREGIDA: Dos niveles arriba para salir de /modulos/ y /pages/
   import { verificarPermisosModulo } from '../../utils/permisos';
   const API_URL = "https://extra-earth-production.up.railway.app";
 
-  let currentPage = 1;
   const { permisos } = verificarPermisosModulo('Permisos-Perfil');
+
+  // --- VARIABLES ESTÁTICAS PARA PAGINACIÓN Y BÚSQUEDA ---
+  let permisosLocales = []; 
+  let permisosFiltrados = []; 
+  let paginaActual = 1;
+  const limitePorPagina = 5; 
 
   async function cargarSelects() {
     try {
@@ -122,70 +148,119 @@ const pageTitle = "Gestión de Permisos por Perfil";
     } catch (error) { console.error('Error cargando selects:', error); }
   }
 
-  async function cargarPermisos(page = 1) {
-    if (!permisos.consulta) return;
-    currentPage = page;
-    const loading = document.getElementById('loading');
-    if(loading) loading.style.display = 'block';
+  // ============================================
+  // CARGA ESTÁTICA TOTAL Y BÚSQUEDA INSTANTÁNEA
+  // ============================================
+  async function cargarTodosLosPermisos() {
+    if (!permisos.consulta) {
+      document.getElementById('tablaBody').innerHTML = '<tr><td colspan="9" class="no-data" style="color: #ef4444; font-weight: 600;">❌ No tienes permisos para consultar información.</td></tr>';
+      return;
+    }
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/permisos-perfil?page=${page}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
+      let res = await fetch(`${API_URL}/api/permisos-perfil?page=1`, { headers: { 'Authorization': `Bearer ${token}` } });
+      let data = await res.json();
       
       if (data.success) {
-        renderizarTabla(data.data);
-        renderizarPaginacion(data.pagination);
+        let totalPages = data.pagination.totalPages;
+        let todos = [...data.data];
+        
+        if (totalPages > 1) {
+          let promesas = [];
+          for (let i = 2; i <= totalPages; i++) {
+            promesas.push(fetch(`${API_URL}/api/permisos-perfil?page=${i}`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json()));
+          }
+          let extras = await Promise.all(promesas);
+          extras.forEach(p => { if (p.success) todos.push(...p.data); });
+        }
+        
+        permisosLocales = todos;
+        aplicarFiltroInstantaneo();
       }
-    } catch (error) { showMsg('Error al cargar permisos', 'error'); } 
-    finally { if(loading) loading.style.display = 'none'; }
+    } catch (error) { 
+      mostrarMensaje('Error al cargar permisos', 'error'); 
+    } 
   }
 
-  function renderizarTabla(listaPermisos) {
+  function aplicarFiltroInstantaneo() {
+    const termino = document.getElementById('searchInput').value.toLowerCase();
+    
+    permisosFiltrados = permisosLocales.filter(p => 
+      p.strnombremodulo.toLowerCase().includes(termino) ||
+      p.strnombreperfil.toLowerCase().includes(termino)
+    );
+
+    paginaActual = 1;
+    dibujarVistaEstatica();
+  }
+
+  function dibujarVistaEstatica() {
+    const inicio = (paginaActual - 1) * limitePorPagina;
+    const fin = inicio + limitePorPagina;
+    const permisosPagina = permisosFiltrados.slice(inicio, fin);
+    
+    renderizarTablaHTML(permisosPagina);
+    
+    const totalPaginas = Math.ceil(permisosFiltrados.length / limitePorPagina);
+    renderizarPaginacionHTML(totalPaginas);
+  }
+
+  window.cambiarPagina = (numPagina) => {
+    paginaActual = numPagina;
+    dibujarVistaEstatica();
+  };
+
+  // ============================================
+  // RENDERIZADO DE INTERFAZ
+  // ============================================
+  function renderizarTablaHTML(listaPermisos) {
     const tbody = document.getElementById('tablaBody');
     if (!tbody) return;
     
     if (listaPermisos.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="9" class="no-data">No hay permisos</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" class="no-data"><i class="fas fa-search-minus"></i> No se encontraron permisos.</td></tr>';
       return;
     }
     
+    const iconCheck = '<i class="fas fa-check-circle" style="color: #10b981; font-size: 1.1rem;"></i>';
+    const iconCross = '<i class="fas fa-times-circle" style="color: #cbd5e1; font-size: 1.1rem;"></i>';
+
     tbody.innerHTML = listaPermisos.map(p => `
       <tr>
-        <td>${p.id}</td>
-        <td><strong>${p.strnombremodulo}</strong></td>
-        <td>${p.strnombreperfil}</td>
-        <td>${p.bitconsulta ? '✅' : '❌'}</td>
-        <td>${p.bitagregar ? '✅' : '❌'}</td>
-        <td>${p.biteditar ? '✅' : '❌'}</td>
-        <td>${p.bitdetalle ? '✅' : '❌'}</td>
-        <td>${p.biteliminar ? '✅' : '❌'}</td>
-        <td class="actions-cell">
-          ${permisos.detalle ? `<button class="btn-icon view" onclick="verDetalle(${p.id})"><i class="fas fa-eye"></i></button>` : ''}
-          ${permisos.editar ? `<button class="btn-icon edit" onclick="editarPermiso(${p.id})"><i class="fas fa-edit"></i></button>` : ''}
-          ${permisos.eliminar ? `<button class="btn-icon delete" onclick="eliminarPermiso(${p.id})"><i class="fas fa-trash"></i></button>` : ''}
+        <td style="vertical-align: middle; padding: 1rem 0.5rem; color: #64748b; font-weight: 500;">#${p.id}</td>
+        <td style="vertical-align: middle; padding: 1rem 0.5rem; font-weight: 600; color: #1e293b;">${p.strnombremodulo}</td>
+        <td style="vertical-align: middle; padding: 1rem 0.5rem;">
+          <span class="role-badge"><i class="fas fa-user-shield"></i> ${p.strnombreperfil}</span>
+        </td>
+        <td class="text-center" style="vertical-align: middle;">${p.bitconsulta ? iconCheck : iconCross}</td>
+        <td class="text-center" style="vertical-align: middle;">${p.bitagregar ? iconCheck : iconCross}</td>
+        <td class="text-center" style="vertical-align: middle;">${p.biteditar ? iconCheck : iconCross}</td>
+        <td class="text-center" style="vertical-align: middle;">${p.bitdetalle ? iconCheck : iconCross}</td>
+        <td class="text-center" style="vertical-align: middle;">${p.biteliminar ? iconCheck : iconCross}</td>
+        <td class="actions-cell" style="vertical-align: middle; padding: 1rem 0.5rem;">
+          ${permisos.detalle ? `<button class="action-btn view" onclick="verDetalle(${p.id})" title="Ver Detalles"><i class="fas fa-eye"></i></button>` : ''}
+          ${permisos.editar ? `<button class="action-btn edit" onclick="editarPermiso(${p.id})" title="Editar"><i class="fas fa-edit"></i></button>` : ''}
+          ${permisos.eliminar ? `<button class="action-btn delete" onclick="eliminarPermiso(${p.id})" title="Eliminar"><i class="fas fa-trash"></i></button>` : ''}
         </td>
       </tr>
     `).join('');
   }
 
-  function renderizarPaginacion(pagination) {
+  function renderizarPaginacionHTML(totalPages) {
     const div = document.getElementById('pagination');
-    if (!div) return;
-    if (pagination.totalPages <= 1) { div.innerHTML = ''; return; }
+    if (totalPages <= 1) { div.innerHTML = ''; return; }
     
     let html = '';
-    for (let i = 1; i <= pagination.totalPages; i++) {
-      html += `<button class="${i === pagination.page ? 'active' : ''}" onclick="cargarPermisos(${i})">${i}</button>`;
+    for (let i = 1; i <= totalPages; i++) {
+      html += `<button class="page-btn ${i === paginaActual ? 'active' : ''}" onclick="window.cambiarPagina(${i})">${i}</button>`;
     }
     div.innerHTML = html;
   }
 
-  // Hacer funciones globales para botones inyectados
-  window.cargarPermisos = cargarPermisos;
-
+  // ============================================
+  // FUNCIONES DE MODAL Y CRUD
+  // ============================================
   window.abrirModalNuevo = () => {
     document.getElementById('modalTitulo').textContent = 'Nuevo Permiso';
     const form = document.getElementById('permisoForm') as HTMLFormElement;
@@ -221,7 +296,7 @@ const pageTitle = "Gestión de Permisos por Perfil";
     const data = await res.json();
     if (data.success) {
       const p = data.data;
-      alert(`Módulo: ${p.strnombremodulo}\nPerfil: ${p.strnombreperfil}\n\nPermisos:\n- Agregar: ${p.bitagregar ? 'SÍ':'NO'}\n- Editar: ${p.biteditar ? 'SÍ':'NO'}\n- Consulta: ${p.bitconsulta ? 'SÍ':'NO'}\n- Eliminar: ${p.biteliminar ? 'SÍ':'NO'}`);
+      alert(`Módulo: ${p.strnombremodulo}\nPerfil: ${p.strnombreperfil}\n\nPermisos:\n- Consultar: ${p.bitconsulta ? 'SÍ':'NO'}\n- Agregar: ${p.bitagregar ? 'SÍ':'NO'}\n- Editar: ${p.biteditar ? 'SÍ':'NO'}\n- Detalle: ${p.bitdetalle ? 'SÍ':'NO'}\n- Eliminar: ${p.biteliminar ? 'SÍ':'NO'}`);
     }
   };
 
@@ -244,60 +319,132 @@ const pageTitle = "Gestión de Permisos por Perfil";
       body: JSON.stringify(permisoData)
     });
     
-    if ((await response.json()).success) {
-      showMsg(id ? 'Actualizado' : 'Creado', 'success');
+    const data = await response.json();
+    if (data.success) {
+      mostrarMensaje(id ? 'Permisos actualizados' : 'Permisos creados', 'success');
       cerrarModal();
-      cargarPermisos(currentPage);
+      cargarTodosLosPermisos();
+    } else {
+      mostrarMensaje(data.message || 'Error al guardar', 'error');
     }
   };
 
   window.eliminarPermiso = async (id) => {
-    if (!confirm('¿Eliminar permiso?')) return;
+    if (!confirm('¿Eliminar permiso de este perfil?')) return;
     const token = localStorage.getItem('token');
     const res = await fetch(`${API_URL}/api/permisos-perfil/${id}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
     });
-    if ((await res.json()).success) cargarPermisos(currentPage);
+    if ((await res.json()).success) {
+        mostrarMensaje('Permiso eliminado', 'success');
+        cargarTodosLosPermisos();
+    }
   };
 
-  function showMsg(text, type) {
-    const msgDiv = document.getElementById('message');
-    if(!msgDiv) return;
-    msgDiv.style.display = 'block';
-    msgDiv.style.background = type === 'success' ? '#dcfce7' : '#fee2e2';
-    msgDiv.textContent = text;
-    setTimeout(() => { msgDiv.style.display = 'none'; }, 3000);
+  function mostrarMensaje(texto, tipo) {
+    const msj = document.getElementById('message');
+    msj.textContent = texto;
+    msj.className = `status-message msg-${tipo}`;
+    msj.style.display = 'block';
+    setTimeout(() => { msj.style.display = 'none'; }, 3000);
   }
 
   document.addEventListener('DOMContentLoaded', () => {
     if (permisos.agregar) {
         const btn = document.getElementById('btnNuevoPermiso');
-        if(btn) btn.style.display = 'block';
+        if(btn) btn.style.display = 'flex';
     }
+    
+    document.getElementById('searchInput').addEventListener('input', aplicarFiltroInstantaneo);
+    
     cargarSelects();
-    cargarPermisos();
+    cargarTodosLosPermisos();
   });
 </script>
 
-<style>
+<style is:global>
+  /* --- CABECERA --- */
   .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
-  .btn-add { background: #059669; color: white; border: none; padding: 0.7rem 1.2rem; border-radius: 6px; cursor: pointer; font-weight: 600; }
-  .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 2000; }
-  .modal-content { background: white; padding: 2rem; border-radius: 8px; width: 90%; max-width: 600px; }
-  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
-  .form-group { display: flex; flex-direction: column; gap: 0.5rem; }
-  .form-group select { padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; }
-  .permisos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; background: #f8fafc; padding: 1rem; border-radius: 6px; }
-  .permiso-item label { display: flex; align-items: center; gap: 5px; font-size: 0.85rem; cursor: pointer; }
-  .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 1.5rem; }
-  .crud-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-  .crud-table th, .crud-table td { padding: 0.8rem; border-bottom: 1px solid #eee; text-align: left; }
-  .actions-cell { display: flex; gap: 5px; }
-  .btn-icon { border: none; background: none; cursor: pointer; padding: 5px; }
-  .edit { color: #f59e0b; } .delete { color: #ef4444; } .view { color: #3b82f6; }
-  .pagination { display: flex; justify-content: center; gap: 5px; margin-top: 1rem; }
-  .pagination button { padding: 5px 10px; cursor: pointer; border: 1px solid #ddd; background: white; }
-  .pagination button.active { background: #1e293b; color: white; border-color: #1e293b; }
-  .status-message { position: fixed; bottom: 20px; right: 20px; padding: 10px 20px; border-radius: 5px; display: none; z-index: 3000; }
+  .header-title h1 { margin: 0; color: #0f172a; font-size: 1.8rem; display: flex; align-items: center; gap: 10px; }
+  .header-title p { margin: 5px 0 0 0; color: #64748b; font-size: 0.95rem; }
+  
+  .btn-add { background: #2563eb; color: white; border: none; padding: 0.8rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2); transition: all 0.2s; }
+  .btn-add:hover { background: #1d4ed8; transform: translateY(-2px); }
+
+  /* --- TARJETA Y BUSCADOR --- */
+  .card-container { background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 1.5rem; border: 1px solid #f1f5f9; }
+  
+  .table-toolbar { margin-bottom: 1.5rem; display: flex; justify-content: flex-end; }
+  .search-box { position: relative; width: 100%; max-width: 400px; }
+  .search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 1.1rem; }
+  .search-box input { width: 100%; padding: 0.9rem 1rem 0.9rem 2.8rem; border: 2px solid #e2e8f0; border-radius: 30px; font-size: 0.95rem; transition: border-color 0.2s; background: #f8fafc; color: #334155; }
+  .search-box input:focus { outline: none; border-color: #3b82f6; background: white; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
+
+  /* --- TABLA --- */
+  .table-responsive { overflow-x: auto; }
+  .crud-table { width: 100%; border-collapse: collapse; min-width: 800px; }
+  .crud-table th { text-align: left; padding: 1rem 0.5rem; color: #475569; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0; background: white; }
+  .crud-table tbody tr { transition: background-color 0.2s; border-bottom: 1px solid #f1f5f9; }
+  .crud-table tbody tr:hover { background-color: #f8fafc; }
+  .text-center { text-align: center !important; }
+  .no-data { text-align: center; color: #94a3b8; padding: 3rem !important; font-size: 1.1rem; }
+
+  /* --- ESTILOS VISUALES CELDAS --- */
+  .role-badge { display: inline-flex; align-items: center; gap: 5px; background: #f8fafc; color: #334155; padding: 0.4rem 0.8rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600; border: 1px solid #e2e8f0; }
+
+  /* --- BOTONES DE ACCIÓN --- */
+  .actions-cell { display: flex; gap: 8px; justify-content: flex-start; }
+  .action-btn { width: 35px; height: 35px; border-radius: 8px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; font-size: 1rem; }
+  .action-btn.view { background: #eff6ff; color: #3b82f6; }
+  .action-btn.view:hover { background: #3b82f6; color: white; }
+  .action-btn.edit { background: #fef3c7; color: #d97706; }
+  .action-btn.edit:hover { background: #f59e0b; color: white; }
+  .action-btn.delete { background: #fef2f2; color: #ef4444; }
+  .action-btn.delete:hover { background: #ef4444; color: white; }
+
+  /* --- PAGINACIÓN ESTÁTICA --- */
+  .pagination { display: flex; justify-content: center; gap: 8px; margin-top: 2rem; }
+  .page-btn { width: 35px; height: 35px; border-radius: 8px; border: 1px solid #e2e8f0; background: white; color: #475569; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
+  .page-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
+  .page-btn.active { background: #2563eb; color: white; border-color: #2563eb; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2); }
+
+  /* --- MODAL FORMULARIO Y CHECKBOXES MODERNOS --- */
+  .modal { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
+  .modal-content { background: white; padding: 2rem; border-radius: 16px; width: 100%; max-width: 600px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 1rem; }
+  .modal-header h3 { margin: 0; color: #0f172a; font-size: 1.4rem; }
+  .close-btn { background: #f1f5f9; border: none; width: 35px; height: 35px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; color: #64748b; transition: all 0.2s; }
+  .close-btn:hover { background: #fee2e2; color: #ef4444; }
+  
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; margin-bottom: 1.5rem; }
+  .form-group { display: flex; flex-direction: column; }
+  .form-group label { font-weight: 600; margin-bottom: 0.5rem; color: #475569; font-size: 0.9rem; }
+  .form-group select { padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.95rem; transition: border-color 0.2s; cursor: pointer; background: #f8fafc; }
+  .form-group select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); background: white;}
+
+  .permisos-section-title { font-weight: 700; color: #334155; font-size: 1.1rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #e2e8f0; }
+  .permisos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; background: #f8fafc; padding: 1.5rem; border-radius: 12px; border: 1px solid #e2e8f0; }
+  
+  /* Custom Checkbox */
+  .permiso-item { display: flex; align-items: center; position: relative; padding-left: 30px; cursor: pointer; font-size: 0.95rem; font-weight: 500; color: #475569; user-select: none; }
+  .permiso-item input { position: absolute; opacity: 0; cursor: pointer; height: 0; width: 0; }
+  .checkmark { position: absolute; top: 0; left: 0; height: 20px; width: 20px; background-color: white; border: 2px solid #cbd5e1; border-radius: 6px; transition: all 0.2s; }
+  .permiso-item:hover input ~ .checkmark { border-color: #3b82f6; }
+  .permiso-item input:checked ~ .checkmark { background-color: #10b981; border-color: #10b981; }
+  .permiso-danger input:checked ~ .checkmark { background-color: #ef4444; border-color: #ef4444; }
+  .checkmark:after { content: ""; position: absolute; display: none; left: 6px; top: 2px; width: 5px; height: 10px; border: solid white; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  .permiso-item input:checked ~ .checkmark:after { display: block; }
+
+  .form-actions { display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem; }
+  .btn-primary { background: #10b981; color: white; border: none; padding: 0.8rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: background 0.2s; }
+  .btn-primary:hover { background: #059669; }
+  .btn-secondary { background: #f1f5f9; color: #475569; border: none; padding: 0.8rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 600; }
+  .btn-secondary:hover { background: #e2e8f0; }
+
+  .status-message { position: fixed; bottom: 20px; right: 20px; padding: 12px 24px; border-radius: 8px; display: none; font-weight: 600; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); z-index: 9999; animation: slideUp 0.3s ease-out; }
+  .msg-success { background: #10b981; color: white; border-left: 4px solid #047857; }
+  .msg-error { background: #ef4444; color: white; border-left: 4px solid #b91c1c; }
+
+  @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 </style>

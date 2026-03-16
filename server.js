@@ -32,10 +32,15 @@ const JWT_SECRET = process.env.JWT_SECRET || 'secreto_super_seguro_2026';
 
 // Configuración de Nodemailer para enviar correos
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true, // Fuerza a usar SSL (Puerto 465)
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
+    },
+    tls: {
+        rejectUnauthorized: false // Evita bloqueos de certificados en Railway
     }
 });
 

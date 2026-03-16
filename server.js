@@ -34,19 +34,25 @@ const pool = new Pool({
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secreto_super_seguro_2026';
 
-// Configuración de Nodemailer para enviar correos
+// CONFIGURACIÓN DE NODEMAILER PARA GMAIL (Puerto 587 - Anti Bloqueos)
 const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
-    port: 465,
-    secure: true, // Fuerza a usar SSL (Puerto 465)
+    port: 587,
+    secure: false, // Usar STARTTLS en lugar de SSL directo
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
     },
     tls: {
-        rejectUnauthorized: false // Evita bloqueos de certificados en Railway
-    }
+        rejectUnauthorized: false
+    },
+    connectionTimeout: 10000 // Si falla, aborta en 10 segundos y no se queda colgado
 });
+
+// VERIFICADOR DE CONEXIÓN (El truco maestro)
+transporter.verify()
+    .then(() => console.log('📧 ✅ Servidor de correos (Gmail) conectado y listo para enviar!'))
+    .catch(err => console.error('📧 ❌ Error conectando con Gmail:', err.message));
 
 // --- 3. Health Check ---
 app.get('/', (req, res) => res.status(200).send('OK'));

@@ -1,132 +1,77 @@
 ---
-// src/pages/modulos/usuarios.astro
+// src/pages/modulos/perfiles.astro
 import Layout from '../../layout/layout.astro';
+
 const API_URL = "https://extra-earth-production.up.railway.app";
+const pageTitle = "Gestión de Perfiles";
 ---
 
-<Layout title="Gestión de Usuarios" moduloActual="Usuario">
+<Layout title={`${pageTitle} | Sistema Corporativo`} moduloActual="Perfil">
   <div class="page-header">
     <div class="header-title">
-      <h1><i class="fas fa-users"></i> Gestión de Usuarios</h1>
-      <p>Administra los accesos y roles del personal del sistema</p>
+      <h1><i class="fas fa-user-shield"></i> {pageTitle}</h1>
+      <p>Administra los roles y niveles de acceso general del sistema</p>
     </div>
-    <button class="btn-add" id="btnNuevoUsuario" style="display: none;" onclick="abrirModalNuevo()">
-      <i class="fas fa-user-plus"></i> Nuevo Usuario
-    </button>
+    <div id="header-actions"></div> 
   </div>
 
   <div class="card-container">
     <div class="table-toolbar">
       <div class="search-box">
         <i class="fas fa-search search-icon"></i>
-        <input type="text" id="searchInput" placeholder="Buscar por nombre, usuario, correo o perfil...">
+        <input type="text" id="searchInput" placeholder="Buscar por nombre de perfil...">
       </div>
     </div>
 
-    <div class="table-responsive">
-      <table class="crud-table" id="tablaUsuarios">
+    <div id="tableContainer" class="table-responsive">
+      <table class="crud-table">
         <thead>
           <tr>
             <th style="display: none;">ID</th>
-            <th>Foto</th>
-            <th>Usuario</th>
-            <th>Nombre</th>
-            <th>Correo</th>
-            <th>Perfil</th>
-            <th>Estado</th>
+            <th>Nombre del Perfil</th>
+            <th>Administrador Global</th>
             <th>Acciones</th>
           </tr>
         </thead>
         <tbody id="tablaBody">
           <tr>
-            <td colspan="8" class="no-data">
-              <i class="fas fa-spinner fa-spin"></i> Cargando usuarios...
+            <td colspan="4" class="no-data">
+              <i class="fas fa-spinner fa-spin"></i> Cargando perfiles...
             </td>
           </tr>
         </tbody>
       </table>
     </div>
-    
+
     <div id="pagination" class="pagination"></div>
   </div>
 
-  <div id="modalUsuario" class="modal" style="display: none;">
+  <div id="modalFormContainer" class="modal" style="display:none;">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 id="modalTitulo">Nuevo Usuario</h3>
-        <button class="close-btn" onclick="cerrarModal()">&times;</button>
+        <h3 id="modalTitulo">Nuevo Perfil</h3>
+        <button class="close-btn" onclick="window.closeModal()">&times;</button>
       </div>
       
-      <form id="usuarioForm" onsubmit="event.preventDefault(); guardarUsuario();">
-        <input type="hidden" id="usuarioId">
-        
-        <div class="form-grid">
-          <div class="form-group">
-            <label>Usuario *</label>
-            <input type="text" id="username" required maxlength="100" placeholder="Ej. jperez">
-          </div>
-          
-          <div class="form-group">
-            <label>Nombre Completo *</label>
-            <input type="text" id="nombre" required placeholder="Ej. Juan Pérez">
-          </div>
+      <form id="perfilForm" class="modal-form">
+        <input type="hidden" id="perfilId">
+        <div class="form-group">
+          <label for="strNombrePerfil">Nombre del Perfil *</label>
+          <input type="text" id="strNombrePerfil" required maxlength="100" placeholder="Ej. Gerente de Ventas" />
+        </div>
 
-          <div class="form-group">
-            <label>Correo *</label>
-            <input type="email" id="email" required placeholder="correo@empresa.com">
-          </div>
-          
-          <div class="form-group">
-            <label>Teléfono</label>
-            <input type="text" id="strNumeroCelular" placeholder="10 dígitos">
-          </div>
-          
-          <div class="form-group">
-            <label>Perfil</label>
-            <select id="idPerfil">
-              <option value="">Seleccione...</option>
-            </select>
-          </div>
-          
-          <div class="form-group">
-            <label>Estado</label>
-            <select id="idEstadoUsuario">
-              <option value="1">Activo</option>
-              <option value="0">Inactivo</option>
-            </select>
-          </div>
-          
-          <div class="form-group" style="grid-column: span 2;">
-            <label>Contraseña</label>
-            <input type="password" id="password" minlength="6" placeholder="••••••••">
-            <small>Mínimo 6 caracteres. Dejar vacío para no cambiar en edición.</small>
-          </div>
+        <div class="permisos-section-title" style="margin-top: 1rem;"><i class="fas fa-shield-alt"></i> Nivel de Poder</div>
+        <div class="permisos-grid" style="grid-template-columns: 1fr;">
+          <label class="permiso-item permiso-danger">
+            <input type="checkbox" id="bitAdministrador" />
+            <span class="checkmark"></span>
+            ¿Es Administrador? (Acceso total e irrestricto al sistema)
+          </label>
         </div>
-        
-        <div class="form-group imagen-group">
-          <label>Foto de Perfil</label>
-          <div class="imagen-preview" id="imagenPreview">
-            <img id="previewImg" src="#" alt="Vista previa" style="display: none; width: 120px; height: 120px; object-fit: cover; border-radius: 50%;">
-            <div class="preview-placeholder" id="previewPlaceholder">
-              <i class="fas fa-camera"></i>
-            </div>
-          </div>
-          
-          <div class="imagen-input" style="text-align: center;">
-            <input type="file" id="imagenFile" accept="image/jpeg,image/png,image/gif" onchange="previsualizarImagen(event)" style="display: none;">
-            <button type="button" class="btn-secondary btn-upload" onclick="document.getElementById('imagenFile').click()">
-              <i class="fas fa-upload"></i> Seleccionar Imagen
-            </button>
-            <button type="button" class="btn-clear" onclick="limpiarImagen()" style="display: none; background: #fee2e2; color: #ef4444; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; margin-top: 5px; font-weight: 600;" id="btnClearImagen">
-              <i class="fas fa-trash-alt"></i> Quitar
-            </button>
-          </div>
-          <input type="hidden" id="strImagenBase64">
-        </div>
-        
+
         <div class="form-actions">
-          <button type="button" class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
-          <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Guardar Usuario</button>
+          <button type="button" class="btn-secondary" onclick="window.closeModal()">Cancelar</button>
+          <button type="submit" class="btn-primary" id="btnGuardar"><i class="fas fa-save"></i> Guardar</button>
         </div>
       </form>
     </div>
@@ -138,163 +83,73 @@ const API_URL = "https://extra-earth-production.up.railway.app";
 <script>
   import { verificarPermisosModulo } from '../../utils/permisos';
   const API_URL = "https://extra-earth-production.up.railway.app";
+  
+  const { permisos } = verificarPermisosModulo('Perfil');
+  const messageDiv = document.getElementById('message');
+  const perfilForm = document.getElementById('perfilForm');
 
-  const { permisos } = verificarPermisosModulo('Usuario');
-
-  // --- VARIABLES PARA EL MODO ESTÁTICO (Frontend Paginación y Búsqueda) ---
-  let usuariosLocales = []; 
-  let usuariosFiltrados = []; 
+  // --- VARIABLES ESTÁTICAS PARA PAGINACIÓN Y BÚSQUEDA ---
+  let perfilesLocales = []; 
+  let perfilesFiltrados = []; 
   let paginaActual = 1;
-  const limitePorPagina = 5; // Cambia este número si quieres ver más de 5 a la vez
-
-  // ============================================
-  // MOTOR DE COMPRESIÓN EXTREMA DE IMÁGENES
-  // ============================================
-  window.previsualizarImagen = (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    if (!file.type.match('image.*')) {
-      alert('Por favor, seleccione una imagen válida');
-      event.target.value = '';
-      return;
-    }
-
-    if (file.size > 2 * 1024 * 1024) {
-      alert('La imagen es muy pesada. Máximo 2MB.');
-      event.target.value = '';
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.src = e.target.result;
-      
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-        
-        const MAX_SIZE = 200;
-        
-        if (width > height && width > MAX_SIZE) {
-          height = Math.round((height * MAX_SIZE) / width);
-          width = MAX_SIZE;
-        } else if (height > MAX_SIZE) {
-          width = Math.round((width * MAX_SIZE) / height);
-          height = MAX_SIZE;
-        }
-        
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        
-        let compressedBase64 = canvas.toDataURL('image/jpeg', 0.4); // Balance calidad/peso
-        
-        document.getElementById('strImagenBase64').value = compressedBase64;
-        
-        const previewImg = document.getElementById('previewImg');
-        previewImg.src = compressedBase64;
-        previewImg.style.display = 'block';
-        
-        document.getElementById('previewPlaceholder').style.display = 'none';
-        document.getElementById('btnClearImagen').style.display = 'inline-block';
-      };
-    };
-    reader.readAsDataURL(file);
-  };
-
-  window.limpiarImagen = () => {
-    document.getElementById('imagenFile').value = '';
-    document.getElementById('strImagenBase64').value = '';
-    
-    const previewImg = document.getElementById('previewImg');
-    previewImg.style.display = 'none';
-    previewImg.src = '#'; 
-    
-    document.getElementById('previewPlaceholder').style.display = 'flex';
-    document.getElementById('btnClearImagen').style.display = 'none';
-  };
-
-  async function cargarPerfiles() {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${API_URL}/api/perfiles-lista`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const data = await response.json();
-    if (data.success) {
-      const select = document.getElementById('idPerfil');
-      select.innerHTML = '<option value="">Seleccione...</option>' + 
-        data.data.map(p => `<option value="${p.id}">${p.strnombreperfil}</option>`).join('');
-    }
-  }
+  const limitePorPagina = 5;
 
   // ============================================
   // CARGA ESTÁTICA TOTAL Y BÚSQUEDA INSTANTÁNEA
   // ============================================
-  async function cargarTodosLosUsuarios() {
+  async function cargarTodosLosPerfiles() {
     if (!permisos.consulta) {
-      document.getElementById('tablaBody').innerHTML = '<tr><td colspan="8" class="no-data" style="color: #ef4444;">❌ No tienes permisos para consultar información.</td></tr>';
+      document.getElementById('tablaBody').innerHTML = '<tr><td colspan="4" class="no-data" style="color: #ef4444; font-weight: 600;">❌ No tienes permisos para consultar información.</td></tr>';
       return;
     }
-
+    
     try {
       const token = localStorage.getItem('token');
-      // 1. Pedimos la página 1 para saber cuántas páginas hay en total
-      let res = await fetch(`${API_URL}/api/usuarios?page=1`, { headers: { 'Authorization': `Bearer ${token}` } });
+      let res = await fetch(`${API_URL}/api/perfiles?page=1`, { headers: { 'Authorization': `Bearer ${token}` } });
       let data = await res.json();
       
       if (data.success) {
         let totalPages = data.pagination.totalPages;
         let todos = [...data.data];
         
-        // 2. Si hay más páginas, las descargamos todas de golpe en segundo plano
         if (totalPages > 1) {
           let promesas = [];
           for (let i = 2; i <= totalPages; i++) {
-            promesas.push(fetch(`${API_URL}/api/usuarios?page=${i}`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json()));
+            promesas.push(fetch(`${API_URL}/api/perfiles?page=${i}`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json()));
           }
           let extras = await Promise.all(promesas);
           extras.forEach(p => { if (p.success) todos.push(...p.data); });
         }
         
-        // Guardamos todo en memoria
-        usuariosLocales = todos;
-        aplicarFiltroInstantaneo(); // Aplica la búsqueda si hay algo escrito y dibuja la tabla
+        perfilesLocales = todos;
+        aplicarFiltroInstantaneo();
       }
-    } catch (error) {
-      console.error(error);
-      mostrarMensaje('Error de conexión al cargar la tabla', 'error');
-    }
+    } catch (error) { 
+      showMsg('Error al cargar perfiles', 'error'); 
+    } 
   }
 
-  // Se activa cada vez que el usuario presiona una tecla
   function aplicarFiltroInstantaneo() {
     const termino = document.getElementById('searchInput').value.toLowerCase();
     
-    usuariosFiltrados = usuariosLocales.filter(u => 
-      u.nombre.toLowerCase().includes(termino) ||
-      u.username.toLowerCase().includes(termino) ||
-      u.email.toLowerCase().includes(termino) ||
-      (u.strnombreperfil && u.strnombreperfil.toLowerCase().includes(termino))
+    perfilesFiltrados = perfilesLocales.filter(p => 
+      p.strnombreperfil.toLowerCase().includes(termino) ||
+      (termino === 'admin' && p.bitadministrador) ||
+      p.id.toString().includes(termino)
     );
 
-    // Regresamos a la página 1 después de buscar
     paginaActual = 1;
     dibujarVistaEstatica();
   }
 
-  // Dibuja solo los 5 usuarios que corresponden a la página actual en memoria
   function dibujarVistaEstatica() {
     const inicio = (paginaActual - 1) * limitePorPagina;
     const fin = inicio + limitePorPagina;
-    const usuariosPagina = usuariosFiltrados.slice(inicio, fin);
+    const perfilesPagina = perfilesFiltrados.slice(inicio, fin);
     
-    renderizarTablaHTML(usuariosPagina);
+    renderizarTablaHTML(perfilesPagina);
     
-    const totalPaginas = Math.ceil(usuariosFiltrados.length / limitePorPagina);
+    const totalPaginas = Math.ceil(perfilesFiltrados.length / limitePorPagina);
     renderizarPaginacionHTML(totalPaginas);
   }
 
@@ -306,40 +161,29 @@ const API_URL = "https://extra-earth-production.up.railway.app";
   // ============================================
   // RENDERIZADO DE INTERFAZ
   // ============================================
-  function renderizarTablaHTML(usuarios) {
+  function renderizarTablaHTML(perfiles) {
     const tbody = document.getElementById('tablaBody');
-    
-    if (usuarios.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="8" class="no-data"><i class="fas fa-search-minus"></i> No se encontraron usuarios.</td></tr>`;
+    if(!tbody) return;
+
+    if (perfiles.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" class="no-data"><i class="fas fa-search-minus"></i> No se encontraron perfiles.</td></tr>';
       return;
     }
 
-    tbody.innerHTML = usuarios.map(u => `
+    tbody.innerHTML = perfiles.map(p => `
       <tr>
-        <td style="display: none; vertical-align: middle; padding: 1rem 0.5rem; color: #64748b; font-weight: 500;">#${u.id}</td>
+        <td style="display: none;">#${p.id}</td>
         <td style="vertical-align: middle; padding: 1rem 0.5rem;">
-          <div class="avatar-container">
-            <img src="${u.strimagen || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(u.nombre) + '&size=45&background=f1f5f9&color=64748b'}" 
-                 class="avatar-img" 
-                 alt="Avatar"
-                 onerror="this.src='https://ui-avatars.com/api/?name=U&size=45'">
-          </div>
-        </td>
-        <td style="vertical-align: middle; padding: 1rem 0.5rem; font-weight: 600; color: #1e293b;">@${u.username}</td>
-        <td style="vertical-align: middle; padding: 1rem 0.5rem;">${u.nombre}</td>
-        <td style="vertical-align: middle; padding: 1rem 0.5rem; color: #64748b;">${u.email}</td>
-        <td style="vertical-align: middle; padding: 1rem 0.5rem;">
-          <span class="role-badge"><i class="fas fa-shield-alt"></i> ${u.strnombreperfil || 'Sin perfil'}</span>
+          <span class="role-badge"><i class="fas fa-user-shield"></i> ${p.strnombreperfil}</span>
         </td>
         <td style="vertical-align: middle; padding: 1rem 0.5rem;">
-          <span class="status-badge ${u.idestadousuario === 1 ? 'status-active' : 'status-inactive'}">
-            ${u.idestadousuario === 1 ? 'Activo' : 'Inactivo'}
-          </span>
+          ${p.bitadministrador 
+            ? '<span class="status-badge status-active"><i class="fas fa-check"></i> Sí, tiene acceso total</span>' 
+            : '<span class="status-badge" style="background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0;">No</span>'}
         </td>
         <td class="actions-cell" style="vertical-align: middle; padding: 1rem 0.5rem;">
-          ${permisos.detalle ? `<button class="action-btn view" onclick="verDetalle(${u.id})" title="Ver Detalles"><i class="fas fa-eye"></i></button>` : ''}
-          ${permisos.editar ? `<button class="action-btn edit" onclick="editarUsuario(${u.id})" title="Editar"><i class="fas fa-edit"></i></button>` : ''}
-          ${permisos.eliminar ? `<button class="action-btn delete" onclick="eliminarUsuario(${u.id})" title="Eliminar"><i class="fas fa-trash"></i></button>` : ''}
+          ${permisos.editar ? `<button onclick="window.prepararEdicion(${p.id}, '${p.strnombreperfil}', ${p.bitadministrador})" class="action-btn edit" title="Editar"><i class="fas fa-edit"></i></button>` : ''}
+          ${permisos.eliminar ? `<button onclick="window.eliminarPerfil(${p.id})" class="action-btn delete" title="Eliminar"><i class="fas fa-trash"></i></button>` : ''}
         </td>
       </tr>
     `).join('');
@@ -347,6 +191,7 @@ const API_URL = "https://extra-earth-production.up.railway.app";
 
   function renderizarPaginacionHTML(totalPages) {
     const div = document.getElementById('pagination');
+    if (!div) return;
     if (totalPages <= 1) { div.innerHTML = ''; return; }
     
     let html = '';
@@ -359,124 +204,126 @@ const API_URL = "https://extra-earth-production.up.railway.app";
   // ============================================
   // FUNCIONES DE MODAL Y CRUD
   // ============================================
-  window.abrirModalNuevo = () => {
-    document.getElementById('modalTitulo').textContent = 'Nuevo Usuario';
-    document.getElementById('usuarioForm').reset();
-    document.getElementById('usuarioId').value = '';
-    document.getElementById('password').required = true;
-    limpiarImagen();
-    document.getElementById('modalUsuario').style.display = 'flex';
+  window.closeModal = () => {
+    const modal = document.getElementById('modalFormContainer');
+    if(modal) modal.style.display = 'none';
+    if(perfilForm) (perfilForm as HTMLFormElement).reset();
   };
 
-  window.cerrarModal = () => { document.getElementById('modalUsuario').style.display = 'none'; };
-
-  window.verDetalle = async (id) => {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${API_URL}/api/usuarios/${id}`, { headers: { 'Authorization': `Bearer ${token}` } });
-    const data = await response.json();
-    if (data.success) {
-      const u = data.data;
-      alert(`Información de Sistema:\n\nUsuario: ${u.username}\nNombre: ${u.nombre}\nEmail: ${u.email}\nTeléfono: ${u.strnumerocelular || 'N/A'}\nEstado: ${u.idestadousuario === 1 ? 'Activo' : 'Inactivo'}`);
-    }
+  window.agregarNuevo = () => {
+    (document.getElementById('perfilId') as HTMLInputElement).value = '';
+    document.getElementById('modalTitulo').textContent = 'Nuevo Perfil';
+    document.getElementById('btnGuardar').innerHTML = '<i class="fas fa-save"></i> Guardar';
+    const modal = document.getElementById('modalFormContainer');
+    if(modal) modal.style.display = 'flex';
   };
 
-  window.editarUsuario = async (id) => {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${API_URL}/api/usuarios/${id}`, { headers: { 'Authorization': `Bearer ${token}` } });
-    const data = await response.json();
-    if (data.success) {
-      const u = data.data;
-      document.getElementById('modalTitulo').textContent = 'Editar Usuario';
-      document.getElementById('usuarioId').value = u.id;
-      document.getElementById('username').value = u.username;
-      document.getElementById('nombre').value = u.nombre;
-      document.getElementById('email').value = u.email;
-      document.getElementById('strNumeroCelular').value = u.strnumerocelular || '';
-      document.getElementById('idPerfil').value = u.idperfil || '';
-      document.getElementById('idEstadoUsuario').value = u.idestadousuario;
-      document.getElementById('password').required = false;
-      document.getElementById('password').value = '';
-      
-      if (u.strimagen) {
-        document.getElementById('strImagenBase64').value = u.strimagen;
-        const img = document.getElementById('previewImg');
-        img.src = u.strimagen;
-        img.style.display = 'block';
-        document.getElementById('previewPlaceholder').style.display = 'none';
-        document.getElementById('btnClearImagen').style.display = 'inline-block';
-      } else {
-        limpiarImagen();
-      }
-      document.getElementById('modalUsuario').style.display = 'flex';
-    }
+  window.prepararEdicion = (id, nombre, isAdmin) => {
+    (document.getElementById('perfilId') as HTMLInputElement).value = id;
+    (document.getElementById('strNombrePerfil') as HTMLInputElement).value = nombre;
+    (document.getElementById('bitAdministrador') as HTMLInputElement).checked = isAdmin;
+    document.getElementById('modalTitulo').textContent = 'Editar Perfil';
+    document.getElementById('btnGuardar').innerHTML = '<i class="fas fa-save"></i> Actualizar';
+    const modal = document.getElementById('modalFormContainer');
+    if(modal) modal.style.display = 'flex';
   };
 
-  window.guardarUsuario = async () => {
-    const id = document.getElementById('usuarioId').value;
-    const password = document.getElementById('password').value;
+  perfilForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btnGuardar = document.getElementById('btnGuardar') as HTMLButtonElement;
     
+    const id = (document.getElementById('perfilId') as HTMLInputElement).value;
+    const nombreVal = (document.getElementById('strNombrePerfil') as HTMLInputElement).value.trim();
+    const isAdmin = (document.getElementById('bitAdministrador') as HTMLInputElement).checked;
+
     const body = {
-      username: document.getElementById('username').value,
-      nombre: document.getElementById('nombre').value,
-      email: document.getElementById('email').value,
-      idPerfil: document.getElementById('idPerfil').value || null,
-      idEstadoUsuario: parseInt(document.getElementById('idEstadoUsuario').value),
-      strNumeroCelular: document.getElementById('strNumeroCelular').value || null,
-      strImagenBase64: document.getElementById('strImagenBase64').value || null
+      strNombrePerfil: nombreVal,
+      strnombreperfil: nombreVal,
+      bitAdministrador: isAdmin,
+      bitadministrador: isAdmin
     };
 
-    if (password) body.password = password;
-
     const token = localStorage.getItem('token');
-    const response = await fetch(id ? `${API_URL}/api/usuarios/${id}` : `${API_URL}/api/usuarios`, {
-      method: id ? 'PUT' : 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify(body)
-    });
+    const method = id ? 'PUT' : 'POST';
+    const url = id ? `${API_URL}/api/perfiles/${id}` : `${API_URL}/api/perfiles`;
 
-    const data = await response.json();
-    if (data.success) {
-      cerrarModal();
-      mostrarMensaje(id ? 'Usuario actualizado exitosamente' : 'Usuario creado exitosamente', 'success');
-      cargarTodosLosUsuarios(); // Recargamos para traer los datos frescos
-    } else {
-      mostrarMensaje(data.message || 'Error al guardar usuario', 'error');
+    btnGuardar.disabled = true;
+    btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(body)
+      });
+
+      if (!res.ok) {
+        showMsg('Error en BD. Revisa la consola F12', 'error');
+        btnGuardar.disabled = false;
+        btnGuardar.innerHTML = id ? '<i class="fas fa-save"></i> Actualizar' : '<i class="fas fa-save"></i> Guardar';
+        return;
+      }
+
+      const data = await res.json();
+      if (data.success) {
+        showMsg(id ? 'Actualizado correctamente' : 'Creado correctamente', 'success');
+        window.closeModal();
+        cargarTodosLosPerfiles(); // Recargamos toda la data
+      } else {
+        showMsg(data.message || 'Error al guardar', 'error');
+      }
+    } catch (err) {
+      showMsg('Error de conexión', 'error');
+    } finally {
+        btnGuardar.disabled = false;
+        btnGuardar.innerHTML = id ? '<i class="fas fa-save"></i> Actualizar' : '<i class="fas fa-save"></i> Guardar';
+    }
+  });
+
+  window.eliminarPerfil = async (id) => {
+    if (!confirm('¿Desea eliminar este perfil de forma permanente?')) return;
+    const token = localStorage.getItem('token');
+    
+    try {
+      const res = await fetch(`${API_URL}/api/perfiles/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        showMsg('Perfil eliminado', 'success');
+        cargarTodosLosPerfiles();
+      } else {
+        showMsg(data.message || 'Error al eliminar', 'error');
+      }
+    } catch (err) {
+      showMsg('Error de conexión', 'error');
     }
   };
 
-  window.eliminarUsuario = async (id) => {
-    if (!confirm('¿Está seguro de eliminar permanentemente este usuario?')) return;
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${API_URL}/api/usuarios/${id}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const data = await response.json();
-    if (data.success) {
-      mostrarMensaje('Usuario eliminado', 'success');
-      cargarTodosLosUsuarios();
-    }
-  };
-
-  function mostrarMensaje(texto, tipo) {
-    const msj = document.getElementById('message');
-    msj.textContent = texto;
-    msj.className = `status-message msg-${tipo}`;
-    msj.style.display = 'block';
-    setTimeout(() => { msj.style.display = 'none'; }, 3000);
+  function showMsg(text, type) {
+    if(!messageDiv) return;
+    messageDiv.style.display = 'block';
+    messageDiv.className = `status-message msg-${type}`;
+    messageDiv.textContent = text;
+    setTimeout(() => { if(messageDiv) messageDiv.style.display = 'none'; }, 3000);
   }
 
   // ============================================
   // EVENTOS INICIALES
   // ============================================
   document.addEventListener('DOMContentLoaded', () => {
-    if (permisos.agregar) document.getElementById('btnNuevoUsuario').style.display = 'flex';
+    if (permisos.agregar) {
+      const btn = document.createElement('button');
+      btn.className = 'btn-add';
+      btn.innerHTML = '<i class="fas fa-plus"></i> Nuevo Perfil';
+      btn.onclick = window.agregarNuevo;
+      document.getElementById('header-actions')?.appendChild(btn);
+    }
     
-    // Escuchador de la barra de búsqueda (El Fech instantáneo estático)
     document.getElementById('searchInput').addEventListener('input', aplicarFiltroInstantaneo);
     
-    cargarPerfiles();
-    cargarTodosLosUsuarios();
+    cargarTodosLosPerfiles();
   });
 </script>
 
@@ -500,27 +347,20 @@ const API_URL = "https://extra-earth-production.up.railway.app";
 
   /* --- TABLA --- */
   .table-responsive { overflow-x: auto; }
-  .crud-table { width: 100%; border-collapse: collapse; min-width: 800px; }
+  .crud-table { width: 100%; border-collapse: collapse; min-width: 600px; }
   .crud-table th { text-align: left; padding: 1rem 0.5rem; color: #475569; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0; background: white; }
   .crud-table tbody tr { transition: background-color 0.2s; border-bottom: 1px solid #f1f5f9; }
   .crud-table tbody tr:hover { background-color: #f8fafc; }
   .no-data { text-align: center; color: #94a3b8; padding: 3rem !important; font-size: 1.1rem; }
 
   /* --- ESTILOS VISUALES CELDAS --- */
-  .avatar-container { width: 45px; height: 45px; border-radius: 50%; overflow: hidden; background: #f1f5f9; border: 2px solid #e2e8f0; display: flex; align-items: center; justify-content: center; }
-  .avatar-img { width: 100%; height: 100%; object-fit: cover; }
-  
-  .role-badge { display: inline-flex; align-items: center; gap: 5px; background: #f1f5f9; color: #475569; padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600; border: 1px solid #e2e8f0; }
-  
+  .role-badge { display: inline-flex; align-items: center; gap: 5px; background: #f1f5f9; color: #1e293b; padding: 0.4rem 0.8rem; border-radius: 20px; font-size: 0.9rem; font-weight: 600; border: 1px solid #e2e8f0; }
   .status-badge { padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.8rem; font-weight: 700; display: inline-block; }
   .status-active { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
-  .status-inactive { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
 
   /* --- BOTONES DE ACCIÓN --- */
-  .actions-cell { display: flex; gap: 8px; }
+  .actions-cell { display: flex; gap: 8px; justify-content: flex-start; }
   .action-btn { width: 35px; height: 35px; border-radius: 8px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; font-size: 1rem; }
-  .action-btn.view { background: #eff6ff; color: #3b82f6; }
-  .action-btn.view:hover { background: #3b82f6; color: white; }
   .action-btn.edit { background: #fef3c7; color: #d97706; }
   .action-btn.edit:hover { background: #f59e0b; color: white; }
   .action-btn.delete { background: #fef2f2; color: #ef4444; }
@@ -532,25 +372,32 @@ const API_URL = "https://extra-earth-production.up.railway.app";
   .page-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
   .page-btn.active { background: #2563eb; color: white; border-color: #2563eb; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2); }
 
-  /* --- MODAL FORMULARIO --- */
+  /* --- MODAL FORMULARIO Y CHECKBOXES MODERNOS --- */
   .modal { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
-  .modal-content { background: white; padding: 2rem; border-radius: 16px; width: 100%; max-width: 650px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
+  .modal-content { background: white; padding: 2rem; border-radius: 16px; width: 100%; max-width: 500px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
   .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 1rem; }
   .modal-header h3 { margin: 0; color: #0f172a; font-size: 1.4rem; }
   .close-btn { background: #f1f5f9; border: none; width: 35px; height: 35px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; color: #64748b; transition: all 0.2s; }
   .close-btn:hover { background: #fee2e2; color: #ef4444; }
   
-  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
-  .form-group { display: flex; flex-direction: column; }
+  .form-group { display: flex; flex-direction: column; margin-bottom: 1rem;}
   .form-group label { font-weight: 600; margin-bottom: 0.5rem; color: #475569; font-size: 0.9rem; }
-  .form-group input, .form-group select { padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.95rem; transition: border-color 0.2s; }
-  .form-group input:focus, .form-group select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
-  
-  .imagen-preview { width: 120px; height: 120px; border-radius: 50%; overflow: hidden; background: #f8fafc; margin: 1rem auto; border: 3px dashed #cbd5e1; display: flex; align-items: center; justify-content: center; }
-  .preview-placeholder { font-size: 2.5rem; color: #94a3b8; }
-  .btn-upload { padding: 8px 12px; font-size: 0.9rem; margin-top: 5px; }
+  .form-group input[type="text"] { padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.95rem; transition: border-color 0.2s; }
+  .form-group input[type="text"]:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
 
-  .form-actions { display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem; border-top: 2px solid #f1f5f9; padding-top: 1.5rem; }
+  .permisos-section-title { font-weight: 700; color: #334155; font-size: 1.1rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #e2e8f0; }
+  .permisos-grid { display: grid; background: #f8fafc; padding: 1.5rem; border-radius: 12px; border: 1px solid #e2e8f0; }
+  
+  /* Custom Checkbox */
+  .permiso-item { display: flex; align-items: center; position: relative; padding-left: 30px; cursor: pointer; font-size: 0.95rem; font-weight: 600; color: #ef4444; user-select: none; }
+  .permiso-item input { position: absolute; opacity: 0; cursor: pointer; height: 0; width: 0; }
+  .checkmark { position: absolute; top: 0; left: 0; height: 20px; width: 20px; background-color: white; border: 2px solid #cbd5e1; border-radius: 6px; transition: all 0.2s; }
+  .permiso-item:hover input ~ .checkmark { border-color: #ef4444; }
+  .permiso-danger input:checked ~ .checkmark { background-color: #ef4444; border-color: #ef4444; }
+  .checkmark:after { content: ""; position: absolute; display: none; left: 6px; top: 2px; width: 5px; height: 10px; border: solid white; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  .permiso-item input:checked ~ .checkmark:after { display: block; }
+
+  .form-actions { display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem; border-top: 2px solid #f1f5f9; padding-top: 1.5rem;}
   .btn-primary { background: #10b981; color: white; border: none; padding: 0.8rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: background 0.2s; }
   .btn-primary:hover { background: #059669; }
   .btn-secondary { background: #f1f5f9; color: #475569; border: none; padding: 0.8rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 600; }

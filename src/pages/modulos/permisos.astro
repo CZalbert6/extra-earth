@@ -9,7 +9,7 @@ const pageTitle = "Gestión de Permisos por Perfil";
   <div class="page-header">
     <div class="header-title">
       <h1><i class="fas fa-key"></i> {pageTitle}</h1>
-      <p>Configura el nivel de acceso de cada perfil a los diferentes módulos</p>
+      <p>Configura el acceso masivo de perfiles a los módulos del sistema</p>
     </div>
     <button class="btn-add" id="btnNuevoPermiso" style="display: none;" onclick="abrirModalNuevo()">
       <i class="fas fa-shield-alt"></i> Asignar Permisos
@@ -58,89 +58,73 @@ const pageTitle = "Gestión de Permisos por Perfil";
   <div id="modalPermiso" class="modal" style="display: none;">
     <div class="modal-content modal-lg">
       <div class="modal-header">
-        <h3 id="modalTitulo">Nuevo Permiso</h3>
+        <h3 id="modalTitulo">Nueva Asignación de Permisos</h3>
         <button class="close-btn" onclick="cerrarModal()">&times;</button>
       </div>
       
       <form id="permisoForm" onsubmit="event.preventDefault(); guardarPermiso();">
         <input type="hidden" id="permisoId">
         
-        <div class="form-grid">
-          <div class="form-group">
-            <label>Módulo *</label>
-            <div class="select-wrapper">
-              <select id="idModulo" required>
-                <option value="">Seleccione módulo...</option>
-              </select>
-              <i class="fas fa-chevron-down select-icon"></i>
-            </div>
-          </div>
-          
-          <div class="form-group">
-            <label>Perfil *</label>
-            <div class="select-wrapper">
-              <select id="idPerfil" required>
-                <option value="">Seleccione perfil...</option>
-              </select>
-              <i class="fas fa-chevron-down select-icon"></i>
-            </div>
+        <div class="form-group" style="margin-bottom: 1.5rem;">
+          <label>1. Selecciona el Perfil *</label>
+          <div class="select-wrapper">
+            <select id="idPerfil" required>
+              <option value="">Seleccione perfil...</option>
+            </select>
+            <i class="fas fa-chevron-down select-icon"></i>
           </div>
         </div>
 
-        <div class="permisos-section-title">
-          <i class="fas fa-sliders-h"></i> Nivel de Acceso y Privilegios
+        <div id="seccionModulos">
+          <label style="font-weight: 700; color: #334155; font-size: 0.9rem; text-transform: uppercase; display: block; margin-bottom: 0.5rem;">
+            2. Selecciona los Módulos *
+          </label>
+          <div id="modulosContainer" class="modulos-selector-grid">
+             </div>
+        </div>
+
+        <div id="seccionModuloUnico" style="display: none;" class="form-group">
+           <label>Módulo *</label>
+           <div class="select-wrapper">
+             <select id="idModulo">
+               <option value="">Seleccione módulo...</option>
+             </select>
+             <i class="fas fa-chevron-down select-icon"></i>
+           </div>
+        </div>
+
+        <div class="permisos-section-title" style="margin-top: 1.5rem;">
+          <i class="fas fa-sliders-h"></i> 3. Nivel de Acceso y Privilegios
         </div>
         
         <div class="permisos-grid">
           <label class="permiso-item">
-            <input type="checkbox" id="bitConsulta"> 
-            <span class="checkmark check-blue"></span> 
-            <div class="permiso-text">
-              <span class="p-title">Consultar</span>
-              <span class="p-desc">Ver listas de datos</span>
-            </div>
+            <input type="checkbox" id="bitConsulta"> <span class="checkmark check-blue"></span> 
+            <div class="permiso-text"><span class="p-title">Consultar</span></div>
           </label>
-          
           <label class="permiso-item">
-            <input type="checkbox" id="bitAgregar"> 
-            <span class="checkmark check-green"></span> 
-            <div class="permiso-text">
-              <span class="p-title">Agregar</span>
-              <span class="p-desc">Crear nuevos registros</span>
-            </div>
+            <input type="checkbox" id="bitAgregar"> <span class="checkmark check-green"></span> 
+            <div class="permiso-text"><span class="p-title">Agregar</span></div>
           </label>
-          
           <label class="permiso-item">
-            <input type="checkbox" id="bitEditar"> 
-            <span class="checkmark check-yellow"></span> 
-            <div class="permiso-text">
-              <span class="p-title">Editar</span>
-              <span class="p-desc">Modificar existentes</span>
-            </div>
+            <input type="checkbox" id="bitEditar"> <span class="checkmark check-yellow"></span> 
+            <div class="permiso-text"><span class="p-title">Editar</span></div>
           </label>
-          
           <label class="permiso-item">
-            <input type="checkbox" id="bitDetalle"> 
-            <span class="checkmark check-purple"></span> 
-            <div class="permiso-text">
-              <span class="p-title">Ver Detalle</span>
-              <span class="p-desc">Información completa</span>
-            </div>
+            <input type="checkbox" id="bitDetalle"> <span class="checkmark check-purple"></span> 
+            <div class="permiso-text"><span class="p-title">Detalle</span></div>
           </label>
-          
-          <label class="permiso-item permiso-danger">
-            <input type="checkbox" id="bitEliminar"> 
-            <span class="checkmark check-red"></span> 
-            <div class="permiso-text">
-              <span class="p-title">Eliminar</span>
-              <span class="p-desc">Borrar del sistema</span>
-            </div>
+          <label class="permiso-item">
+            <input type="checkbox" id="bitEliminar"> <span class="checkmark check-red"></span> 
+            <div class="permiso-text"><span class="p-title">Eliminar</span></div>
           </label>
         </div>
         
         <div class="form-actions">
           <button type="button" class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
-          <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Guardar Permisos</button>
+          <button type="submit" class="btn-primary" id="btnGuardar">
+            <i class="fas fa-save"></i> <span id="textBtnGuardar">Guardar Cambios</span>
+          </button>
         </div>
       </form>
     </div>
@@ -152,10 +136,8 @@ const pageTitle = "Gestión de Permisos por Perfil";
 <script>
   import { verificarPermisosModulo } from '../../utils/permisos';
   const API_URL = "https://extra-earth-production.up.railway.app";
-
   const { permisos } = verificarPermisosModulo('Permisos-Perfil');
 
-  // --- VARIABLES ESTÁTICAS PARA PAGINACIÓN Y BÚSQUEDA ---
   let permisosLocales = []; 
   let permisosFiltrados = []; 
   let paginaActual = 1;
@@ -173,8 +155,20 @@ const pageTitle = "Gestión de Permisos por Perfil";
       const perfilesData = await perfilesRes.json();
       
       if (modulosData.success) {
+        // Llenar select para edición
         document.getElementById('idModulo').innerHTML = '<option value="">Seleccione módulo...</option>' + 
           modulosData.data.map(m => `<option value="${m.id}">${m.strnombremodulo}</option>`).join('');
+        
+        // Llenar grid de checkboxes para nueva asignación
+        document.getElementById('modulosContainer').innerHTML = modulosData.data.map(m => `
+          <label class="modulo-check-card">
+            <input type="checkbox" name="moduloBatch" value="${m.id}">
+            <div class="check-content">
+               <i class="fas fa-cube"></i>
+               <span>${m.strnombremodulo}</span>
+            </div>
+          </label>
+        `).join('');
       }
       
       if (perfilesData.success) {
@@ -184,24 +178,18 @@ const pageTitle = "Gestión de Permisos por Perfil";
     } catch (error) { console.error('Error cargando selects:', error); }
   }
 
-  // ============================================
-  // CARGA ESTÁTICA TOTAL Y BÚSQUEDA INSTANTÁNEA
-  // ============================================
   async function cargarTodosLosPermisos() {
     if (!permisos.consulta) {
-      document.getElementById('tablaBody').innerHTML = '<tr><td colspan="9" class="no-data" style="color: #ef4444; font-weight: 600;">❌ No tienes permisos para consultar información.</td></tr>';
+      document.getElementById('tablaBody').innerHTML = '<tr><td colspan="9" class="no-data" style="color: #ef4444; font-weight: 600;">❌ Sin permisos.</td></tr>';
       return;
     }
-    
     try {
       const token = localStorage.getItem('token');
       let res = await fetch(`${API_URL}/api/permisos-perfil?page=1`, { headers: { 'Authorization': `Bearer ${token}` } });
       let data = await res.json();
-      
       if (data.success) {
         let totalPages = data.pagination.totalPages;
         let todos = [...data.data];
-        
         if (totalPages > 1) {
           let promesas = [];
           for (let i = 2; i <= totalPages; i++) {
@@ -210,23 +198,18 @@ const pageTitle = "Gestión de Permisos por Perfil";
           let extras = await Promise.all(promesas);
           extras.forEach(p => { if (p.success) todos.push(...p.data); });
         }
-        
         permisosLocales = todos;
         aplicarFiltroInstantaneo();
       }
-    } catch (error) { 
-      mostrarMensaje('Error al cargar permisos', 'error'); 
-    } 
+    } catch (error) { mostrarMensaje('Error al cargar datos', 'error'); } 
   }
 
   function aplicarFiltroInstantaneo() {
     const termino = document.getElementById('searchInput').value.toLowerCase();
-    
     permisosFiltrados = permisosLocales.filter(p => 
       p.strnombremodulo.toLowerCase().includes(termino) ||
       p.strnombreperfil.toLowerCase().includes(termino)
     );
-
     paginaActual = 1;
     dibujarVistaEstatica();
   }
@@ -234,81 +217,63 @@ const pageTitle = "Gestión de Permisos por Perfil";
   function dibujarVistaEstatica() {
     const inicio = (paginaActual - 1) * limitePorPagina;
     const fin = inicio + limitePorPagina;
-    const permisosPagina = permisosFiltrados.slice(inicio, fin);
-    
-    renderizarTablaHTML(permisosPagina);
-    
-    const totalPaginas = Math.ceil(permisosFiltrados.length / limitePorPagina);
-    renderizarPaginacionHTML(totalPaginas);
+    renderizarTablaHTML(permisosFiltrados.slice(inicio, fin));
+    renderizarPaginacionHTML(Math.ceil(permisosFiltrados.length / limitePorPagina));
   }
 
-  window.cambiarPagina = (numPagina) => {
-    paginaActual = numPagina;
-    dibujarVistaEstatica();
-  };
-
-  // ============================================
-  // RENDERIZADO DE INTERFAZ
-  // ============================================
-  function renderizarTablaHTML(listaPermisos) {
-    const tbody = document.getElementById('tablaBody');
-    if (!tbody) return;
+  // --- PAGINACIÓN INTELIGENTE (MAX 5 BOTONES) ---
+  function renderizarPaginacionHTML(total) {
+    const div = document.getElementById('pagination');
+    if (total <= 1) { div.innerHTML = ''; return; }
     
-    if (listaPermisos.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="9" class="no-data"><i class="fas fa-folder-open" style="font-size: 2rem; display:block; margin-bottom:10px;"></i> No se encontraron permisos.</td></tr>';
+    let html = '';
+    let start = Math.max(1, paginaActual - 2);
+    let end = Math.min(total, start + 4);
+    if (end - start < 4) start = Math.max(1, end - 4);
+
+    if (paginaActual > 1) html += `<button class="page-btn" onclick="window.cambiarPagina(${paginaActual-1})"><i class="fas fa-chevron-left"></i></button>`;
+    for (let i = start; i <= end; i++) {
+      html += `<button class="page-btn ${i === paginaActual ? 'active' : ''}" onclick="window.cambiarPagina(${i})">${i}</button>`;
+    }
+    if (paginaActual < total) html += `<button class="page-btn" onclick="window.cambiarPagina(${paginaActual+1})"><i class="fas fa-chevron-right"></i></button>`;
+    div.innerHTML = html;
+  }
+
+  window.cambiarPagina = (num) => { paginaActual = num; dibujarVistaEstatica(); };
+
+  function renderizarTablaHTML(lista) {
+    const tbody = document.getElementById('tablaBody');
+    if (lista.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="9" class="no-data">No se encontraron registros.</td></tr>';
       return;
     }
-    
     const iconCheck = '<div class="check-badge true"><i class="fas fa-check"></i></div>';
     const iconCross = '<div class="check-badge false"><i class="fas fa-times"></i></div>';
-
-    tbody.innerHTML = listaPermisos.map(p => `
+    tbody.innerHTML = lista.map(p => `
       <tr>
-        <td style="vertical-align: middle; color: #64748b; font-weight: 600;">#${p.id}</td>
-        <td style="vertical-align: middle; font-weight: 700; color: #1e293b;">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <div style="width:30px; height:30px; border-radius:6px; background:#eff6ff; display:flex; align-items:center; justify-content:center; color:#3b82f6;">
-              <i class="fas fa-box"></i>
-            </div>
-            ${p.strnombremodulo}
-          </div>
-        </td>
-        <td style="vertical-align: middle;">
-          <span class="role-badge"><i class="fas fa-id-badge"></i> ${p.strnombreperfil}</span>
-        </td>
-        <td class="text-center" style="vertical-align: middle;">${p.bitconsulta ? iconCheck : iconCross}</td>
-        <td class="text-center" style="vertical-align: middle;">${p.bitagregar ? iconCheck : iconCross}</td>
-        <td class="text-center" style="vertical-align: middle;">${p.biteditar ? iconCheck : iconCross}</td>
-        <td class="text-center" style="vertical-align: middle;">${p.bitdetalle ? iconCheck : iconCross}</td>
-        <td class="text-center" style="vertical-align: middle;">${p.biteliminar ? iconCheck : iconCross}</td>
-        <td class="actions-cell" style="vertical-align: middle;">
-          ${permisos.detalle ? `<button class="action-btn view" onclick="verDetalle(${p.id})" title="Ver Detalles"><i class="fas fa-list-ul"></i></button>` : ''}
-          ${permisos.editar ? `<button class="action-btn edit" onclick="editarPermiso(${p.id})" title="Editar"><i class="fas fa-pen"></i></button>` : ''}
-          ${permisos.eliminar ? `<button class="action-btn delete" onclick="eliminarPermiso(${p.id})" title="Eliminar"><i class="fas fa-trash-alt"></i></button>` : ''}
+        <td>#${p.id}</td>
+        <td style="font-weight:700;">${p.strnombremodulo}</td>
+        <td><span class="role-badge">${p.strnombreperfil}</span></td>
+        <td class="text-center">${p.bitconsulta ? iconCheck : iconCross}</td>
+        <td class="text-center">${p.bitagregar ? iconCheck : iconCross}</td>
+        <td class="text-center">${p.biteditar ? iconCheck : iconCross}</td>
+        <td class="text-center">${p.bitdetalle ? iconCheck : iconCross}</td>
+        <td class="text-center">${p.biteliminar ? iconCheck : iconCross}</td>
+        <td class="actions-cell">
+          ${permisos.editar ? `<button class="action-btn edit" onclick="editarPermiso(${p.id})"><i class="fas fa-pen"></i></button>` : ''}
+          ${permisos.eliminar ? `<button class="action-btn delete" onclick="eliminarPermiso(${p.id})"><i class="fas fa-trash-alt"></i></button>` : ''}
         </td>
       </tr>
     `).join('');
   }
 
-  function renderizarPaginacionHTML(totalPages) {
-    const div = document.getElementById('pagination');
-    if (totalPages <= 1) { div.innerHTML = ''; return; }
-    
-    let html = '';
-    for (let i = 1; i <= totalPages; i++) {
-      html += `<button class="page-btn ${i === paginaActual ? 'active' : ''}" onclick="window.cambiarPagina(${i})">${i}</button>`;
-    }
-    div.innerHTML = html;
-  }
-
-  // ============================================
-  // FUNCIONES DE MODAL Y CRUD
-  // ============================================
+  // --- CRUD FUNCTIONS ---
   window.abrirModalNuevo = () => {
-    document.getElementById('modalTitulo').textContent = 'Configurar Permisos';
-    const form = document.getElementById('permisoForm') as HTMLFormElement;
-    if(form) form.reset();
+    document.getElementById('modalTitulo').textContent = 'Asignación Masiva de Permisos';
     document.getElementById('permisoId').value = '';
+    document.getElementById('seccionModulos').style.display = 'block';
+    document.getElementById('seccionModuloUnico').style.display = 'none';
+    (document.getElementById('permisoForm') as HTMLFormElement).reset();
     document.getElementById('modalPermiso').style.display = 'flex';
   };
 
@@ -320,8 +285,11 @@ const pageTitle = "Gestión de Permisos por Perfil";
     const data = await res.json();
     if (data.success) {
       const p = data.data;
-      document.getElementById('modalTitulo').textContent = 'Modificar Permisos';
-      (document.getElementById('permisoId') as HTMLInputElement).value = p.id;
+      document.getElementById('modalTitulo').textContent = 'Editar Permiso Individual';
+      document.getElementById('permisoId').value = p.id;
+      document.getElementById('seccionModulos').style.display = 'none';
+      document.getElementById('seccionModuloUnico').style.display = 'block';
+      
       (document.getElementById('idModulo') as HTMLSelectElement).value = p.idmodulo;
       (document.getElementById('idPerfil') as HTMLSelectElement).value = p.idperfil;
       (document.getElementById('bitAgregar') as HTMLInputElement).checked = p.bitagregar;
@@ -333,56 +301,63 @@ const pageTitle = "Gestión de Permisos por Perfil";
     }
   };
 
-  window.verDetalle = async (id) => {
-    const token = localStorage.getItem('token');
-    const res = await fetch(`${API_URL}/api/permisos-perfil/${id}`, { headers: { 'Authorization': `Bearer ${token}` } });
-    const data = await res.json();
-    if (data.success) {
-      const p = data.data;
-      alert(`Matriz de Acceso:\n\nMódulo: ${p.strnombremodulo}\nPerfil: ${p.strnombreperfil}\n\nPermisos Otorgados:\n- Consultar: ${p.bitconsulta ? 'SÍ':'NO'}\n- Agregar: ${p.bitagregar ? 'SÍ':'NO'}\n- Editar: ${p.biteditar ? 'SÍ':'NO'}\n- Detalle: ${p.bitdetalle ? 'SÍ':'NO'}\n- Eliminar: ${p.biteliminar ? 'SÍ':'NO'}`);
-    }
-  };
-
   window.guardarPermiso = async () => {
     const id = (document.getElementById('permisoId') as HTMLInputElement).value;
-    const permisoData = {
-      idModulo: parseInt((document.getElementById('idModulo') as HTMLSelectElement).value),
-      idPerfil: parseInt((document.getElementById('idPerfil') as HTMLSelectElement).value),
+    const token = localStorage.getItem('token');
+    const btn = document.getElementById('btnGuardar');
+    const text = document.getElementById('textBtnGuardar');
+    
+    const bitValues = {
       bitAgregar: (document.getElementById('bitAgregar') as HTMLInputElement).checked,
       bitEditar: (document.getElementById('bitEditar') as HTMLInputElement).checked,
       bitConsulta: (document.getElementById('bitConsulta') as HTMLInputElement).checked,
       bitEliminar: (document.getElementById('bitEliminar') as HTMLInputElement).checked,
       bitDetalle: (document.getElementById('bitDetalle') as HTMLInputElement).checked
     };
-    
-    const token = localStorage.getItem('token');
-    const response = await fetch(id ? `${API_URL}/api/permisos-perfil/${id}` : `${API_URL}/api/permisos-perfil`, {
-      method: id ? 'PUT' : 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify(permisoData)
-    });
-    
-    const data = await response.json();
-    if (data.success) {
-      mostrarMensaje(id ? 'Permisos actualizados' : 'Permisos creados', 'success');
+
+    btn.disabled = true;
+    text.textContent = "Guardando...";
+
+    try {
+      if (id) {
+        // EDICIÓN ÚNICA
+        const body = { ...bitValues, idModulo: parseInt((document.getElementById('idModulo') as HTMLSelectElement).value), idPerfil: parseInt((document.getElementById('idPerfil') as HTMLSelectElement).value) };
+        await fetch(`${API_URL}/api/permisos-perfil/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify(body)
+        });
+      } else {
+        // ASIGNACIÓN MASIVA (Promesas en paralelo)
+        const idPerfil = parseInt((document.getElementById('idPerfil') as HTMLSelectElement).value);
+        const checkboxes = document.querySelectorAll('input[name="moduloBatch"]:checked');
+        if (checkboxes.length === 0) throw new Error("Selecciona al menos un módulo");
+
+        const promesas = Array.from(checkboxes).map(cb => {
+          return fetch(`${API_URL}/api/permisos-perfil`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ ...bitValues, idPerfil, idModulo: parseInt((cb as HTMLInputElement).value) })
+          });
+        });
+        await Promise.all(promesas);
+      }
+      mostrarMensaje('Permisos guardados correctamente', 'success');
       cerrarModal();
-      cargarTodosLosPermisos();
-    } else {
-      mostrarMensaje(data.message || 'Error al guardar', 'error');
+      await cargarTodosLosPermisos();
+    } catch (err) {
+      mostrarMensaje(err.message || 'Error al guardar', 'error');
+    } finally {
+      btn.disabled = false;
+      text.textContent = "Guardar Cambios";
     }
   };
 
   window.eliminarPermiso = async (id) => {
-    if (!confirm('¿Revocar completamente el acceso a este módulo para este perfil?')) return;
+    if (!confirm('¿Eliminar este permiso?')) return;
     const token = localStorage.getItem('token');
-    const res = await fetch(`${API_URL}/api/permisos-perfil/${id}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    if ((await res.json()).success) {
-        mostrarMensaje('Acceso revocado', 'success');
-        cargarTodosLosPermisos();
-    }
+    const res = await fetch(`${API_URL}/api/permisos-perfil/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+    if ((await res.json()).success) { mostrarMensaje('Permiso eliminado', 'success'); cargarTodosLosPermisos(); }
   };
 
   function mostrarMensaje(texto, tipo) {
@@ -394,127 +369,82 @@ const pageTitle = "Gestión de Permisos por Perfil";
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    if (permisos.agregar) {
-        const btn = document.getElementById('btnNuevoPermiso');
-        if(btn) btn.style.display = 'flex';
-    }
-    
+    if (permisos.agregar) document.getElementById('btnNuevoPermiso').style.display = 'flex';
     document.getElementById('searchInput').addEventListener('input', aplicarFiltroInstantaneo);
-    
     cargarSelects();
     cargarTodosLosPermisos();
   });
 </script>
 
 <style is:global>
-  /* --- CABECERA --- */
+  /* --- REESTRUCTURACIÓN DE DISEÑO --- */
   .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
-  .header-title h1 { margin: 0; color: #0f172a; font-size: 1.8rem; display: flex; align-items: center; gap: 10px; }
-  .header-title p { margin: 5px 0 0 0; color: #64748b; font-size: 0.95rem; }
+  .header-title h1 { margin: 0; color: #0f172a; font-size: 1.8rem; }
+  .header-title p { margin: 5px 0 0 0; color: #64748b; }
   
-  .btn-add { background: #2563eb; color: white; border: none; padding: 0.8rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2); transition: all 0.2s; }
-  .btn-add:hover { background: #1d4ed8; transform: translateY(-2px); }
+  .btn-add { background: #2563eb; color: white; border: none; padding: 0.8rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; }
 
-  /* --- TARJETA Y BUSCADOR --- */
-  .card-container { background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 1.5rem; border: 1px solid #f1f5f9; }
+  .card-container { background: white; border-radius: 12px; padding: 1.5rem; border: 1px solid #f1f5f9; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
   
   .table-toolbar { margin-bottom: 1.5rem; display: flex; justify-content: flex-end; }
   .search-box { position: relative; width: 100%; max-width: 400px; }
-  .search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 1.1rem; }
-  .search-box input { width: 100%; padding: 0.9rem 1rem 0.9rem 2.8rem; border: 2px solid #e2e8f0; border-radius: 30px; font-size: 0.95rem; transition: border-color 0.2s; background: #f8fafc; color: #334155; }
-  .search-box input:focus { outline: none; border-color: #3b82f6; background: white; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
+  .search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #94a3b8; }
+  .search-box input { width: 100%; padding: 0.8rem 1rem 0.8rem 2.8rem; border: 1px solid #e2e8f0; border-radius: 30px; }
 
-  /* --- TABLA --- */
-  .table-responsive { overflow-x: auto; }
-  .crud-table { width: 100%; border-collapse: collapse; min-width: 800px; }
-  .crud-table th { text-align: left; padding: 1rem 0.5rem; color: #475569; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0; background: white; }
-  .crud-table tbody tr { transition: background-color 0.2s; border-bottom: 1px solid #f1f5f9; }
-  .crud-table tbody tr:hover { background-color: #f8fafc; }
-  .text-center { text-align: center !important; }
-  .no-data { text-align: center; color: #94a3b8; padding: 3rem !important; }
+  .crud-table { width: 100%; border-collapse: collapse; }
+  .crud-table th { text-align: left; padding: 1rem; border-bottom: 2px solid #f1f5f9; font-size: 0.8rem; color: #64748b; text-transform: uppercase; }
+  .crud-table td { padding: 1rem; border-bottom: 1px solid #f1f5f9; }
+
+  .check-badge { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; margin: 0 auto; }
+  .check-badge.true { background: #dcfce7; color: #166534; }
+  .check-badge.false { background: #f1f5f9; color: #94a3b8; }
+
+  .role-badge { background: #f1f5f9; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; color: #475569; }
+
+  /* --- MODAL Y SELECTOR MASIVO --- */
+  .modal { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
+  .modal-content { background: white; padding: 2rem; border-radius: 12px; width: 100%; max-width: 700px; max-height: 90vh; overflow-y: auto; }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
   
-  /* Iconos de check en tabla */
-  .check-badge { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; margin: 0 auto; }
-  .check-badge.true { background: #dcfce7; color: #10b981; }
-  .check-badge.false { background: #f1f5f9; color: #cbd5e1; }
+  /* GRID DE MODULOS */
+  .modulos-selector-grid { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); 
+    gap: 10px; 
+    background: #f8fafc; 
+    padding: 15px; 
+    border-radius: 8px; 
+    border: 1px solid #e2e8f0;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+  .modulo-check-card { cursor: pointer; }
+  .modulo-check-card input { display: none; }
+  .check-content { 
+    background: white; 
+    padding: 10px; 
+    border: 1px solid #e2e8f0; 
+    border-radius: 6px; 
+    display: flex; 
+    align-items: center; 
+    gap: 8px; 
+    font-size: 0.8rem;
+    transition: all 0.2s;
+  }
+  .modulo-check-card input:checked + .check-content { 
+    background: #eff6ff; 
+    border-color: #3b82f6; 
+    color: #1e40af; 
+  }
 
-  /* --- ESTILOS VISUALES CELDAS --- */
-  .role-badge { display: inline-flex; align-items: center; gap: 8px; background: white; color: #334155; padding: 0.4rem 1rem; border-radius: 8px; font-size: 0.9rem; font-weight: 600; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.05);}
-  .role-badge i { color: #6366f1; }
+  .permisos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-top: 1rem; }
+  .permiso-item { border: 1px solid #e2e8f0; padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
 
-  /* --- BOTONES DE ACCIÓN --- */
-  .actions-cell { display: flex; gap: 8px; justify-content: flex-start; }
-  .action-btn { width: 35px; height: 35px; border-radius: 8px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; font-size: 1rem; }
-  .action-btn.view { background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; }
-  .action-btn.view:hover { background: #475569; color: white; border-color: #475569; }
-  .action-btn.edit { background: #eff6ff; color: #3b82f6; border: 1px solid #bfdbfe; }
-  .action-btn.edit:hover { background: #3b82f6; color: white; }
-  .action-btn.delete { background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; }
-  .action-btn.delete:hover { background: #ef4444; color: white; }
+  .pagination { display: flex; justify-content: center; gap: 5px; margin-top: 2rem; }
+  .page-btn { padding: 8px 14px; border: 1px solid #e2e8f0; background: white; border-radius: 6px; cursor: pointer; font-weight: 600; }
+  .page-btn.active { background: #2563eb; color: white; border-color: #2563eb; }
 
-  /* --- PAGINACIÓN ESTÁTICA --- */
-  .pagination { display: flex; justify-content: center; gap: 8px; margin-top: 2rem; }
-  .page-btn { width: 35px; height: 35px; border-radius: 8px; border: 1px solid #e2e8f0; background: white; color: #475569; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
-  .page-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
-  .page-btn.active { background: #2563eb; color: white; border-color: #2563eb; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2); }
-
-  /* --- MODAL FORMULARIO Y SELECTS MODERNOS --- */
-  .modal { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
-  .modal-content { background: white; padding: 2rem; border-radius: 16px; width: 100%; max-width: 650px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
-  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 1rem; }
-  .modal-header h3 { margin: 0; color: #0f172a; font-size: 1.4rem; }
-  .close-btn { background: #f1f5f9; border: none; width: 35px; height: 35px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; color: #64748b; transition: all 0.2s; }
-  .close-btn:hover { background: #fee2e2; color: #ef4444; }
-  
-  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; margin-bottom: 2rem; }
-  .form-group { display: flex; flex-direction: column; }
-  .form-group label { font-weight: 700; margin-bottom: 0.5rem; color: #334155; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px;}
-  
-  .select-wrapper { position: relative; }
-  .select-icon { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; }
-  .select-wrapper select { width: 100%; padding: 0.9rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.95rem; font-weight: 500; color: #1e293b; transition: all 0.2s; cursor: pointer; background: #f8fafc; appearance: none; -webkit-appearance: none; }
-  .select-wrapper select:focus { outline: none; border-color: #3b82f6; background: white; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);}
-
-  /* --- CHECKBOXES COMO TARJETAS (NUEVO DISEÑO) --- */
-  .permisos-section-title { font-weight: 700; color: #334155; font-size: 1.1rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #e2e8f0; display: flex; align-items: center; gap: 8px;}
-  .permisos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
-  
-  .permiso-item { display: flex; align-items: flex-start; position: relative; padding: 12px 15px 12px 45px; cursor: pointer; background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 8px; transition: all 0.2s; user-select: none; }
-  .permiso-item:hover { border-color: #cbd5e1; background: white; }
-  .permiso-item input { position: absolute; opacity: 0; cursor: pointer; height: 0; width: 0; }
-  
-  .permiso-text { display: flex; flex-direction: column; }
-  .p-title { font-weight: 700; color: #1e293b; font-size: 0.95rem; margin-bottom: 2px; }
-  .p-desc { font-size: 0.75rem; color: #64748b; }
-
-  .checkmark { position: absolute; top: 50%; transform: translateY(-50%); left: 12px; height: 22px; width: 22px; background-color: white; border: 2px solid #cbd5e1; border-radius: 6px; transition: all 0.2s; }
-  .checkmark:after { content: ""; position: absolute; display: none; left: 6px; top: 2px; width: 5px; height: 10px; border: solid white; border-width: 0 2px 2px 0; transform: rotate(45deg); }
-  
-  /* Colores dinámicos al hacer check */
-  .permiso-item input:checked ~ .checkmark.check-blue { background-color: #3b82f6; border-color: #3b82f6; }
-  .permiso-item input:checked ~ .checkmark.check-green { background-color: #10b981; border-color: #10b981; }
-  .permiso-item input:checked ~ .checkmark.check-yellow { background-color: #f59e0b; border-color: #f59e0b; }
-  .permiso-item input:checked ~ .checkmark.check-purple { background-color: #8b5cf6; border-color: #8b5cf6; }
-  .permiso-item input:checked ~ .checkmark.check-red { background-color: #ef4444; border-color: #ef4444; }
-  
-  .permiso-item input:checked ~ .checkmark:after { display: block; }
-  .permiso-item input:checked ~ .permiso-text .p-title { color: #0f172a; }
-
-  /* Borde de la tarjeta al seleccionar */
-  .permiso-item:has(input:checked) { background: white; border-color: #94a3b8; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
-
-  .form-actions { display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem; border-top: 2px solid #f1f5f9; padding-top: 1.5rem;}
-  .btn-primary { background: #10b981; color: white; border: none; padding: 0.8rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: background 0.2s; }
-  .btn-primary:hover { background: #059669; }
-  .btn-secondary { background: #f1f5f9; color: #475569; border: none; padding: 0.8rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 600; }
-  .btn-secondary:hover { background: #e2e8f0; }
-
-  .status-message { position: fixed; bottom: 20px; right: 20px; padding: 12px 24px; border-radius: 8px; display: none; font-weight: 600; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); z-index: 9999; animation: slideUp 0.3s ease-out; }
-  .msg-success { background: #10b981; color: white; border-left: 4px solid #047857; }
-  .msg-error { background: #ef4444; color: white; border-left: 4px solid #b91c1c; }
-
-  .loader-container { padding: 2rem; text-align: center; color: #64748b; }
-  .loader-container i { font-size: 2rem; margin-bottom: 10px; color: #3b82f6; }
-
-  @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .status-message { position: fixed; bottom: 20px; right: 20px; padding: 15px 25px; border-radius: 8px; color: white; z-index: 2000; }
+  .msg-success { background: #10b981; }
+  .msg-error { background: #ef4444; }
 </style>

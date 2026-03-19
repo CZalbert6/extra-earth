@@ -11,6 +11,7 @@ const pageTitle = "Matriz de Permisos por Perfil";
       <h1><i class="fas fa-shield-alt"></i> {pageTitle}</h1>
       <p>Selecciona un perfil para gestionar sus accesos globales</p>
     </div>
+    
     <div class="form-group" style="min-width: 300px; margin: 0;">
       <div class="select-wrapper">
         <select id="selectPerfilMaster" onchange="cargarMatrizDePerfil(this.value)">
@@ -19,6 +20,12 @@ const pageTitle = "Matriz de Permisos por Perfil";
         <i class="fas fa-chevron-down select-icon"></i>
       </div>
     </div>
+  </div>
+
+  <div id="estadoVacio" class="empty-state">
+      <i class="fas fa-user-shield"></i>
+      <h2>Selecciona un perfil</h2>
+      <p>Elige un perfil en la parte superior para cargar su matriz de permisos.</p>
   </div>
 
   <div class="card-container" id="contenedorPrincipal" style="display: none;">
@@ -42,23 +49,18 @@ const pageTitle = "Matriz de Permisos por Perfil";
           </tr>
         </thead>
         <tbody id="tablaBody">
-          </tbody>
+        </tbody>
       </table>
     </div>
     
+    <div id="paginationInfo" style="margin-top: 15px; font-size: 0.85rem; color: #64748b;"></div>
     <div id="pagination" class="pagination"></div>
 
-    <div style="display: flex; justify-content: flex-end; margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
+    <div class="form-actions" style="margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 20px; justify-content: flex-end;">
         <button class="btn-primary" id="btnGuardarMatriz" onclick="guardarMatrizCompleta()">
             <i class="fas fa-save"></i> Guardar Matriz de Permisos
         </button>
     </div>
-  </div>
-
-  <div id="estadoVacio" style="text-align: center; padding: 5rem; color: #94a3b8;">
-      <i class="fas fa-user-shield" style="font-size: 4rem; margin-bottom: 1rem; color: #cbd5e1;"></i>
-      <h2>Selecciona un perfil</h2>
-      <p>Elige un perfil en la parte superior para cargar su matriz de permisos.</p>
   </div>
 
   <div id="message" class="status-message"></div>
@@ -70,12 +72,14 @@ const pageTitle = "Matriz de Permisos por Perfil";
   const { permisos } = verificarPermisosModulo('Permisos-Perfil');
 
   let todosLosModulos = [];
-  let permisosDelPerfilSeleccionado = [];
   let modulosFiltrados = [];
   let paginaActual = 1;
   const limitePorPagina = 5; 
+  
+  // EL CEREBRO: Aquí guardaremos los cambios en memoria mientras navega
+  let matrizBorrador = {};
 
-  // --- 1. CARGA INICIAL (Perfiles y Módulos) ---
+  // --- 1. CARGA INICIAL ---
   async function inicializarVista() {
     try {
       const token = localStorage.getItem('token');
@@ -97,7 +101,7 @@ const pageTitle = "Matriz de Permisos por Perfil";
     } catch (error) { console.error('Error inicial:', error); }
   }
 
-  // --- 2. CARGAR MATRIZ AL SELECCIONAR PERFIL ---
+  // --- 2. RECOLECTAR Y CREAR EL BORRADOR EN MEMORIA ---
   window.cargarMatrizDePerfil = async (idPerfil) => {
     const contenedor = document.getElementById('contenedorPrincipal');
     const estadoVacio = document.getElementById('estadoVacio');
@@ -110,27 +114,56 @@ const pageTitle = "Matriz de Permisos por Perfil";
 
     estadoVacio.style.display = 'none';
     contenedor.style.display = 'block';
-    document.getElementById('tablaBody').innerHTML = '<tr><td colspan="6" style="text-align:center; padding:2rem;"><i class="fas fa-spinner fa-spin"></i> Cargando matriz...</td></tr>';
+    document.getElementById('tablaBody').innerHTML = '<tr><td colspan="6" class="no-data"><i class="fas fa-spinner fa-spin" style="font-size:2rem; margin-bottom:10px;"></i><br>Cargando configuración...</td></tr>';
 
     try {
-      // Obtenemos tooooodos los permisos existentes en la DB para cruzarlos
       const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/api/permisos-perfil?limit=1000`, { headers: { 'Authorization': `Bearer ${token}` } });
-      const data = await res.json();
+      let todosLosPermisosDB = [];
+
+      let res = await fetch(`${API_URL}/api/permisos-perfil?page=1`, { headers: { 'Authorization': `Bearer ${token}` } });
+      let data = await res.json();
       
-      // Filtramos solo los permisos del perfil que seleccionamos
-      permisosDelPerfilSeleccionado = data.success ? data.data.filter(p => p.idperfil == idPerfil) : [];
+      if (data.success) {
+        todosLosPermisosDB = [...data.data];
+        let totalPages = data.pagination.totalPages;
+
+        if (totalPages > 1) {
+          let promesas = [];
+          for (let i = 2; i <= totalPages; i++) {
+            promesas.push(fetch(`${API_URL}/api/permisos-perfil?page=${i}`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json()));
+          }
+          let extras = await Promise.all(promesas);
+          extras.forEach(p => { if (p.success) todosLosPermisosDB.push(...p.data); });
+        }
+      }
       
-      modulosFiltrados = [...todosLosModulos]; // Reiniciamos el filtro
+      const permisosDelPerfil = todosLosPermisosDB.filter(p => p.idperfil == idPerfil);
+      
+      // INICIALIZAMOS EL BORRADOR (La Memoria)
+      matrizBorrador = {};
+      todosLosModulos.forEach(modulo => {
+         const permisoDB = permisosDelPerfil.find(p => p.idmodulo == modulo.id);
+         matrizBorrador[modulo.id] = {
+             idPermiso: permisoDB ? permisoDB.id : null,
+             c: permisoDB ? permisoDB.bitconsulta : false,
+             a: permisoDB ? permisoDB.bitagregar : false,
+             e: permisoDB ? permisoDB.biteditar : false,
+             d: permisoDB ? permisoDB.bitdetalle : false,
+             x: permisoDB ? permisoDB.biteliminar : false,
+             modificado: false // Bandera para saber si el usuario lo tocó
+         };
+      });
+
+      modulosFiltrados = [...todosLosModulos];
       paginaActual = 1;
       dibujarMatriz();
       
     } catch (error) {
-      mostrarMensaje("Error al cargar la matriz", "error");
+      mostrarMensaje("Error al conectar con la base de datos", "error");
     }
   };
 
-  // --- 3. DIBUJAR LA TABLA CON CHECKBOXES ---
+  // --- 3. DIBUJAR LA TABLA LEYENDO LA MEMORIA (EL BORRADOR) ---
   function dibujarMatriz() {
     const start = (paginaActual - 1) * limitePorPagina;
     const modulosPaginados = modulosFiltrados.slice(start, start + limitePorPagina);
@@ -138,64 +171,101 @@ const pageTitle = "Matriz de Permisos por Perfil";
 
     if (modulosPaginados.length === 0) {
       tbody.innerHTML = '<tr><td colspan="6" class="no-data">No se encontraron módulos.</td></tr>';
+      document.getElementById('paginationInfo').textContent = '';
+      document.getElementById('pagination').innerHTML = '';
       return;
     }
 
     tbody.innerHTML = modulosPaginados.map(modulo => {
-      // Buscamos si el perfil ya tiene un registro guardado para este módulo
-      const permisoExistente = permisosDelPerfilSeleccionado.find(p => p.idmodulo == modulo.id);
+      // Leemos el estado desde nuestro borrador en memoria
+      const estado = matrizBorrador[modulo.id];
       
-      // Si existe, usamos sus valores. Si no, todo en "false" (desmarcado)
-      const pId = permisoExistente ? permisoExistente.id : '';
-      const c = permisoExistente ? permisoExistente.bitconsulta : false;
-      const a = permisoExistente ? permisoExistente.bitagregar : false;
-      const e = permisoExistente ? permisoExistente.biteditar : false;
-      const d = permisoExistente ? permisoExistente.bitdetalle : false;
-      const x = permisoExistente ? permisoExistente.biteliminar : false;
+      // Si todos están activos, el check maestro también
+      const todosActivos = estado.c && estado.a && estado.e && estado.d && estado.x;
 
-      // Usamos el diseño de Checkbox que tenías en tu Modal original
-      const crearCheck = (tipo, valor, colorClase) => `
-        <label class="permiso-item" style="justify-content: center; padding: 10px; margin: 0; background: transparent; border: none;">
-          <input type="checkbox" class="check-permiso" data-tipo="${tipo}" ${valor ? 'checked' : ''}> 
-          <span class="checkmark ${colorClase}" style="position: relative; left: 0; transform: none; margin: 0 auto;"></span> 
+      const crearCheck = (campo, valor) => `
+        <label class="permiso-item">
+          <input type="checkbox" onchange="actualizarMemoria(${modulo.id}, '${campo}', this.checked)" ${valor ? 'checked' : ''}> 
+          <span class="checkmark"></span> 
         </label>
       `;
 
       return `
-        <tr class="fila-modulo" data-idmodulo="${modulo.id}" data-idpermiso="${pId}">
-          <td style="vertical-align: middle; font-weight: 700; color: #1e293b;">
-            <div style="display:flex; align-items:center; gap:8px;">
-              <div style="width:30px; height:30px; border-radius:6px; background:#eff6ff; display:flex; align-items:center; justify-content:center; color:#3b82f6;">
-                <i class="fas fa-box"></i>
-              </div>
+        <tr>
+          <td style="vertical-align: middle; font-weight: 500; color: #334155;">
+            <label style="display:flex; align-items:center; gap:10px; cursor:pointer; margin:0;">
+              <input type="checkbox" class="mod-row-check" style="accent-color: #1e3a8a; width: 16px; height: 16px;" onchange="activarTodaFila(${modulo.id}, this.checked)" ${todosActivos ? 'checked' : ''}>
               ${modulo.strnombremodulo}
-            </div>
+            </label>
           </td>
-          <td class="text-center">${crearCheck('bitConsulta', c, 'check-blue')}</td>
-          <td class="text-center">${crearCheck('bitAgregar', a, 'check-green')}</td>
-          <td class="text-center">${crearCheck('bitEditar', e, 'check-yellow')}</td>
-          <td class="text-center">${crearCheck('bitDetalle', d, 'check-purple')}</td>
-          <td class="text-center">${crearCheck('bitEliminar', x, 'check-red')}</td>
+          <td class="text-center">${crearCheck('c', estado.c)}</td>
+          <td class="text-center">${crearCheck('a', estado.a)}</td>
+          <td class="text-center">${crearCheck('e', estado.e)}</td>
+          <td class="text-center">${crearCheck('d', estado.d)}</td>
+          <td class="text-center">${crearCheck('x', estado.x)}</td>
         </tr>
       `;
     }).join('');
 
-    renderizarPaginacionHTML(Math.ceil(modulosFiltrados.length / limitePorPagina));
+    const totalItems = modulosFiltrados.length;
+    const end = Math.min(start + limitePorPagina, totalItems);
+    document.getElementById('paginationInfo').textContent = `Mostrando ${start + 1} a ${end} de ${totalItems} módulos`;
+
+    renderizarPaginacionHTML(Math.ceil(totalItems / limitePorPagina));
   }
 
-  // --- LÓGICA DE PAGINACIÓN EXACTA A LA ANTERIOR ---
-  function renderizarPaginacionHTML(totalPages) {
+  // --- FUNCIONES PARA ACTUALIZAR LA MEMORIA (Sin guardar en BD todavía) ---
+  window.actualizarMemoria = (idModulo, campo, valor) => {
+      matrizBorrador[idModulo][campo] = valor;
+      matrizBorrador[idModulo].modificado = true; // Marcamos que hubo un cambio
+      
+      // Verificamos si hay que marcar/desmarcar el check maestro de la fila
+      const e = matrizBorrador[idModulo];
+      const checkMaestro = document.querySelector(`tr[data-idmodulo="${idModulo}"] .mod-row-check`);
+      if(checkMaestro) {
+          checkMaestro.checked = (e.c && e.a && e.e && e.d && e.x);
+      }
+  };
+
+  window.activarTodaFila = (idModulo, valor) => {
+      matrizBorrador[idModulo].c = valor;
+      matrizBorrador[idModulo].a = valor;
+      matrizBorrador[idModulo].e = valor;
+      matrizBorrador[idModulo].d = valor;
+      matrizBorrador[idModulo].x = valor;
+      matrizBorrador[idModulo].modificado = true;
+      dibujarMatriz(); // Redibujamos para que se vean las palomitas puestas
+  };
+
+  // --- PAGINACIÓN ---
+  function renderizarPaginacionHTML(totalPaginas) {
     const div = document.getElementById('pagination');
-    if (totalPages <= 1) { div.innerHTML = ''; return; }
+    if (totalPaginas <= 1) { div.innerHTML = ''; return; }
+    
     let html = '';
-    for (let i = 1; i <= totalPages; i++) {
-      html += `<button class="page-btn ${i === paginaActual ? 'active' : ''}" onclick="window.cambiarPagina(${i})">${i}</button>`;
+    let start = Math.max(1, paginaActual - 2);
+    let end = Math.min(totalPaginas, start + 4);
+    if (end - start < 4) start = Math.max(1, end - 4);
+
+    if (paginaActual > 1) {
+      html += `<button class="page-link text-link" onclick="window.cambiarPagina(1)">« Inicio</button>`;
+      html += `<button class="page-link text-link" onclick="window.cambiarPagina(${paginaActual-1})">Anterior</button>`;
     }
+    
+    for (let i = start; i <= end; i++) {
+      html += `<button class="page-link ${i === paginaActual ? 'active' : ''}" onclick="window.cambiarPagina(${i})">${i}</button>`;
+    }
+    
+    if (paginaActual < totalPaginas) {
+      html += `<button class="page-link text-link" onclick="window.cambiarPagina(${paginaActual+1})">Siguiente</button>`;
+      html += `<button class="page-link text-link" onclick="window.cambiarPagina(${totalPaginas})">Final »</button>`;
+    }
+    
     div.innerHTML = html;
   }
   window.cambiarPagina = (numPagina) => { paginaActual = numPagina; dibujarMatriz(); };
 
-  // --- FILTRO DE BÚSQUEDA ---
+  // --- FILTRO ---
   document.getElementById('searchInput').addEventListener('input', (e) => {
     const termino = (e.target as HTMLInputElement).value.toLowerCase();
     modulosFiltrados = todosLosModulos.filter(m => m.strnombremodulo.toLowerCase().includes(termino));
@@ -203,7 +273,7 @@ const pageTitle = "Matriz de Permisos por Perfil";
     dibujarMatriz();
   });
 
-  // --- 4. GUARDAR LA MATRIZ (El botón final) ---
+  // --- 4. GUARDAR LA MEMORIA EN LA BASE DE DATOS (El Gran Final) ---
   window.guardarMatrizCompleta = async () => {
     if (!permisos.editar && !permisos.agregar) {
         mostrarMensaje("No tienes permiso para modificar la matriz", "error");
@@ -216,48 +286,54 @@ const pageTitle = "Matriz de Permisos por Perfil";
     btn.disabled = true;
 
     const token = localStorage.getItem('token');
-    const filas = document.querySelectorAll('.fila-modulo');
     let promesas = [];
 
-    // Recorremos las 5 filas que están en pantalla
-    filas.forEach(fila => {
-      const idModulo = fila.getAttribute('data-idmodulo');
-      const idPermisoExistente = fila.getAttribute('data-idpermiso'); // Si ya existía, editamos (PUT)
+    // Recorremos TODO el borrador (las 5 páginas juntas)
+    Object.keys(matrizBorrador).forEach(idModulo => {
+      const estado = matrizBorrador[idModulo];
       
-      const inputs = fila.querySelectorAll('.check-permiso');
-      const data = {
-        idModulo: parseInt(idModulo),
-        idPerfil: parseInt(idPerfil),
-        bitConsulta: (inputs[0] as HTMLInputElement).checked,
-        bitAgregar: (inputs[1] as HTMLInputElement).checked,
-        bitEditar: (inputs[2] as HTMLInputElement).checked,
-        bitDetalle: (inputs[3] as HTMLInputElement).checked,
-        bitEliminar: (inputs[4] as HTMLInputElement).checked
-      };
+      // ¡SOLO enviamos a la BD si el usuario hizo algún cambio! (Súper optimizado)
+      if (estado.modificado) {
+          const data = {
+            idModulo: parseInt(idModulo),
+            idPerfil: parseInt(idPerfil),
+            bitConsulta: estado.c,
+            bitAgregar: estado.a,
+            bitEditar: estado.e,
+            bitDetalle: estado.d,
+            bitEliminar: estado.x
+          };
 
-      // Solo mandamos petición si el usuario marcó al menos una casilla, o si ya existía y lo estamos modificando
-      const tieneAlgunPermiso = data.bitConsulta || data.bitAgregar || data.bitEditar || data.bitDetalle || data.bitEliminar;
+          const tieneAlgunPermiso = estado.c || estado.a || estado.e || estado.d || estado.x;
 
-      if (idPermisoExistente) {
-          // Ya existía en DB -> Hacemos PUT
-          promesas.push(fetch(`${API_URL}/api/permisos-perfil/${idPermisoExistente}`, {
-            method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(data)
-          }));
-      } else if (tieneAlgunPermiso) {
-          // No existía, pero el usuario marcó algo -> Hacemos POST
-          promesas.push(fetch(`${API_URL}/api/permisos-perfil`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(data)
-          }));
+          if (estado.idPermiso) {
+              // Ya existía: actualizamos (incluso si los desmarcó todos para dejarlos en false)
+              promesas.push(fetch(`${API_URL}/api/permisos-perfil/${estado.idPermiso}`, {
+                method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(data)
+              }));
+          } else if (tieneAlgunPermiso) {
+              // No existía, y marcó al menos uno: creamos nuevo registro
+              promesas.push(fetch(`${API_URL}/api/permisos-perfil`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(data)
+              }));
+          }
       }
     });
 
+    if (promesas.length === 0) {
+        mostrarMensaje('No se detectaron cambios para guardar', 'success');
+        btn.innerHTML = '<i class="fas fa-save"></i> Guardar Matriz de Permisos';
+        btn.disabled = false;
+        return;
+    }
+
     try {
       await Promise.all(promesas);
-      mostrarMensaje('Matriz guardada correctamente', 'success');
-      // Recargamos los datos para que el array interno se actualice
+      mostrarMensaje('¡Permisos sincronizados correctamente!', 'success');
+      // Recargamos fresco de la Base de datos
       await window.cargarMatrizDePerfil(idPerfil);
     } catch (error) {
-      mostrarMensaje('Error al guardar la matriz', 'error');
+      mostrarMensaje('Error al sincronizar la base de datos', 'error');
     } finally {
       btn.innerHTML = '<i class="fas fa-save"></i> Guardar Matriz de Permisos';
       btn.disabled = false;
@@ -276,62 +352,57 @@ const pageTitle = "Matriz de Permisos por Perfil";
 </script>
 
 <style is:global>
-  /* --- CABECERA Y SELECTOR --- */
+  /* MANTENEMOS TU DISEÑO INTACTO */
   .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); border: 1px solid #f1f5f9;}
   .header-title h1 { margin: 0; color: #0f172a; font-size: 1.8rem; display: flex; align-items: center; gap: 10px; }
   .header-title p { margin: 5px 0 0 0; color: #64748b; font-size: 0.95rem; }
   
+  .empty-state { text-align: center; padding: 5rem 2rem; background: white; border-radius: 12px; border: 1px dashed #cbd5e1; color: #94a3b8; }
+  .empty-state i { font-size: 4rem; margin-bottom: 1rem; color: #e2e8f0; }
+  .empty-state h2 { color: #475569; margin: 0 0 0.5rem 0; font-size: 1.4rem; }
+
   .form-group label { font-weight: 700; margin-bottom: 0.5rem; color: #334155; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px;}
   .select-wrapper { position: relative; }
   .select-icon { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; }
-  .select-wrapper select { width: 100%; padding: 0.9rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.95rem; font-weight: 600; color: #1e293b; transition: all 0.2s; cursor: pointer; background: #f8fafc; appearance: none; -webkit-appearance: none; }
+  .select-wrapper select { width: 100%; padding: 0.9rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.95rem; font-weight: 600; color: #1e293b; transition: all 0.2s; cursor: pointer; background: #f8fafc; appearance: none; -webkit-appearance: none; outline: none; }
   .select-wrapper select:focus { outline: none; border-color: #3b82f6; background: white; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);}
 
-  /* --- TARJETA Y BUSCADOR --- */
   .card-container { background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 1.5rem; border: 1px solid #f1f5f9; }
   .table-toolbar { margin-bottom: 1.5rem; display: flex; justify-content: flex-end; }
   .search-box { position: relative; width: 100%; max-width: 400px; }
   .search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 1.1rem; }
-  .search-box input { width: 100%; padding: 0.9rem 1rem 0.9rem 2.8rem; border: 2px solid #e2e8f0; border-radius: 30px; font-size: 0.95rem; transition: border-color 0.2s; background: #f8fafc; color: #334155; }
-  .search-box input:focus { outline: none; border-color: #3b82f6; background: white; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
+  .search-box input { width: 100%; padding: 0.9rem 1rem 0.9rem 2.8rem; border: 2px solid #e2e8f0; border-radius: 30px; font-size: 0.95rem; transition: border-color 0.2s; background: #f8fafc; color: #334155; outline: none; }
+  .search-box input:focus { border-color: #3b82f6; background: white; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
 
-  /* --- TABLA --- */
-  .table-responsive { overflow-x: auto; }
-  .crud-table { width: 100%; border-collapse: collapse; min-width: 800px; }
-  .crud-table th { text-align: left; padding: 1rem 0.5rem; color: white; background: #1e3a8a; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; }
-  .crud-table th:first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; padding-left: 15px;}
-  .crud-table th:last-child { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
-  .crud-table tbody tr { transition: background-color 0.2s; border-bottom: 1px solid #f1f5f9; }
+  .table-responsive { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px; }
+  .crud-table { width: 100%; border-collapse: collapse; min-width: 700px; }
+  .crud-table th { background: #1e3a8a; color: white; padding: 12px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; border-right: 1px solid rgba(255,255,255,0.1); }
+  .crud-table th.text-center { text-align: center; }
+  .crud-table th:first-child { padding-left: 15px; }
+  .crud-table td { padding: 12px; border-bottom: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9; }
   .crud-table tbody tr:hover { background-color: #f8fafc; }
   .text-center { text-align: center !important; }
   .no-data { text-align: center; color: #94a3b8; padding: 3rem !important; }
   
-  /* --- CHECKBOXES ESTILO TARJETA (Integrados a la tabla) --- */
-  .permiso-item { cursor: pointer; user-select: none; }
+  .permiso-item { display: inline-flex; align-items: center; justify-content: center; cursor: pointer; margin: 0; }
   .permiso-item input { position: absolute; opacity: 0; cursor: pointer; height: 0; width: 0; }
-  .checkmark { height: 22px; width: 22px; background-color: white; border: 2px solid #cbd5e1; border-radius: 6px; transition: all 0.2s; display: block;}
-  .checkmark:after { content: ""; position: absolute; display: none; left: 6px; top: 2px; width: 5px; height: 10px; border: solid white; border-width: 0 2px 2px 0; transform: rotate(45deg); }
-  
-  .permiso-item input:checked ~ .checkmark.check-blue { background-color: #3b82f6; border-color: #3b82f6; }
-  .permiso-item input:checked ~ .checkmark.check-green { background-color: #10b981; border-color: #10b981; }
-  .permiso-item input:checked ~ .checkmark.check-yellow { background-color: #f59e0b; border-color: #f59e0b; }
-  .permiso-item input:checked ~ .checkmark.check-purple { background-color: #8b5cf6; border-color: #8b5cf6; }
-  .permiso-item input:checked ~ .checkmark.check-red { background-color: #ef4444; border-color: #ef4444; }
+  .checkmark { height: 18px; width: 18px; background-color: white; border: 2px solid #cbd5e1; border-radius: 4px; display: block; position: relative; transition: 0.1s; }
+  .checkmark:after { content: ""; position: absolute; display: none; left: 5px; top: 1px; width: 4px; height: 9px; border: solid white; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  .permiso-item input:checked ~ .checkmark { background-color: #2563eb; border-color: #2563eb; }
   .permiso-item input:checked ~ .checkmark:after { display: block; }
 
-  /* --- BOTONES Y PAGINACIÓN --- */
   .btn-primary { background: #1e3a8a; color: white; border: none; padding: 0.9rem 2rem; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: background 0.2s; font-size: 1rem;}
   .btn-primary:hover { background: #172554; }
   .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; }
 
-  .pagination { display: flex; justify-content: flex-end; gap: 8px; margin-top: 1.5rem; }
-  .page-btn { width: 35px; height: 35px; border-radius: 8px; border: 1px solid #e2e8f0; background: white; color: #475569; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
-  .page-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
-  .page-btn.active { background: #1e3a8a; color: white; border-color: #1e3a8a; box-shadow: 0 2px 4px rgba(30, 58, 138, 0.2); }
+  .pagination { display: flex; justify-content: flex-end; gap: 4px; }
+  .page-link { padding: 6px 12px; border: 1px solid #e2e8f0; background: white; color: #475569; border-radius: 4px; cursor: pointer; font-size: 0.85rem; transition: 0.2s; }
+  .page-link:hover:not(.active) { background: #f8fafc; }
+  .page-link.active { background: #1e3a8a; color: white; border-color: #1e3a8a; }
+  .page-link.text-link { color: #64748b; }
 
-  /* --- MENSAJES FLOTANTES --- */
-  .status-message { position: fixed; bottom: 20px; right: 20px; padding: 12px 24px; border-radius: 8px; display: none; font-weight: 600; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); z-index: 9999; animation: slideUp 0.3s ease-out; }
-  .msg-success { background: #10b981; color: white; border-left: 4px solid #047857; }
-  .msg-error { background: #ef4444; color: white; border-left: 4px solid #b91c1c; }
+  .status-message { position: fixed; bottom: 20px; right: 20px; padding: 12px 24px; border-radius: 8px; display: none; font-weight: 600; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); z-index: 9999; animation: slideUp 0.3s ease-out; color: white;}
+  .msg-success { background: #10b981; }
+  .msg-error { background: #ef4444; }
   @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 </style>

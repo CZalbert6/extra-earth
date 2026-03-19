@@ -1,0 +1,183 @@
+---
+// src/pages/modulos/bienvenida.astro
+import Layout from '../../layout/layout.astro';
+---
+
+<Layout title="Bienvenida | Sistema Corporativo" moduloActual="Inicio">
+  <div class="welcome-container">
+    
+    <div class="welcome-banner">
+      <div class="banner-content">
+        <h1 id="welcome-text">¡Bienvenido al Sistema!</h1>
+        <p>Nos alegra verte por aquí. Selecciona un módulo en el menú lateral izquierdo para comenzar a trabajar o revisar tu información.</p>
+      </div>
+      <div class="banner-image">
+        <i class="fas fa-laptop-house"></i>
+      </div>
+    </div>
+
+    <div class="quick-stats">
+      <div class="stat-card">
+        <i class="fas fa-shield-alt stat-icon"></i>
+        <div class="stat-info">
+          <h3>Acceso Seguro</h3>
+          <p>Sesión corporativa encriptada</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <i class="far fa-clock stat-icon"></i>
+        <div class="stat-info">
+          <h3 id="current-time">00:00</h3>
+          <p>Hora local</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <i class="far fa-calendar-check stat-icon"></i>
+        <div class="stat-info">
+          <h3 id="current-date">Cargando...</h3>
+          <p>Día actual</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</Layout>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // 1. Saludo personalizado leyendo de localStorage
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        const nombre = user.nombre || user.username || '';
+        if (nombre) {
+          document.getElementById('welcome-text').textContent = `¡Hola de nuevo, ${nombre}!`;
+        }
+      } catch (e) {
+        console.error("No se pudo leer el nombre del usuario");
+      }
+    }
+
+    // 2. Lógica del Reloj y Fecha en tiempo real
+    const timeEl = document.getElementById('current-time');
+    const dateEl = document.getElementById('current-date');
+    
+    const actualizarReloj = () => {
+      const ahora = new Date();
+      timeEl.textContent = ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      // Formato elegante: "martes, 18 de marzo"
+      const opcionesFecha: Intl.DateTimeFormatOptions = { weekday: 'long', day: 'numeric', month: 'long' };
+      dateEl.textContent = ahora.toLocaleDateString('es-ES', opcionesFecha);
+    };
+    
+    actualizarReloj();
+    setInterval(actualizarReloj, 60000); // Actualiza cada minuto
+  });
+</script>
+
+<style is:global>
+  .welcome-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  /* --- BANNER --- */
+  .welcome-banner {
+    background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+    border-radius: 16px;
+    padding: 3rem;
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 10px 25px rgba(59, 130, 246, 0.25);
+    overflow: hidden;
+    position: relative;
+  }
+  .banner-content {
+    position: relative;
+    z-index: 2;
+  }
+  .banner-content h1 {
+    font-size: 2.5rem;
+    margin: 0 0 1rem 0;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  .banner-content p {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin: 0;
+    max-width: 550px;
+    line-height: 1.6;
+  }
+  .banner-image i {
+    font-size: 10rem;
+    opacity: 0.15;
+    position: absolute;
+    right: 2rem;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  /* --- TARJETAS --- */
+  .quick-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
+  .stat-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    transition: all 0.3s ease;
+  }
+  .stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 20px -5px rgba(0,0,0,0.05);
+    border-color: #cbd5e1;
+  }
+  .stat-icon {
+    font-size: 1.8rem;
+    color: #3b82f6;
+    background: #eff6ff;
+    width: 65px;
+    height: 65px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+  }
+  .stat-info h3 {
+    margin: 0 0 0.3rem 0;
+    color: #1e293b;
+    font-size: 1.3rem;
+    font-weight: 700;
+  }
+  .stat-info p {
+    margin: 0;
+    color: #64748b;
+    font-size: 0.95rem;
+    text-transform: capitalize;
+  }
+
+  /* Responsivo para móviles */
+  @media (max-width: 768px) {
+    .welcome-banner {
+      padding: 2rem;
+      text-align: center;
+    }
+    .banner-content h1 {
+      font-size: 2rem;
+    }
+    .banner-image {
+      display: none;
+    }
+  }
+</style>

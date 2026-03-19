@@ -91,7 +91,7 @@ const { title = "Sistema Corporativo", moduloActual } = Astro.props;
         </header>
 
         <div class="breadcrumbs">
-            <a href="/extra-earth/modulos/principal-1-1/" style="text-decoration:none; color:inherit;">Inicio</a>
+            <a href="/extra-earth/modulos/bienvenida/" style="text-decoration:none; color:inherit;">Inicio</a>
             {moduloActual && (
                 <>
                     <span> <i class="fas fa-chevron-right" style="font-size: 0.7rem;"></i> </span>
@@ -158,8 +158,8 @@ const { title = "Sistema Corporativo", moduloActual } = Astro.props;
                     return;
                 }
 
-                // CORRECCIÓN: Se agrega la barra diagonal al final del Inicio
-                let html = `<a href="/extra-earth/modulos/principal-1-1/"><i class="fas fa-home"></i> Inicio</a>`;
+                // ✅ CAMBIO 2: Redirección al módulo de bienvenida en el menú lateral
+                let html = `<a href="/extra-earth/modulos/bienvenida/"><i class="fas fa-home"></i> Inicio</a>`;
 
                 Object.values(data.data).forEach((grupo: any) => {
                     if (grupo.modulos?.length > 0) {
@@ -178,7 +178,6 @@ const { title = "Sistema Corporativo", moduloActual } = Astro.props;
                             if (slug === "usuario") slug = "usuarios";
                             if (slug === "permisos-perfil") slug = "permisos";
 
-                            // CORRECCIÓN CRÍTICA: Se agrega la barra diagonal al final de cada URL dinámica
                             const url = `/extra-earth/modulos/${slug}/`;
                             
                             const activeClass = window.location.pathname.includes(slug) ? 'active' : '';

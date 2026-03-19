@@ -27,7 +27,7 @@ const pageTitle = "Gestión de Perfiles";
       <table class="crud-table">
         <thead>
           <tr>
-            <th>ID</th>
+            <th style="display: none;">ID</th>
             <th>Nombre del Perfil</th>
             <th>Administrador Global</th>
             <th>Acciones</th>
@@ -172,7 +172,7 @@ const pageTitle = "Gestión de Perfiles";
 
     tbody.innerHTML = perfiles.map(p => `
       <tr>
-        <td style="vertical-align: middle; padding: 1rem 0.5rem; color: #64748b; font-weight: 500;">#${p.id}</td>
+        <td style="display: none;">#${p.id}</td>
         <td style="vertical-align: middle; padding: 1rem 0.5rem;">
           <span class="role-badge"><i class="fas fa-user-shield"></i> ${p.strnombreperfil}</span>
         </td>

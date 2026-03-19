@@ -28,7 +28,7 @@ const pageTitle = "Gestión de Módulos";
       <table class="crud-table" id="tablaModulos">
         <thead>
           <tr>
-            <th>ID</th>
+            <th style="display: none;">ID</th>
             <th>Nombre del Módulo</th>
             <th>Fecha Creación</th>
             <th>Acciones</th>
@@ -169,7 +169,7 @@ const pageTitle = "Gestión de Módulos";
     
     tbody.innerHTML = modulos.map(m => `
       <tr>
-        <td style="vertical-align: middle; padding: 1rem; color: #64748b; font-weight: 500;">#${m.id}</td>
+        <td style="display: none; vertical-align: middle; padding: 1rem; color: #64748b; font-weight: 500;">#${m.id}</td>
         <td style="vertical-align: middle; padding: 1rem; font-weight: 600; color: #1e293b;">
           <i class="fas fa-folder" style="color: #cbd5e1; margin-right: 8px;"></i> ${m.strnombremodulo}
         </td>
@@ -333,6 +333,7 @@ const pageTitle = "Gestión de Módulos";
   .crud-table th { text-align: left; padding: 1rem 0.5rem; color: #475569; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0; background: white; }
   .crud-table tbody tr { transition: background-color 0.2s; border-bottom: 1px solid #f1f5f9; }
   .crud-table tbody tr:hover { background-color: #f8fafc; }
+  .text-center { text-align: center !important; }
   .no-data { text-align: center; color: #94a3b8; padding: 3rem !important; font-size: 1.1rem; }
 
   /* --- ESTILOS VISUALES CELDAS --- */

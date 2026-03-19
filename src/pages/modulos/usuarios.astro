@@ -27,7 +27,7 @@ const API_URL = "https://extra-earth-production.up.railway.app";
       <table class="crud-table" id="tablaUsuarios">
         <thead>
           <tr>
-            <th>ID</th>
+            <th style="display: none;">ID</th>
             <th>Foto</th>
             <th>Usuario</th>
             <th>Nombre</th>
@@ -142,10 +142,10 @@ const API_URL = "https://extra-earth-production.up.railway.app";
   const { permisos } = verificarPermisosModulo('Usuario');
 
   // --- VARIABLES PARA EL MODO ESTÁTICO (Frontend Paginación y Búsqueda) ---
-  let usuariosLocales = []; // Todos los usuarios de la base de datos
-  let usuariosFiltrados = []; // Usuarios después de aplicar la barra de búsqueda
+  let usuariosLocales = []; 
+  let usuariosFiltrados = []; 
   let paginaActual = 1;
-  const limitePorPagina = 5; // Cambia este número si quieres ver más de 5 a la vez
+  const limitePorPagina = 5; 
 
   // ============================================
   // MOTOR DE COMPRESIÓN EXTREMA DE IMÁGENES
@@ -316,7 +316,7 @@ const API_URL = "https://extra-earth-production.up.railway.app";
 
     tbody.innerHTML = usuarios.map(u => `
       <tr>
-        <td style="vertical-align: middle; padding: 1rem 0.5rem; color: #64748b; font-weight: 500;">#${u.id}</td>
+        <td style="display: none; vertical-align: middle; padding: 1rem 0.5rem; color: #64748b; font-weight: 500;">#${u.id}</td>
         <td style="vertical-align: middle; padding: 1rem 0.5rem;">
           <div class="avatar-container">
             <img src="${u.strimagen || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(u.nombre) + '&size=45&background=f1f5f9&color=64748b'}" 

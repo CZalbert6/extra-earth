@@ -158,14 +158,14 @@ const { title = "Sistema Corporativo", moduloActual } = Astro.props;
                     return;
                 }
 
-                // ✅ CAMBIO 2: Apunta a bienvenida
+                // CORRECCIÓN: Se agrega la barra diagonal al final del Inicio
                 let html = `<a href="/extra-earth/modulos/bienvenida/"><i class="fas fa-home"></i> Inicio</a>`;
 
-                if(data.data) {
-                    Object.values(data.data).forEach(grupo => {
+                if (data.data) {
+                    Object.values(data.data).forEach((grupo) => {
                         if (grupo && grupo.modulos && grupo.modulos.length > 0) {
                             html += `<div class="menu-section"><div class="menu-section-title">${grupo.nombre}</div>`;
-                            grupo.modulos.forEach(mod => {
+                            grupo.modulos.forEach((mod) => {
                                 const nombre = mod.strNombreModulo || mod.nombre;
                                 
                                 let slug = nombre.toLowerCase()
@@ -179,6 +179,7 @@ const { title = "Sistema Corporativo", moduloActual } = Astro.props;
                                 if (slug === "usuario") slug = "usuarios";
                                 if (slug === "permisos-perfil") slug = "permisos";
 
+                                // CORRECCIÓN CRÍTICA: Se agrega la barra diagonal al final de cada URL dinámica
                                 const url = `/extra-earth/modulos/${slug}/`;
                                 
                                 const activeClass = window.location.pathname.includes(slug) ? 'active' : '';
@@ -195,7 +196,7 @@ const { title = "Sistema Corporativo", moduloActual } = Astro.props;
             }
         }
 
-        if(logoutBtn) {
+        if (logoutBtn) {
             logoutBtn.addEventListener("click", () => { 
                 localStorage.clear(); 
                 window.location.href = "/extra-earth/login"; 
@@ -203,10 +204,10 @@ const { title = "Sistema Corporativo", moduloActual } = Astro.props;
         }
         
         const menuToggleBtn = document.getElementById('menuToggle');
-        if(menuToggleBtn) {
+        if (menuToggleBtn) {
             menuToggleBtn.onclick = () => {
                 const sidebar = document.getElementById('sidebar');
-                if(sidebar) sidebar.classList.toggle('open');
+                if (sidebar) sidebar.classList.toggle('open');
             };
         }
 

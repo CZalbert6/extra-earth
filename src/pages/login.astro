@@ -117,21 +117,18 @@ const API_URL = "https://extra-earth-production.up.railway.app";
       const hcaptchaElement = document.querySelector('[name="h-captcha-response"]');
       if (!hcaptchaElement || !hcaptchaElement.value) { showMsg("Resuelva el captcha", "error"); return; }
 
-      if(btnSubmit) {
+      if (btnSubmit) {
           btnSubmit.disabled = true;
           btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Entrando...';
       }
 
       try {
-        const usernameInput = document.getElementById("loginIdentifier");
-        const passwordInput = document.getElementById("loginPassword");
-        
         const res = await fetch(`${apiUrl}/api/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            username: usernameInput ? usernameInput.value : '',
-            password: passwordInput ? passwordInput.value : ''
+            username: document.getElementById("loginIdentifier").value,
+            password: document.getElementById("loginPassword").value
           })
         });
 
@@ -146,19 +143,19 @@ const API_URL = "https://extra-earth-production.up.railway.app";
           
           showMsg("Bienvenido", "success");
           
-          // ✅ CAMBIO REALIZADO AQUÍ: Redirección a bienvenida
+          // ✅ AQUÍ ESTÁ LA REDIRECCIÓN CORREGIDA
           setTimeout(() => { window.location.href = "/extra-earth/modulos/bienvenida/"; }, 1000);
           
         } else {
           showMsg(data.message || "Error", "error");
-          if(btnSubmit) {
+          if (btnSubmit) {
               btnSubmit.disabled = false;
               btnSubmit.innerHTML = '<span>Ingresar al Sistema</span><i class="fas fa-arrow-right"></i>';
           }
         }
       } catch (err) {
         showMsg("Error de conexión", "error");
-        if(btnSubmit) {
+        if (btnSubmit) {
             btnSubmit.disabled = false;
             btnSubmit.innerHTML = '<span>Ingresar al Sistema</span><i class="fas fa-arrow-right"></i>';
         }
@@ -168,18 +165,15 @@ const API_URL = "https://extra-earth-production.up.railway.app";
 
   // --- NUEVA LÓGICA DE RECUPERACIÓN ---
   window.abrirModalRecuperar = (e) => {
-    if(e) e.preventDefault();
-    const modal = document.getElementById('modalRecuperar');
-    if(modal) modal.style.display = 'flex';
+    e.preventDefault();
+    document.getElementById('modalRecuperar').style.display = 'flex';
   };
 
   window.cerrarModalRecuperar = () => {
-    const modal = document.getElementById('modalRecuperar');
-    if(modal) modal.style.display = 'none';
+    document.getElementById('modalRecuperar').style.display = 'none';
     const form = document.getElementById('recuperarForm');
     if(form) form.reset();
-    const msg = document.getElementById('msgRecuperar');
-    if(msg) msg.style.display = 'none';
+    document.getElementById('msgRecuperar').style.display = 'none';
   };
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -195,7 +189,7 @@ const API_URL = "https://extra-earth-production.up.railway.app";
           const emailInput = document.getElementById('emailRecuperar');
           const email = emailInput ? emailInput.value : '';
 
-          if(btnRecuperar) {
+          if (btnRecuperar) {
               btnRecuperar.disabled = true;
               btnRecuperar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
           }
@@ -208,21 +202,21 @@ const API_URL = "https://extra-earth-production.up.railway.app";
             });
             const data = await res.json();
             
-            if(msgDiv) {
+            if (msgDiv) {
                 msgDiv.style.display = "block";
                 msgDiv.style.background = "#dcfce7";
                 msgDiv.style.color = "#166534";
                 msgDiv.textContent = data.message;
             }
           } catch (err) {
-            if(msgDiv) {
+            if (msgDiv) {
                 msgDiv.style.display = "block";
                 msgDiv.style.background = "#fee2e2";
                 msgDiv.style.color = "#991b1b";
                 msgDiv.textContent = "Error al conectar con el servidor.";
             }
           } finally {
-            if(btnRecuperar) {
+            if (btnRecuperar) {
                 btnRecuperar.disabled = false;
                 btnRecuperar.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar Enlace';
             }

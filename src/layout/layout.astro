@@ -126,7 +126,7 @@ const { title = "Sistema Corporativo", moduloActual } = Astro.props;
                 const user = JSON.parse(userString);
                 if (user) {
                     if(userNameSpan) userNameSpan.textContent = user.nombre || user.username;
-                    const img = document.getElementById('userImg') as HTMLImageElement;
+                    const img = document.getElementById('userImg');
                     const icon = document.getElementById('userIcon');
                     if (user.strImagen && img && icon) {
                         img.src = user.strImagen;
@@ -158,34 +158,36 @@ const { title = "Sistema Corporativo", moduloActual } = Astro.props;
                     return;
                 }
 
-                // ✅ CAMBIO 2: Redirección al módulo de bienvenida en el menú lateral
+                // ✅ CAMBIO 2: Apunta a bienvenida
                 let html = `<a href="/extra-earth/modulos/bienvenida/"><i class="fas fa-home"></i> Inicio</a>`;
 
-                Object.values(data.data).forEach((grupo: any) => {
-                    if (grupo.modulos?.length > 0) {
-                        html += `<div class="menu-section"><div class="menu-section-title">${grupo.nombre}</div>`;
-                        grupo.modulos.forEach((mod: any) => {
-                            const nombre = mod.strNombreModulo || mod.nombre;
-                            
-                            let slug = nombre.toLowerCase()
-                                .normalize("NFD")
-                                .replace(/[\u0300-\u036f]/g, "")
-                                .replace(/[\s.]+/g, '-')
-                                .replace(/-+/g, '-');
-                            
-                            if (slug === "modulo") slug = "modulos";
-                            if (slug === "perfil") slug = "perfiles";
-                            if (slug === "usuario") slug = "usuarios";
-                            if (slug === "permisos-perfil") slug = "permisos";
+                if(data.data) {
+                    Object.values(data.data).forEach(grupo => {
+                        if (grupo && grupo.modulos && grupo.modulos.length > 0) {
+                            html += `<div class="menu-section"><div class="menu-section-title">${grupo.nombre}</div>`;
+                            grupo.modulos.forEach(mod => {
+                                const nombre = mod.strNombreModulo || mod.nombre;
+                                
+                                let slug = nombre.toLowerCase()
+                                    .normalize("NFD")
+                                    .replace(/[\u0300-\u036f]/g, "")
+                                    .replace(/[\s.]+/g, '-')
+                                    .replace(/-+/g, '-');
+                                
+                                if (slug === "modulo") slug = "modulos";
+                                if (slug === "perfil") slug = "perfiles";
+                                if (slug === "usuario") slug = "usuarios";
+                                if (slug === "permisos-perfil") slug = "permisos";
 
-                            const url = `/extra-earth/modulos/${slug}/`;
-                            
-                            const activeClass = window.location.pathname.includes(slug) ? 'active' : '';
-                            html += `<a href="${url}" class="${activeClass}"><i class="fas fa-chevron-right" style="font-size:0.7rem; opacity:0.5;"></i> ${nombre}</a>`;
-                        });
-                        html += `</div>`;
-                    }
-                });
+                                const url = `/extra-earth/modulos/${slug}/`;
+                                
+                                const activeClass = window.location.pathname.includes(slug) ? 'active' : '';
+                                html += `<a href="${url}" class="${activeClass}"><i class="fas fa-chevron-right" style="font-size:0.7rem; opacity:0.5;"></i> ${nombre}</a>`;
+                            });
+                            html += `</div>`;
+                        }
+                    });
+                }
                 menuContainer.innerHTML = html;
             } catch (err) {
                 console.error("Error al cargar menú:", err);
@@ -193,14 +195,20 @@ const { title = "Sistema Corporativo", moduloActual } = Astro.props;
             }
         }
 
-        logoutBtn?.addEventListener("click", () => { 
-            localStorage.clear(); 
-            window.location.href = "/extra-earth/login"; 
-        });
+        if(logoutBtn) {
+            logoutBtn.addEventListener("click", () => { 
+                localStorage.clear(); 
+                window.location.href = "/extra-earth/login"; 
+            });
+        }
         
-        document.getElementById('menuToggle')!.onclick = () => {
-            document.getElementById('sidebar')!.classList.toggle('open');
-        };
+        const menuToggleBtn = document.getElementById('menuToggle');
+        if(menuToggleBtn) {
+            menuToggleBtn.onclick = () => {
+                const sidebar = document.getElementById('sidebar');
+                if(sidebar) sidebar.classList.toggle('open');
+            };
+        }
 
         document.addEventListener("DOMContentLoaded", () => {
             verificarAuth();

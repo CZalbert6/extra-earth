@@ -97,14 +97,14 @@ const API_URL = "https://extra-earth-production.up.railway.app";
   const API_URL = "https://extra-earth-production.up.railway.app";
 
   const setupLoginForm = () => {
-    const form = document.getElementById("loginForm") as HTMLFormElement;
+    const form = document.getElementById("loginForm");
     if (!form) return;
 
     const messageDiv = document.getElementById("message");
-    const btnSubmit = document.getElementById("btnSubmit") as HTMLButtonElement;
+    const btnSubmit = document.getElementById("btnSubmit");
     const apiUrl = form.dataset.apiUrl;
 
-    const showMsg = (text: string, type: string) => {
+    const showMsg = (text, type) => {
       if (!messageDiv) return;
       messageDiv.style.display = "block";
       messageDiv.style.background = type === "success" ? "#dcfce7" : "#fee2e2";
@@ -114,19 +114,24 @@ const API_URL = "https://extra-earth-production.up.railway.app";
 
     form.onsubmit = async (e) => {
       e.preventDefault();
-      const hcaptchaElement = document.querySelector('[name="h-captcha-response"]') as HTMLTextAreaElement;
-      if (!hcaptchaElement?.value) { showMsg("Resuelva el captcha", "error"); return; }
+      const hcaptchaElement = document.querySelector('[name="h-captcha-response"]');
+      if (!hcaptchaElement || !hcaptchaElement.value) { showMsg("Resuelva el captcha", "error"); return; }
 
-      btnSubmit.disabled = true;
-      btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Entrando...';
+      if(btnSubmit) {
+          btnSubmit.disabled = true;
+          btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Entrando...';
+      }
 
       try {
+        const usernameInput = document.getElementById("loginIdentifier");
+        const passwordInput = document.getElementById("loginPassword");
+        
         const res = await fetch(`${apiUrl}/api/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            username: (document.getElementById("loginIdentifier") as HTMLInputElement).value,
-            password: (document.getElementById("loginPassword") as HTMLInputElement).value
+            username: usernameInput ? usernameInput.value : '',
+            password: passwordInput ? passwordInput.value : ''
           })
         });
 
@@ -146,65 +151,83 @@ const API_URL = "https://extra-earth-production.up.railway.app";
           
         } else {
           showMsg(data.message || "Error", "error");
-          btnSubmit.disabled = false;
-          btnSubmit.innerHTML = '<span>Ingresar al Sistema</span><i class="fas fa-arrow-right"></i>';
+          if(btnSubmit) {
+              btnSubmit.disabled = false;
+              btnSubmit.innerHTML = '<span>Ingresar al Sistema</span><i class="fas fa-arrow-right"></i>';
+          }
         }
       } catch (err) {
         showMsg("Error de conexión", "error");
-        btnSubmit.disabled = false;
-        btnSubmit.innerHTML = '<span>Ingresar al Sistema</span><i class="fas fa-arrow-right"></i>';
+        if(btnSubmit) {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = '<span>Ingresar al Sistema</span><i class="fas fa-arrow-right"></i>';
+        }
       }
     };
   };
 
   // --- NUEVA LÓGICA DE RECUPERACIÓN ---
   window.abrirModalRecuperar = (e) => {
-    e.preventDefault();
-    document.getElementById('modalRecuperar').style.display = 'flex';
+    if(e) e.preventDefault();
+    const modal = document.getElementById('modalRecuperar');
+    if(modal) modal.style.display = 'flex';
   };
 
   window.cerrarModalRecuperar = () => {
-    document.getElementById('modalRecuperar').style.display = 'none';
-    const form = document.getElementById('recuperarForm') as HTMLFormElement;
+    const modal = document.getElementById('modalRecuperar');
+    if(modal) modal.style.display = 'none';
+    const form = document.getElementById('recuperarForm');
     if(form) form.reset();
-    document.getElementById('msgRecuperar').style.display = 'none';
+    const msg = document.getElementById('msgRecuperar');
+    if(msg) msg.style.display = 'none';
   };
 
   document.addEventListener('DOMContentLoaded', () => {
     setupLoginForm();
 
     // Evento para enviar el correo de recuperación
-    document.getElementById('recuperarForm')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const btnRecuperar = document.getElementById('btnRecuperar') as HTMLButtonElement;
-      const msgDiv = document.getElementById('msgRecuperar');
-      const email = (document.getElementById('emailRecuperar') as HTMLInputElement).value;
+    const recuperarForm = document.getElementById('recuperarForm');
+    if (recuperarForm) {
+        recuperarForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const btnRecuperar = document.getElementById('btnRecuperar');
+          const msgDiv = document.getElementById('msgRecuperar');
+          const emailInput = document.getElementById('emailRecuperar');
+          const email = emailInput ? emailInput.value : '';
 
-      btnRecuperar.disabled = true;
-      btnRecuperar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+          if(btnRecuperar) {
+              btnRecuperar.disabled = true;
+              btnRecuperar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+          }
 
-      try {
-        const res = await fetch(`${API_URL}/api/forgot-password`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email })
+          try {
+            const res = await fetch(`${API_URL}/api/forgot-password`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email })
+            });
+            const data = await res.json();
+            
+            if(msgDiv) {
+                msgDiv.style.display = "block";
+                msgDiv.style.background = "#dcfce7";
+                msgDiv.style.color = "#166534";
+                msgDiv.textContent = data.message;
+            }
+          } catch (err) {
+            if(msgDiv) {
+                msgDiv.style.display = "block";
+                msgDiv.style.background = "#fee2e2";
+                msgDiv.style.color = "#991b1b";
+                msgDiv.textContent = "Error al conectar con el servidor.";
+            }
+          } finally {
+            if(btnRecuperar) {
+                btnRecuperar.disabled = false;
+                btnRecuperar.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar Enlace';
+            }
+          }
         });
-        const data = await res.json();
-        
-        msgDiv.style.display = "block";
-        msgDiv.style.background = "#dcfce7";
-        msgDiv.style.color = "#166534";
-        msgDiv.textContent = data.message;
-        
-      } catch (err) {
-        msgDiv.style.display = "block";
-        msgDiv.style.background = "#fee2e2";
-        msgDiv.style.color = "#991b1b";
-        msgDiv.textContent = "Error al conectar con el servidor.";
-      } finally {
-        btnRecuperar.disabled = false;
-        btnRecuperar.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar Enlace';
-      }
-    });
+    }
   });
 </script>

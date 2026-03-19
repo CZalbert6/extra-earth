@@ -52,23 +52,31 @@ import Layout from '../../layout/layout.astro';
         const user = JSON.parse(userStr);
         const nombre = user.nombre || user.username || '';
         if (nombre) {
-          document.getElementById('welcome-text').textContent = `¡Hola de nuevo, ${nombre}!`;
+          const welcomeText = document.getElementById('welcome-text');
+          if (welcomeText) {
+             welcomeText.textContent = `¡Hola de nuevo, ${nombre}!`;
+          }
         }
       } catch (e) {
         console.error("No se pudo leer el nombre del usuario");
       }
     }
 
-    // 2. Lógica del Reloj y Fecha en tiempo real
+    // 2. Lógica del Reloj y Fecha en tiempo real (JavaScript Puro)
     const timeEl = document.getElementById('current-time');
     const dateEl = document.getElementById('current-date');
     
     const actualizarReloj = () => {
       const ahora = new Date();
-      timeEl.textContent = ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      // Formato elegante: "martes, 18 de marzo"
-      const opcionesFecha: Intl.DateTimeFormatOptions = { weekday: 'long', day: 'numeric', month: 'long' };
-      dateEl.textContent = ahora.toLocaleDateString('es-ES', opcionesFecha);
+      if (timeEl) {
+        timeEl.textContent = ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+      
+      // Formato elegante sin tipos de TypeScript
+      const opcionesFecha = { weekday: 'long', day: 'numeric', month: 'long' };
+      if (dateEl) {
+         dateEl.textContent = ahora.toLocaleDateString('es-ES', opcionesFecha);
+      }
     };
     
     actualizarReloj();

@@ -2,135 +2,98 @@
 // src/pages/modulos/permisos.astro
 import Layout from '../../layout/layout.astro';
 const API_URL = "https://extra-earth-production.up.railway.app";
-const pageTitle = "Gestión de Permisos por Perfil";
 ---
 
-<Layout title={`${pageTitle} | Sistema Corporativo`} moduloActual="Permisos-Perfil">
+<Layout title="Matriz de Permisos | ERP" moduloActual="Permisos-Perfil">
   <div class="page-header">
     <div class="header-title">
-      <h1><i class="fas fa-key"></i> {pageTitle}</h1>
-      <p>Configura el acceso masivo de perfiles a los módulos del sistema</p>
+      <h1><i class="fas fa-shield-halved"></i> Matriz de Seguridad</h1>
+      <p>Configuración maestra de privilegios por perfil de usuario</p>
     </div>
     <button class="btn-add" id="btnNuevoPermiso" style="display: none;" onclick="abrirModalNuevo()">
-      <i class="fas fa-shield-alt"></i> Asignar Permisos
+      <i class="fas fa-plus-circle"></i> Nueva Asignación Masiva
     </button>
   </div>
 
-  <div class="card-container">
+  <div class="main-card">
     <div class="table-toolbar">
       <div class="search-box">
-        <i class="fas fa-search search-icon"></i>
-        <input type="text" id="searchInput" placeholder="Buscar por módulo o perfil...">
+        <i class="fas fa-search"></i>
+        <input type="text" id="searchInput" placeholder="Filtrar por módulo o perfil...">
       </div>
     </div>
 
     <div class="table-responsive">
-      <table class="crud-table" id="tablaPermisos">
+      <table class="modern-table">
         <thead>
           <tr>
-            <th>ID</th>
             <th>Módulo</th>
             <th>Perfil</th>
-            <th class="text-center" title="Consulta">C</th> 
-            <th class="text-center" title="Agregar">A</th> 
-            <th class="text-center" title="Editar">E</th> 
-            <th class="text-center" title="Detalle">D</th> 
-            <th class="text-center" title="Eliminar">X</th> 
-            <th>Acciones</th>
+            <th class="text-center">C</th>
+            <th class="text-center">A</th>
+            <th class="text-center">E</th>
+            <th class="text-center">D</th>
+            <th class="text-center">X</th>
+            <th>Acción</th>
           </tr>
         </thead>
-        <tbody id="tablaBody">
-          <tr>
-            <td colspan="9" class="no-data">
-              <div class="loader-container">
-                <i class="fas fa-spinner fa-spin"></i>
-                <p>Cargando matriz de permisos...</p>
-              </div>
-            </td>
-          </tr>
-        </tbody>
+        <tbody id="tablaBody"></tbody>
       </table>
     </div>
-    
-    <div id="pagination" class="pagination"></div>
+    <div id="pagination" class="pagination-container"></div>
   </div>
 
-  <div id="modalPermiso" class="modal" style="display: none;">
-    <div class="modal-content modal-lg">
+  <div id="modalPermiso" class="modal-backdrop" style="display: none;">
+    <div class="modal-window">
       <div class="modal-header">
-        <h3 id="modalTitulo">Nueva Asignación de Permisos</h3>
-        <button class="close-btn" onclick="cerrarModal()">&times;</button>
+        <div>
+          <h3>Asignación Inteligente</h3>
+          <p>Configura accesos múltiples en un solo paso</p>
+        </div>
+        <button class="btn-close" onclick="cerrarModal()">&times;</button>
       </div>
       
-      <form id="permisoForm" onsubmit="event.preventDefault(); guardarPermiso();">
-        <input type="hidden" id="permisoId">
-        
-        <div class="form-group" style="margin-bottom: 1.5rem;">
-          <label>1. Selecciona el Perfil *</label>
-          <div class="select-wrapper">
-            <select id="idPerfil" required>
-              <option value="">Seleccione perfil...</option>
+      <form id="permisoForm" onsubmit="event.preventDefault(); guardarPermiso();" class="modal-body">
+        <div class="selection-section">
+          <label class="section-label">1. Perfil de Usuario</label>
+          <div class="custom-select">
+            <i class="fas fa-user-shield"></i>
+            <select id="idPerfil" required onchange="validarSeleccionPerfil()">
+              <option value="">Selecciona el perfil destino...</option>
             </select>
-            <i class="fas fa-chevron-down select-icon"></i>
           </div>
         </div>
 
-        <div id="seccionModulos">
-          <label style="font-weight: 700; color: #334155; font-size: 0.9rem; text-transform: uppercase; display: block; margin-bottom: 0.5rem;">
-            2. Selecciona los Módulos *
-          </label>
-          <div id="modulosContainer" class="modulos-selector-grid">
-             </div>
+        <div id="contenedorMatriz" class="matriz-container disabled-section">
+          <label class="section-label">2. Matriz de Módulos y Privilegios</label>
+          <div class="matriz-wrapper">
+            <table class="inner-matriz">
+              <thead>
+                <tr>
+                  <th class="text-left">Módulo</th>
+                  <th>Consultar</th>
+                  <th>Agregar</th>
+                  <th>Editar</th>
+                  <th>Detalle</th>
+                  <th>Eliminar</th>
+                </tr>
+              </thead>
+              <tbody id="modulosGridBody"></tbody>
+            </table>
+          </div>
         </div>
 
-        <div id="seccionModuloUnico" style="display: none;" class="form-group">
-           <label>Módulo *</label>
-           <div class="select-wrapper">
-             <select id="idModulo">
-               <option value="">Seleccione módulo...</option>
-             </select>
-             <i class="fas fa-chevron-down select-icon"></i>
-           </div>
-        </div>
-
-        <div class="permisos-section-title" style="margin-top: 1.5rem;">
-          <i class="fas fa-sliders-h"></i> 3. Nivel de Acceso y Privilegios
-        </div>
-        
-        <div class="permisos-grid">
-          <label class="permiso-item">
-            <input type="checkbox" id="bitConsulta"> <span class="checkmark check-blue"></span> 
-            <div class="permiso-text"><span class="p-title">Consultar</span></div>
-          </label>
-          <label class="permiso-item">
-            <input type="checkbox" id="bitAgregar"> <span class="checkmark check-green"></span> 
-            <div class="permiso-text"><span class="p-title">Agregar</span></div>
-          </label>
-          <label class="permiso-item">
-            <input type="checkbox" id="bitEditar"> <span class="checkmark check-yellow"></span> 
-            <div class="permiso-text"><span class="p-title">Editar</span></div>
-          </label>
-          <label class="permiso-item">
-            <input type="checkbox" id="bitDetalle"> <span class="checkmark check-purple"></span> 
-            <div class="permiso-text"><span class="p-title">Detalle</span></div>
-          </label>
-          <label class="permiso-item">
-            <input type="checkbox" id="bitEliminar"> <span class="checkmark check-red"></span> 
-            <div class="permiso-text"><span class="p-title">Eliminar</span></div>
-          </label>
-        </div>
-        
-        <div class="form-actions">
-          <button type="button" class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
-          <button type="submit" class="btn-primary" id="btnGuardar">
-            <i class="fas fa-save"></i> <span id="textBtnGuardar">Guardar Cambios</span>
+        <div class="modal-footer">
+          <button type="button" class="btn-ghost" onclick="cerrarModal()">Cancelar</button>
+          <button type="submit" class="btn-primary" id="btnGuardar" disabled>
+            <i class="fas fa-cloud-upload-alt"></i> <span id="textBtn">Sincronizar Permisos</span>
           </button>
         </div>
       </form>
     </div>
   </div>
 
-  <div id="message" class="status-message"></div>
+  <div id="message" class="toast-message"></div>
 </Layout>
 
 <script>
@@ -143,308 +106,270 @@ const pageTitle = "Gestión de Permisos por Perfil";
   let paginaActual = 1;
   const limitePorPagina = 5; 
 
-  async function cargarSelects() {
-    try {
-      const token = localStorage.getItem('token');
-      const [modulosRes, perfilesRes] = await Promise.all([
-        fetch(`${API_URL}/api/modulos-lista`, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(`${API_URL}/api/perfiles-lista`, { headers: { 'Authorization': `Bearer ${token}` } })
-      ]);
-      
-      const modulosData = await modulosRes.json();
-      const perfilesData = await perfilesRes.json();
-      
-      if (modulosData.success) {
-        // Llenar select para edición
-        document.getElementById('idModulo').innerHTML = '<option value="">Seleccione módulo...</option>' + 
-          modulosData.data.map(m => `<option value="${m.id}">${m.strnombremodulo}</option>`).join('');
-        
-        // Llenar grid de checkboxes para nueva asignación
-        document.getElementById('modulosContainer').innerHTML = modulosData.data.map(m => `
-          <label class="modulo-check-card">
-            <input type="checkbox" name="moduloBatch" value="${m.id}">
-            <div class="check-content">
-               <i class="fas fa-cube"></i>
-               <span>${m.strnombremodulo}</span>
-            </div>
-          </label>
-        `).join('');
-      }
-      
-      if (perfilesData.success) {
-        document.getElementById('idPerfil').innerHTML = '<option value="">Seleccione perfil...</option>' + 
-          perfilesData.data.map(p => `<option value="${p.id}">${p.strnombreperfil}</option>`).join('');
-      }
-    } catch (error) { console.error('Error cargando selects:', error); }
-  }
+  async function cargarCatalogos() {
+    const token = localStorage.getItem('token');
+    const [mRes, pRes] = await Promise.all([
+      fetch(`${API_URL}/api/modulos-lista`, { headers: { 'Authorization': `Bearer ${token}` } }),
+      fetch(`${API_URL}/api/perfiles-lista`, { headers: { 'Authorization': `Bearer ${token}` } })
+    ]);
+    const mData = await mRes.json();
+    const pData = await pRes.json();
 
-  async function cargarTodosLosPermisos() {
-    if (!permisos.consulta) {
-      document.getElementById('tablaBody').innerHTML = '<tr><td colspan="9" class="no-data" style="color: #ef4444; font-weight: 600;">❌ Sin permisos.</td></tr>';
-      return;
+    if (pData.success) {
+      document.getElementById('idPerfil').innerHTML = '<option value="">Selecciona el perfil destino...</option>' + 
+        pData.data.map(p => `<option value="${p.id}">${p.strnombreperfil}</option>`).join('');
     }
-    try {
-      const token = localStorage.getItem('token');
-      let res = await fetch(`${API_URL}/api/permisos-perfil?page=1`, { headers: { 'Authorization': `Bearer ${token}` } });
-      let data = await res.json();
-      if (data.success) {
-        let totalPages = data.pagination.totalPages;
-        let todos = [...data.data];
-        if (totalPages > 1) {
-          let promesas = [];
-          for (let i = 2; i <= totalPages; i++) {
-            promesas.push(fetch(`${API_URL}/api/permisos-perfil?page=${i}`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json()));
-          }
-          let extras = await Promise.all(promesas);
-          extras.forEach(p => { if (p.success) todos.push(...p.data); });
-        }
-        permisosLocales = todos;
-        aplicarFiltroInstantaneo();
+
+    if (mData.success) {
+      document.getElementById('modulosGridBody').innerHTML = mData.data.map(m => `
+        <tr>
+          <td class="sticky-col">
+            <label class="check-container">
+              <input type="checkbox" class="mod-row-check" data-modid="${m.id}" onchange="toggleFilaPermisos(this)">
+              <span class="custom-check"></span>
+              <span class="mod-name">${m.strnombremodulo}</span>
+            </label>
+          </td>
+          <td><input type="checkbox" class="bit-check bitConsulta" disabled></td>
+          <td><input type="checkbox" class="bit-check bitAgregar" disabled></td>
+          <td><input type="checkbox" class="bit-check bitEditar" disabled></td>
+          <td><input type="checkbox" class="bit-check bitDetalle" disabled></td>
+          <td><input type="checkbox" class="bit-check bitEliminar" disabled></td>
+        </tr>
+      `).join('');
+    }
+  }
+
+  window.validarSeleccionPerfil = () => {
+    const id = (document.getElementById('idPerfil') as HTMLSelectElement).value;
+    const cont = document.getElementById('contenedorMatriz');
+    const btn = document.getElementById('btnGuardar') as HTMLButtonElement;
+    if (id) {
+      cont.classList.remove('disabled-section');
+      btn.disabled = false;
+    } else {
+      cont.classList.add('disabled-section');
+      btn.disabled = true;
+    }
+  };
+
+  window.toggleFilaPermisos = (el) => {
+    const row = el.closest('tr');
+    const checks = row.querySelectorAll('.bit-check');
+    checks.forEach(c => {
+      c.disabled = !el.checked;
+      c.checked = el.checked;
+    });
+  };
+
+  window.cambiarPagina = (n) => { paginaActual = n; dibujarVista(); };
+
+  window.guardarPermiso = async () => {
+    const token = localStorage.getItem('token');
+    const idPerfil = (document.getElementById('idPerfil') as HTMLSelectElement).value;
+    const filas = document.querySelectorAll('#modulosGridBody tr');
+    const btn = document.getElementById('btnGuardar') as HTMLButtonElement;
+    const txt = document.getElementById('textBtn');
+
+    const selecciones = [];
+    filas.forEach(tr => {
+      const checkModulo = tr.querySelector('.mod-row-check') as HTMLInputElement;
+      if (checkModulo.checked) {
+        selecciones.push({
+          idModulo: parseInt(checkModulo.dataset.modid),
+          idPerfil: parseInt(idPerfil),
+          bitConsulta: (tr.querySelector('.bitConsulta') as HTMLInputElement).checked,
+          bitAgregar: (tr.querySelector('.bitAgregar') as HTMLInputElement).checked,
+          bitEditar: (tr.querySelector('.bitEditar') as HTMLInputElement).checked,
+          bitDetalle: (tr.querySelector('.bitDetalle') as HTMLInputElement).checked,
+          bitEliminar: (tr.querySelector('.bitEliminar') as HTMLInputElement).checked
+        });
       }
-    } catch (error) { mostrarMensaje('Error al cargar datos', 'error'); } 
+    });
+
+    if (selecciones.length === 0) return alert("Debes seleccionar al menos un módulo");
+
+    btn.disabled = true;
+    txt.textContent = "Sincronizando...";
+
+    try {
+      const promesas = selecciones.map(data => 
+        fetch(`${API_URL}/api/permisos-perfil`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify(data)
+        })
+      );
+      await Promise.all(promesas);
+      mostrarMensaje("Matriz de permisos actualizada", "success");
+      cerrarModal();
+      location.reload();
+    } catch (e) {
+      mostrarMensaje("Fallo en la sincronización", "error");
+      btn.disabled = false;
+      txt.textContent = "Sincronizar Permisos";
+    }
+  };
+
+  async function cargarLista() {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API_URL}/api/permisos-perfil?page=1`, { headers: { 'Authorization': `Bearer ${token}` } });
+    const data = await res.json();
+    if (data.success) {
+      permisosLocales = data.data; 
+      aplicarFiltro();
+    }
   }
 
-  function aplicarFiltroInstantaneo() {
-    const termino = document.getElementById('searchInput').value.toLowerCase();
-    permisosFiltrados = permisosLocales.filter(p => 
-      p.strnombremodulo.toLowerCase().includes(termino) ||
-      p.strnombreperfil.toLowerCase().includes(termino)
-    );
+  function aplicarFiltro() {
+    const t = (document.getElementById('searchInput') as HTMLInputElement).value.toLowerCase();
+    permisosFiltrados = permisosLocales.filter(p => p.strnombremodulo.toLowerCase().includes(t) || p.strnombreperfil.toLowerCase().includes(t));
     paginaActual = 1;
-    dibujarVistaEstatica();
+    dibujarVista();
   }
 
-  function dibujarVistaEstatica() {
-    const inicio = (paginaActual - 1) * limitePorPagina;
-    const fin = inicio + limitePorPagina;
-    renderizarTablaHTML(permisosFiltrados.slice(inicio, fin));
-    renderizarPaginacionHTML(Math.ceil(permisosFiltrados.length / limitePorPagina));
+  function dibujarVista() {
+    const start = (paginaActual - 1) * limitePorPagina;
+    const data = permisosFiltrados.slice(start, start + limitePorPagina);
+    const tbody = document.getElementById('tablaBody');
+    const ok = '<div class="badge-status ok"><i class="fas fa-check"></i></div>';
+    const no = '<div class="badge-status no"><i class="fas fa-times"></i></div>';
+
+    tbody.innerHTML = data.map(p => `
+      <tr>
+        <td class="mod-cell"><i class="fas fa-folder"></i> ${p.strnombremodulo}</td>
+        <td><span class="profile-tag">${p.strnombreperfil}</span></td>
+        <td class="text-center">${p.bitconsulta ? ok : no}</td>
+        <td class="text-center">${p.bitagregar ? ok : no}</td>
+        <td class="text-center">${p.biteditar ? ok : no}</td>
+        <td class="text-center">${p.bitdetalle ? ok : no}</td>
+        <td class="text-center">${p.biteliminar ? ok : no}</td>
+        <td>
+           <button class="btn-circle-delete" onclick="eliminar(${p.id})"><i class="fas fa-trash-alt"></i></button>
+        </td>
+      </tr>
+    `).join('');
+    
+    renderPaginacion(Math.ceil(permisosFiltrados.length / limitePorPagina));
   }
 
-  // --- PAGINACIÓN INTELIGENTE (MAX 5 BOTONES) ---
-  function renderizarPaginacionHTML(total) {
+  function renderPaginacion(total) {
     const div = document.getElementById('pagination');
     if (total <= 1) { div.innerHTML = ''; return; }
-    
     let html = '';
     let start = Math.max(1, paginaActual - 2);
     let end = Math.min(total, start + 4);
     if (end - start < 4) start = Math.max(1, end - 4);
 
-    if (paginaActual > 1) html += `<button class="page-btn" onclick="window.cambiarPagina(${paginaActual-1})"><i class="fas fa-chevron-left"></i></button>`;
+    if (paginaActual > 1) html += `<button class="page-link" onclick="window.cambiarPagina(${paginaActual-1})">&larr;</button>`;
     for (let i = start; i <= end; i++) {
-      html += `<button class="page-btn ${i === paginaActual ? 'active' : ''}" onclick="window.cambiarPagina(${i})">${i}</button>`;
+      html += `<button class="page-link ${i === paginaActual ? 'active' : ''}" onclick="window.cambiarPagina(${i})">${i}</button>`;
     }
-    if (paginaActual < total) html += `<button class="page-btn" onclick="window.cambiarPagina(${paginaActual+1})"><i class="fas fa-chevron-right"></i></button>`;
+    if (paginaActual < total) html += `<button class="page-link" onclick="window.cambiarPagina(${paginaActual+1})">&rarr;</button>`;
     div.innerHTML = html;
   }
 
-  window.cambiarPagina = (num) => { paginaActual = num; dibujarVistaEstatica(); };
-
-  function renderizarTablaHTML(lista) {
-    const tbody = document.getElementById('tablaBody');
-    if (lista.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="9" class="no-data">No se encontraron registros.</td></tr>';
-      return;
-    }
-    const iconCheck = '<div class="check-badge true"><i class="fas fa-check"></i></div>';
-    const iconCross = '<div class="check-badge false"><i class="fas fa-times"></i></div>';
-    tbody.innerHTML = lista.map(p => `
-      <tr>
-        <td>#${p.id}</td>
-        <td style="font-weight:700;">${p.strnombremodulo}</td>
-        <td><span class="role-badge">${p.strnombreperfil}</span></td>
-        <td class="text-center">${p.bitconsulta ? iconCheck : iconCross}</td>
-        <td class="text-center">${p.bitagregar ? iconCheck : iconCross}</td>
-        <td class="text-center">${p.biteditar ? iconCheck : iconCross}</td>
-        <td class="text-center">${p.bitdetalle ? iconCheck : iconCross}</td>
-        <td class="text-center">${p.biteliminar ? iconCheck : iconCross}</td>
-        <td class="actions-cell">
-          ${permisos.editar ? `<button class="action-btn edit" onclick="editarPermiso(${p.id})"><i class="fas fa-pen"></i></button>` : ''}
-          ${permisos.eliminar ? `<button class="action-btn delete" onclick="eliminarPermiso(${p.id})"><i class="fas fa-trash-alt"></i></button>` : ''}
-        </td>
-      </tr>
-    `).join('');
-  }
-
-  // --- CRUD FUNCTIONS ---
-  window.abrirModalNuevo = () => {
-    document.getElementById('modalTitulo').textContent = 'Asignación Masiva de Permisos';
-    document.getElementById('permisoId').value = '';
-    document.getElementById('seccionModulos').style.display = 'block';
-    document.getElementById('seccionModuloUnico').style.display = 'none';
-    (document.getElementById('permisoForm') as HTMLFormElement).reset();
-    document.getElementById('modalPermiso').style.display = 'flex';
-  };
-
+  window.abrirModalNuevo = () => { document.getElementById('modalPermiso').style.display = 'flex'; };
   window.cerrarModal = () => { document.getElementById('modalPermiso').style.display = 'none'; };
-
-  window.editarPermiso = async (id) => {
+  window.eliminar = async (id) => {
+    if(!confirm("¿Deseas revocar este acceso?")) return;
     const token = localStorage.getItem('token');
-    const res = await fetch(`${API_URL}/api/permisos-perfil/${id}`, { headers: { 'Authorization': `Bearer ${token}` } });
-    const data = await res.json();
-    if (data.success) {
-      const p = data.data;
-      document.getElementById('modalTitulo').textContent = 'Editar Permiso Individual';
-      document.getElementById('permisoId').value = p.id;
-      document.getElementById('seccionModulos').style.display = 'none';
-      document.getElementById('seccionModuloUnico').style.display = 'block';
-      
-      (document.getElementById('idModulo') as HTMLSelectElement).value = p.idmodulo;
-      (document.getElementById('idPerfil') as HTMLSelectElement).value = p.idperfil;
-      (document.getElementById('bitAgregar') as HTMLInputElement).checked = p.bitagregar;
-      (document.getElementById('bitEditar') as HTMLInputElement).checked = p.biteditar;
-      (document.getElementById('bitConsulta') as HTMLInputElement).checked = p.bitconsulta;
-      (document.getElementById('bitEliminar') as HTMLInputElement).checked = p.biteliminar;
-      (document.getElementById('bitDetalle') as HTMLInputElement).checked = p.bitdetalle;
-      document.getElementById('modalPermiso').style.display = 'flex';
-    }
+    await fetch(`${API_URL}/api/permisos-perfil/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+    location.reload();
   };
 
-  window.guardarPermiso = async () => {
-    const id = (document.getElementById('permisoId') as HTMLInputElement).value;
-    const token = localStorage.getItem('token');
-    const btn = document.getElementById('btnGuardar');
-    const text = document.getElementById('textBtnGuardar');
-    
-    const bitValues = {
-      bitAgregar: (document.getElementById('bitAgregar') as HTMLInputElement).checked,
-      bitEditar: (document.getElementById('bitEditar') as HTMLInputElement).checked,
-      bitConsulta: (document.getElementById('bitConsulta') as HTMLInputElement).checked,
-      bitEliminar: (document.getElementById('bitEliminar') as HTMLInputElement).checked,
-      bitDetalle: (document.getElementById('bitDetalle') as HTMLInputElement).checked
-    };
-
-    btn.disabled = true;
-    text.textContent = "Guardando...";
-
-    try {
-      if (id) {
-        // EDICIÓN ÚNICA
-        const body = { ...bitValues, idModulo: parseInt((document.getElementById('idModulo') as HTMLSelectElement).value), idPerfil: parseInt((document.getElementById('idPerfil') as HTMLSelectElement).value) };
-        await fetch(`${API_URL}/api/permisos-perfil/${id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify(body)
-        });
-      } else {
-        // ASIGNACIÓN MASIVA (Promesas en paralelo)
-        const idPerfil = parseInt((document.getElementById('idPerfil') as HTMLSelectElement).value);
-        const checkboxes = document.querySelectorAll('input[name="moduloBatch"]:checked');
-        if (checkboxes.length === 0) throw new Error("Selecciona al menos un módulo");
-
-        const promesas = Array.from(checkboxes).map(cb => {
-          return fetch(`${API_URL}/api/permisos-perfil`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ ...bitValues, idPerfil, idModulo: parseInt((cb as HTMLInputElement).value) })
-          });
-        });
-        await Promise.all(promesas);
-      }
-      mostrarMensaje('Permisos guardados correctamente', 'success');
-      cerrarModal();
-      await cargarTodosLosPermisos();
-    } catch (err) {
-      mostrarMensaje(err.message || 'Error al guardar', 'error');
-    } finally {
-      btn.disabled = false;
-      text.textContent = "Guardar Cambios";
-    }
-  };
-
-  window.eliminarPermiso = async (id) => {
-    if (!confirm('¿Eliminar este permiso?')) return;
-    const token = localStorage.getItem('token');
-    const res = await fetch(`${API_URL}/api/permisos-perfil/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-    if ((await res.json()).success) { mostrarMensaje('Permiso eliminado', 'success'); cargarTodosLosPermisos(); }
-  };
-
-  function mostrarMensaje(texto, tipo) {
-    const msj = document.getElementById('message');
-    msj.textContent = texto;
-    msj.className = `status-message msg-${tipo}`;
-    msj.style.display = 'block';
-    setTimeout(() => { msj.style.display = 'none'; }, 3000);
+  function mostrarMensaje(m, t) {
+    const el = document.getElementById('message');
+    el.textContent = m; el.className = `toast-message ${t}`; el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 3000);
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    if (permisos.agregar) document.getElementById('btnNuevoPermiso').style.display = 'flex';
-    document.getElementById('searchInput').addEventListener('input', aplicarFiltroInstantaneo);
-    cargarSelects();
-    cargarTodosLosPermisos();
+    if(permisos.agregar) document.getElementById('btnNuevoPermiso').style.display = 'flex';
+    document.getElementById('searchInput').oninput = aplicarFiltro;
+    cargarCatalogos();
+    cargarLista();
   });
 </script>
 
 <style is:global>
-  /* --- REESTRUCTURACIÓN DE DISEÑO --- */
+  :root {
+    --primary: #4f46e5;
+    --primary-hover: #4338ca;
+    --bg-card: #ffffff;
+    --text-dark: #1e293b;
+    --text-muted: #64748b;
+    --border-color: #e2e8f0;
+    --success: #10b981;
+    --danger: #ef4444;
+  }
+
   .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
-  .header-title h1 { margin: 0; color: #0f172a; font-size: 1.8rem; }
-  .header-title p { margin: 5px 0 0 0; color: #64748b; }
+  .header-title h1 { font-size: 1.75rem; color: var(--text-dark); display: flex; align-items: center; gap: 12px; margin: 0; }
+  .header-title h1 i { color: var(--primary); }
+  .header-title p { color: var(--text-muted); margin: 4px 0 0 0; }
+
+  .main-card { background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border-color); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); padding: 1.5rem; }
+  .table-toolbar { display: flex; justify-content: flex-end; margin-bottom: 1.5rem; }
   
-  .btn-add { background: #2563eb; color: white; border: none; padding: 0.8rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .search-box { position: relative; width: 100%; max-width: 350px; }
+  .search-box i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+  .search-box input { width: 100%; padding: 10px 15px 10px 40px; border-radius: 10px; border: 1.5px solid var(--border-color); outline: none; }
 
-  .card-container { background: white; border-radius: 12px; padding: 1.5rem; border: 1px solid #f1f5f9; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+  .modern-table { width: 100%; border-collapse: collapse; }
+  .modern-table th { text-align: left; padding: 12px 16px; font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); border-bottom: 2px solid var(--border-color); }
+  .modern-table td { padding: 16px; border-bottom: 1px solid #f1f5f9; color: var(--text-dark); font-size: 0.9rem; }
+  .modern-table tr:hover { background: #f8fafc; }
+
+  .mod-cell { font-weight: 700; color: var(--text-dark); }
+  .mod-cell i { color: #94a3b8; margin-right: 8px; }
   
-  .table-toolbar { margin-bottom: 1.5rem; display: flex; justify-content: flex-end; }
-  .search-box { position: relative; width: 100%; max-width: 400px; }
-  .search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #94a3b8; }
-  .search-box input { width: 100%; padding: 0.8rem 1rem 0.8rem 2.8rem; border: 1px solid #e2e8f0; border-radius: 30px; }
+  .profile-tag { background: #eef2ff; color: #4338ca; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; border: 1px solid #c7d2fe; }
 
-  .crud-table { width: 100%; border-collapse: collapse; }
-  .crud-table th { text-align: left; padding: 1rem; border-bottom: 2px solid #f1f5f9; font-size: 0.8rem; color: #64748b; text-transform: uppercase; }
-  .crud-table td { padding: 1rem; border-bottom: 1px solid #f1f5f9; }
+  .badge-status { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; margin: 0 auto; }
+  .badge-status.ok { background: #dcfce7; color: #15803d; }
+  .badge-status.no { background: #f1f5f9; color: #94a3b8; }
 
-  .check-badge { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; margin: 0 auto; }
-  .check-badge.true { background: #dcfce7; color: #166534; }
-  .check-badge.false { background: #f1f5f9; color: #94a3b8; }
+  .pagination-container { display: flex; justify-content: center; gap: 8px; margin-top: 1.5rem; }
+  .page-link { border: 1.5px solid var(--border-color); background: white; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+  .page-link.active { background: var(--primary); color: white; border-color: var(--primary); }
 
-  .role-badge { background: #f1f5f9; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; color: #475569; }
-
-  /* --- MODAL Y SELECTOR MASIVO --- */
-  .modal { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
-  .modal-content { background: white; padding: 2rem; border-radius: 12px; width: 100%; max-width: 700px; max-height: 90vh; overflow-y: auto; }
-  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .modal-window { background: white; width: 100%; max-width: 850px; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); animation: zoomIn 0.3s ease; }
   
-  /* GRID DE MODULOS */
-  .modulos-selector-grid { 
-    display: grid; 
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); 
-    gap: 10px; 
-    background: #f8fafc; 
-    padding: 15px; 
-    border-radius: 8px; 
-    border: 1px solid #e2e8f0;
-    max-height: 180px;
-    overflow-y: auto;
-  }
-  .modulo-check-card { cursor: pointer; }
-  .modulo-check-card input { display: none; }
-  .check-content { 
-    background: white; 
-    padding: 10px; 
-    border: 1px solid #e2e8f0; 
-    border-radius: 6px; 
-    display: flex; 
-    align-items: center; 
-    gap: 8px; 
-    font-size: 0.8rem;
-    transition: all 0.2s;
-  }
-  .modulo-check-card input:checked + .check-content { 
-    background: #eff6ff; 
-    border-color: #3b82f6; 
-    color: #1e40af; 
-  }
+  .modal-header { padding: 20px 30px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+  .modal-body { padding: 30px; }
+  .section-label { display: block; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px; }
 
-  .permisos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-top: 1rem; }
-  .permiso-item { border: 1px solid #e2e8f0; padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+  .custom-select { position: relative; margin-bottom: 25px; }
+  .custom-select i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--primary); }
+  .custom-select select { width: 100%; padding: 12px 15px 12px 45px; border-radius: 12px; border: 1.5px solid var(--border-color); appearance: none; outline: none; }
 
-  .pagination { display: flex; justify-content: center; gap: 5px; margin-top: 2rem; }
-  .page-btn { padding: 8px 14px; border: 1px solid #e2e8f0; background: white; border-radius: 6px; cursor: pointer; font-weight: 600; }
-  .page-btn.active { background: #2563eb; color: white; border-color: #2563eb; }
+  .disabled-section { opacity: 0.4; pointer-events: none; filter: grayscale(1); }
 
-  .status-message { position: fixed; bottom: 20px; right: 20px; padding: 15px 25px; border-radius: 8px; color: white; z-index: 2000; }
-  .msg-success { background: #10b981; }
-  .msg-error { background: #ef4444; }
+  .matriz-wrapper { border: 1.5px solid var(--border-color); border-radius: 12px; overflow: hidden; max-height: 300px; overflow-y: auto; }
+  .inner-matriz { width: 100%; border-collapse: collapse; }
+  .inner-matriz th { background: #f8fafc; padding: 12px; font-size: 0.7rem; color: var(--text-muted); position: sticky; top: 0; }
+  .inner-matriz td { padding: 12px; border-bottom: 1px solid #f1f5f9; text-align: center; }
+  .text-left { text-align: left !important; }
+
+  .check-container { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+  .check-container input { display: none; }
+  .custom-check { width: 20px; height: 20px; border: 2px solid var(--border-color); border-radius: 6px; position: relative; }
+  .check-container input:checked + .custom-check { background: var(--primary); border-color: var(--primary); }
+  .check-container input:checked + .custom-check::after { content: '✓'; color: white; position: absolute; left: 4px; top: -1px; }
+
+  .modal-footer { padding: 20px 30px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 12px; }
+
+  .btn-add { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; }
+  .btn-primary { background: var(--primary); color: white; border: none; padding: 12px 25px; border-radius: 10px; font-weight: 600; cursor: pointer; }
+  .btn-primary:disabled { background: #94a3b8; }
+  .btn-circle-delete { border: none; background: none; color: #94a3b8; font-size: 1.1rem; cursor: pointer; }
+  .btn-circle-delete:hover { color: var(--danger); }
+
+  .toast-message { position: fixed; bottom: 30px; right: 30px; padding: 15px 30px; border-radius: 12px; color: white; font-weight: 600; display: none; z-index: 3000; }
+  .toast-message.success { background: var(--success); }
+  .toast-message.error { background: var(--danger); }
+
+  @keyframes zoomIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
 </style>

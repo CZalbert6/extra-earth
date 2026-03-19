@@ -27,6 +27,7 @@ const API_URL = "https://extra-earth-production.up.railway.app";
       <table class="modern-table">
         <thead>
           <tr>
+            <th>ID</th>
             <th>Módulo</th>
             <th>Perfil</th>
             <th class="text-center">C</th>
@@ -237,6 +238,7 @@ const API_URL = "https://extra-earth-production.up.railway.app";
 
     tbody.innerHTML = data.map(p => `
       <tr>
+        <td class="id-cell">#${p.id}</td>
         <td class="mod-cell"><i class="fas fa-folder"></i> ${p.strnombremodulo}</td>
         <td><span class="profile-tag">${p.strnombreperfil}</span></td>
         <td class="text-center">${p.bitconsulta ? ok : no}</td>
@@ -272,7 +274,7 @@ const API_URL = "https://extra-earth-production.up.railway.app";
   window.abrirModalNuevo = () => { document.getElementById('modalPermiso').style.display = 'flex'; };
   window.cerrarModal = () => { document.getElementById('modalPermiso').style.display = 'none'; };
   window.eliminar = async (id) => {
-    if(!confirm("¿Deseas revocar este acceso?")) return;
+    if(!confirm("¿Deseas revocar este permiso?")) return;
     const token = localStorage.getItem('token');
     await fetch(`${API_URL}/api/permisos-perfil/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
     location.reload();
@@ -293,6 +295,7 @@ const API_URL = "https://extra-earth-production.up.railway.app";
 </script>
 
 <style is:global>
+  /* --- PALETA DE COLORES --- */
   :root {
     --primary: #4f46e5;
     --primary-hover: #4338ca;
@@ -304,23 +307,27 @@ const API_URL = "https://extra-earth-production.up.railway.app";
     --danger: #ef4444;
   }
 
+  /* --- HEADER --- */
   .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
   .header-title h1 { font-size: 1.75rem; color: var(--text-dark); display: flex; align-items: center; gap: 12px; margin: 0; }
   .header-title h1 i { color: var(--primary); }
   .header-title p { color: var(--text-muted); margin: 4px 0 0 0; }
 
-  .main-card { background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border-color); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); padding: 1.5rem; }
+  /* --- CARD & TABLA --- */
+  .main-card { background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border-color); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); overflow: hidden; padding: 1.5rem; }
   .table-toolbar { display: flex; justify-content: flex-end; margin-bottom: 1.5rem; }
   
   .search-box { position: relative; width: 100%; max-width: 350px; }
   .search-box i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
-  .search-box input { width: 100%; padding: 10px 15px 10px 40px; border-radius: 10px; border: 1.5px solid var(--border-color); outline: none; }
+  .search-box input { width: 100%; padding: 10px 15px 10px 40px; border-radius: 10px; border: 1.5px solid var(--border-color); outline: none; transition: 0.2s; }
+  .search-box input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1); }
 
   .modern-table { width: 100%; border-collapse: collapse; }
-  .modern-table th { text-align: left; padding: 12px 16px; font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); border-bottom: 2px solid var(--border-color); }
+  .modern-table th { text-align: left; padding: 12px 16px; font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.05em; border-bottom: 2px solid var(--border-color); }
   .modern-table td { padding: 16px; border-bottom: 1px solid #f1f5f9; color: var(--text-dark); font-size: 0.9rem; }
   .modern-table tr:hover { background: #f8fafc; }
 
+  .id-cell { color: var(--text-muted); font-weight: 600; font-family: monospace; }
   .mod-cell { font-weight: 700; color: var(--text-dark); }
   .mod-cell i { color: #94a3b8; margin-right: 8px; }
   
@@ -330,46 +337,62 @@ const API_URL = "https://extra-earth-production.up.railway.app";
   .badge-status.ok { background: #dcfce7; color: #15803d; }
   .badge-status.no { background: #f1f5f9; color: #94a3b8; }
 
+  /* --- PAGINACIÓN --- */
   .pagination-container { display: flex; justify-content: center; gap: 8px; margin-top: 1.5rem; }
-  .page-link { border: 1.5px solid var(--border-color); background: white; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+  .page-link { border: 1.5px solid var(--border-color); background: white; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: 0.2s; }
   .page-link.active { background: var(--primary); color: white; border-color: var(--primary); }
+  .page-link:hover:not(.active) { background: #f1f5f9; border-color: #cbd5e1; }
 
+  /* --- MODAL --- */
   .modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; }
-  .modal-window { background: white; width: 100%; max-width: 850px; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); animation: zoomIn 0.3s ease; }
+  .modal-window { background: white; width: 100%; max-width: 850px; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden; animation: zoomIn 0.3s ease; }
   
-  .modal-header { padding: 20px 30px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+  .modal-header { padding: 20px 30px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #fafafa; }
+  .modal-header h3 { margin: 0; font-size: 1.25rem; color: var(--text-dark); }
+  .modal-header p { margin: 4px 0 0 0; font-size: 0.85rem; color: var(--text-muted); }
+  .btn-close { border: none; background: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted); }
+
   .modal-body { padding: 30px; }
-  .section-label { display: block; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px; }
+  .section-label { display: block; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px; letter-spacing: 0.025em; }
 
   .custom-select { position: relative; margin-bottom: 25px; }
   .custom-select i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--primary); }
-  .custom-select select { width: 100%; padding: 12px 15px 12px 45px; border-radius: 12px; border: 1.5px solid var(--border-color); appearance: none; outline: none; }
+  .custom-select select { width: 100%; padding: 12px 15px 12px 45px; border-radius: 12px; border: 1.5px solid var(--border-color); appearance: none; font-weight: 500; outline: none; }
+  .custom-select select:focus { border-color: var(--primary); }
 
-  .disabled-section { opacity: 0.4; pointer-events: none; filter: grayscale(1); }
+  .disabled-section { opacity: 0.4; pointer-events: none; filter: grayscale(1); transition: 0.3s; }
 
+  /* MATRIZ MODAL */
   .matriz-wrapper { border: 1.5px solid var(--border-color); border-radius: 12px; overflow: hidden; max-height: 300px; overflow-y: auto; }
   .inner-matriz { width: 100%; border-collapse: collapse; }
   .inner-matriz th { background: #f8fafc; padding: 12px; font-size: 0.7rem; color: var(--text-muted); position: sticky; top: 0; }
   .inner-matriz td { padding: 12px; border-bottom: 1px solid #f1f5f9; text-align: center; }
   .text-left { text-align: left !important; }
 
-  .check-container { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+  /* CHECKBOX CUSTOM */
+  .check-container { display: flex; align-items: center; gap: 12px; cursor: pointer; position: relative; }
   .check-container input { display: none; }
-  .custom-check { width: 20px; height: 20px; border: 2px solid var(--border-color); border-radius: 6px; position: relative; }
+  .custom-check { width: 20px; height: 20px; border: 2px solid var(--border-color); border-radius: 6px; transition: 0.2s; position: relative; }
   .check-container input:checked + .custom-check { background: var(--primary); border-color: var(--primary); }
-  .check-container input:checked + .custom-check::after { content: '✓'; color: white; position: absolute; left: 4px; top: -1px; }
+  .check-container input:checked + .custom-check::after { content: '✓'; color: white; position: absolute; left: 4px; top: -1px; font-size: 14px; }
+  .mod-name { font-weight: 600; font-size: 0.85rem; }
 
-  .modal-footer { padding: 20px 30px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 12px; }
+  .modal-footer { padding: 20px 30px; background: #fafafa; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 12px; }
 
-  .btn-add { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; }
-  .btn-primary { background: var(--primary); color: white; border: none; padding: 12px 25px; border-radius: 10px; font-weight: 600; cursor: pointer; }
-  .btn-primary:disabled { background: #94a3b8; }
-  .btn-circle-delete { border: none; background: none; color: #94a3b8; font-size: 1.1rem; cursor: pointer; }
+  /* BOTONES */
+  .btn-add { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+  .btn-add:hover { background: var(--primary-hover); transform: translateY(-1px); }
+  .btn-primary { background: var(--primary); color: white; border: none; padding: 12px 25px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: 0.3s; }
+  .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; }
+  .btn-ghost { background: none; border: none; color: var(--text-muted); font-weight: 600; cursor: pointer; }
+  .btn-circle-delete { border: none; background: none; color: #94a3b8; font-size: 1.1rem; cursor: pointer; transition: 0.2s; }
   .btn-circle-delete:hover { color: var(--danger); }
 
-  .toast-message { position: fixed; bottom: 30px; right: 30px; padding: 15px 30px; border-radius: 12px; color: white; font-weight: 600; display: none; z-index: 3000; }
+  /* TOAST */
+  .toast-message { position: fixed; bottom: 30px; right: 30px; padding: 15px 30px; border-radius: 12px; color: white; font-weight: 600; display: none; box-shadow: 0 10px 15px rgba(0,0,0,0.1); z-index: 3000; animation: slideIn 0.3s ease; }
   .toast-message.success { background: var(--success); }
   .toast-message.error { background: var(--danger); }
 
   @keyframes zoomIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+  @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 </style>

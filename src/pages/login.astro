@@ -140,7 +140,8 @@ const API_URL = "https://extra-earth-production.up.railway.app";
           localStorage.setItem("permisos", JSON.stringify(data.permisos || []));
           
           showMsg("Bienvenido", "success");
-          setTimeout(() => { window.location.href = "/extra-earth/modulos/principal-1-1"; }, 1000);
+          // CAMBIO AQUÍ: Redirige a la página de bienvenida
+          setTimeout(() => { window.location.href = "/extra-earth/bienvenida/"; }, 1000);
         } else {
           showMsg(data.message || "Error", "error");
           btnSubmit.disabled = false;

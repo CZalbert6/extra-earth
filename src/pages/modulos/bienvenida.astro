@@ -1,0 +1,324 @@
+---
+import Layout from '../../../layout/layout.astro';
+
+const moduloActual = "Bienvenida";
+---
+
+<Layout title="Bienvenida | Sistema Corporativo" moduloActual={moduloActual}>
+  <div class="welcome-container">
+    <!-- Hero Section con efecto glassmorphism -->
+    <div class="hero-section">
+      <div class="hero-content">
+        <div class="icon-wrapper">
+          <i class="fas fa-chess-queen"></i>
+        </div>
+        <h1>Panel de Control</h1>
+        <p class="subtitle">Sistema de Gestión Empresarial</p>
+        <div class="divider">
+          <span></span>
+          <i class="fas fa-star"></i>
+          <span></span>
+        </div>
+        <p class="company-name">CORP-DEV 2026</p>
+      </div>
+    </div>
+
+    <!-- Tarjetas decorativas -->
+    <div class="cards-grid">
+      <div class="decorative-card">
+        <div class="card-icon">
+          <i class="fas fa-chart-line"></i>
+        </div>
+        <h3>Analytics</h3>
+        <p>Visualiza el rendimiento de tu negocio en tiempo real</p>
+        <div class="card-shine"></div>
+      </div>
+
+      <div class="decorative-card">
+        <div class="card-icon">
+          <i class="fas fa-users-cog"></i>
+        </div>
+        <h3>Gestión</h3>
+        <p>Administra usuarios, perfiles y permisos de acceso</p>
+        <div class="card-shine"></div>
+      </div>
+
+      <div class="decorative-card">
+        <div class="card-icon">
+          <i class="fas fa-file-invoice"></i>
+        </div>
+        <h3>Reportes</h3>
+        <p>Genera informes detallados de todas las operaciones</p>
+        <div class="card-shine"></div>
+      </div>
+    </div>
+
+    <!-- Mensaje de bienvenida elegante -->
+    <div class="welcome-message">
+      <i class="fas fa-quote-right quote-icon"></i>
+      <p>
+        Bienvenido al sistema integrado de gestión. 
+        Utiliza el menú lateral para acceder a todos los módulos disponibles.
+      </p>
+    </div>
+
+    <!-- Línea de tiempo decorativa -->
+    <div class="timeline-decoration">
+      <div class="timeline-dot"></div>
+      <div class="timeline-line"></div>
+      <div class="timeline-dot"></div>
+      <div class="timeline-line"></div>
+      <div class="timeline-dot"></div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .welcome-container {
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
+    padding: 1rem 0;
+  }
+
+  /* Hero Section */
+  .hero-section {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 24px;
+    padding: 3rem 2rem;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+  }
+
+  .hero-section::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    animation: rotate 20s linear infinite;
+  }
+
+  @keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    color: white;
+  }
+
+  .icon-wrapper {
+    width: 100px;
+    height: 100px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 2rem;
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255,255,255,0.3);
+  }
+
+  .icon-wrapper i {
+    font-size: 3rem;
+    color: white;
+  }
+
+  .hero-content h1 {
+    font-size: 3rem;
+    margin: 0 0 1rem;
+    font-weight: 700;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+  }
+
+  .subtitle {
+    font-size: 1.2rem;
+    opacity: 0.9;
+    margin: 0 0 2rem;
+    letter-spacing: 1px;
+  }
+
+  .divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin: 2rem 0;
+  }
+
+  .divider span {
+    width: 50px;
+    height: 2px;
+    background: rgba(255,255,255,0.5);
+  }
+
+  .divider i {
+    color: rgba(255,255,255,0.8);
+    font-size: 1rem;
+  }
+
+  .company-name {
+    font-size: 1.5rem;
+    font-weight: 300;
+    letter-spacing: 4px;
+    margin: 0;
+    opacity: 0.9;
+  }
+
+  /* Tarjetas decorativas */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+  }
+
+  .decorative-card {
+    background: white;
+    border-radius: 20px;
+    padding: 2rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    transition: all 0.3s ease;
+  }
+
+  .decorative-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    border-color: transparent;
+  }
+
+  .card-icon {
+    width: 70px;
+    height: 70px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+  }
+
+  .card-icon i {
+    font-size: 2rem;
+    color: white;
+  }
+
+  .decorative-card h3 {
+    margin: 0 0 1rem;
+    color: #2d3748;
+    font-size: 1.3rem;
+  }
+
+  .decorative-card p {
+    margin: 0;
+    color: #718096;
+    font-size: 0.95rem;
+    line-height: 1.6;
+  }
+
+  .card-shine {
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+      45deg,
+      transparent 30%,
+      rgba(255,255,255,0.1) 50%,
+      transparent 70%
+    );
+    transform: rotate(45deg);
+    animation: shine 3s infinite;
+  }
+
+  @keyframes shine {
+    0% { transform: translateX(-100%) rotate(45deg); }
+    20%, 100% { transform: translateX(100%) rotate(45deg); }
+  }
+
+  /* Mensaje de bienvenida */
+  .welcome-message {
+    background: #f7fafc;
+    border-radius: 16px;
+    padding: 2rem;
+    text-align: center;
+    position: relative;
+    border: 1px solid #e2e8f0;
+  }
+
+  .quote-icon {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    font-size: 2rem;
+    color: #cbd5e0;
+    opacity: 0.5;
+  }
+
+  .welcome-message p {
+    margin: 0;
+    font-size: 1.2rem;
+    color: #4a5568;
+    line-height: 1.8;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  /* Línea de tiempo decorativa */
+  .timeline-decoration {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  .timeline-dot {
+    width: 12px;
+    height: 12px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  .timeline-dot:nth-child(2) { animation-delay: 0.5s; }
+  .timeline-dot:nth-child(4) { animation-delay: 0.5s; }
+
+  .timeline-line {
+    width: 100px;
+    height: 2px;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.5); opacity: 0.7; }
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .cards-grid {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    .hero-content h1 {
+      font-size: 2rem;
+    }
+
+    .timeline-line {
+      width: 50px;
+    }
+  }
+</style>

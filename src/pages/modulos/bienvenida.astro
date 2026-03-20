@@ -1,0 +1,48 @@
+---
+// src/pages/modulos/bienvenida.astro
+import Layout from '../../layout/layout.astro';
+---
+
+<Layout title="Inicio | Sistema Corporativo" moduloActual="Inicio">
+  <div style="padding: 2rem; text-align: center; background: white; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+    <i class="fas fa- handshake" style="font-size: 4rem; color: #3b82f6; margin-bottom: 1.5rem;"></i>
+    <h1 id="user-greeting" style="color: #1e293b; font-size: 2rem; margin-bottom: 1rem;">¡Bienvenido al Sistema!</h1>
+    <p style="color: #64748b; font-size: 1.1rem; max-width: 600px; margin: 0 auto 2rem;">
+      Has ingresado correctamente al panel administrativo. Utiliza el menú lateral para navegar entre los módulos disponibles.
+    </p>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 2rem;">
+      <div style="padding: 1.5rem; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <h3 style="margin: 0; color: #1e293b;">Fecha</h3>
+        <p id="live-date" style="margin: 0.5rem 0 0; color: #3b82f6; font-weight: 600;">--</p>
+      </div>
+      <div style="padding: 1.5rem; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <h3 style="margin: 0; color: #1e293b;">Estado</h3>
+        <p style="margin: 0.5rem 0 0; color: #10b981; font-weight: 600;">Sincronizado</p>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script is:inline>
+  // Usamos is:inline para que Astro no intente procesar este JS, 
+  // así evitamos errores de compilación al 100%.
+  document.addEventListener('DOMContentLoaded', () => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        const nombre = user.nombre || user.username;
+        const greeting = document.getElementById('user-greeting');
+        if (greeting && nombre) greeting.textContent = '¡Hola de nuevo, ' + nombre + '!';
+      } catch (e) {}
+    }
+
+    const dateEl = document.getElementById('live-date');
+    if (dateEl) {
+      dateEl.textContent = new Date().toLocaleDateString('es-ES', { 
+        weekday: 'long', day: 'numeric', month: 'long' 
+      });
+    }
+  });
+</script>

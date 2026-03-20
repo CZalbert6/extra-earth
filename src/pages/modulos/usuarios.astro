@@ -63,12 +63,12 @@ const API_URL = "https://extra-earth-production.up.railway.app";
         <div class="form-grid">
           <div class="form-group">
             <label>Usuario *</label>
-            <input type="text" id="username" required maxlength="100" placeholder="Ej. jperez">
+            <input type="text" id="username" required maxlength="10" placeholder="Máx. 10 caracteres">
           </div>
           
           <div class="form-group">
             <label>Nombre Completo *</label>
-            <input type="text" id="nombre" required placeholder="Ej. Juan Pérez">
+            <input type="text" id="nombre" required maxlength="50" placeholder="Máx. 50 caracteres">
           </div>
 
           <div class="form-group">
@@ -77,8 +77,14 @@ const API_URL = "https://extra-earth-production.up.railway.app";
           </div>
           
           <div class="form-group">
-            <label>Teléfono</label>
-            <input type="text" id="strNumeroCelular" placeholder="10 dígitos">
+            <label>Teléfono (10 dígitos)</label>
+            <input 
+              type="text" 
+              id="strNumeroCelular" 
+              placeholder="10 dígitos" 
+              maxlength="10"
+              oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10)"
+            >
           </div>
           
           <div class="form-group">
@@ -141,64 +147,34 @@ const API_URL = "https://extra-earth-production.up.railway.app";
 
   const { permisos } = verificarPermisosModulo('Usuario');
 
-  // --- VARIABLES PARA EL MODO ESTÁTICO (Frontend Paginación y Búsqueda) ---
   let usuariosLocales = []; 
   let usuariosFiltrados = []; 
   let paginaActual = 1;
   const limitePorPagina = 5; 
 
-  // ============================================
-  // MOTOR DE COMPRESIÓN EXTREMA DE IMÁGENES
-  // ============================================
   window.previsualizarImagen = (event) => {
     const file = event.target.files[0];
     if (!file) return;
-
-    if (!file.type.match('image.*')) {
-      alert('Por favor, seleccione una imagen válida');
-      event.target.value = '';
-      return;
-    }
-
-    if (file.size > 2 * 1024 * 1024) {
-      alert('La imagen es muy pesada. Máximo 2MB.');
-      event.target.value = '';
-      return;
-    }
+    if (!file.type.match('image.*')) { alert('Por favor, seleccione una imagen válida'); event.target.value = ''; return; }
+    if (file.size > 2 * 1024 * 1024) { alert('La imagen es muy pesada. Máximo 2MB.'); event.target.value = ''; return; }
 
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new Image();
       img.src = e.target.result;
-      
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-        
+        let width = img.width; let height = img.height;
         const MAX_SIZE = 200;
-        
-        if (width > height && width > MAX_SIZE) {
-          height = Math.round((height * MAX_SIZE) / width);
-          width = MAX_SIZE;
-        } else if (height > MAX_SIZE) {
-          width = Math.round((width * MAX_SIZE) / height);
-          height = MAX_SIZE;
-        }
-        
-        canvas.width = width;
-        canvas.height = height;
+        if (width > height && width > MAX_SIZE) { height = Math.round((height * MAX_SIZE) / width); width = MAX_SIZE; }
+        else if (height > MAX_SIZE) { width = Math.round((width * MAX_SIZE) / height); height = MAX_SIZE; }
+        canvas.width = width; canvas.height = height;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
-        
-        let compressedBase64 = canvas.toDataURL('image/jpeg', 0.4); // Balance calidad/peso
-        
+        let compressedBase64 = canvas.toDataURL('image/jpeg', 0.4);
         document.getElementById('strImagenBase64').value = compressedBase64;
-        
         const previewImg = document.getElementById('previewImg');
-        previewImg.src = compressedBase64;
-        previewImg.style.display = 'block';
-        
+        previewImg.src = compressedBase64; previewImg.style.display = 'block';
         document.getElementById('previewPlaceholder').style.display = 'none';
         document.getElementById('btnClearImagen').style.display = 'inline-block';
       };
@@ -209,20 +185,15 @@ const API_URL = "https://extra-earth-production.up.railway.app";
   window.limpiarImagen = () => {
     document.getElementById('imagenFile').value = '';
     document.getElementById('strImagenBase64').value = '';
-    
     const previewImg = document.getElementById('previewImg');
-    previewImg.style.display = 'none';
-    previewImg.src = '#'; 
-    
+    previewImg.style.display = 'none'; previewImg.src = '#'; 
     document.getElementById('previewPlaceholder').style.display = 'flex';
     document.getElementById('btnClearImagen').style.display = 'none';
   };
 
   async function cargarPerfiles() {
     const token = localStorage.getItem('token');
-    const response = await fetch(`${API_URL}/api/perfiles-lista`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
+    const response = await fetch(`${API_URL}/api/perfiles-lista`, { headers: { 'Authorization': `Bearer ${token}` } });
     const data = await response.json();
     if (data.success) {
       const select = document.getElementById('idPerfil');
@@ -231,26 +202,18 @@ const API_URL = "https://extra-earth-production.up.railway.app";
     }
   }
 
-  // ============================================
-  // CARGA ESTÁTICA TOTAL Y BÚSQUEDA INSTANTÁNEA
-  // ============================================
   async function cargarTodosLosUsuarios() {
     if (!permisos.consulta) {
       document.getElementById('tablaBody').innerHTML = '<tr><td colspan="8" class="no-data" style="color: #ef4444;">❌ No tienes permisos para consultar información.</td></tr>';
       return;
     }
-
     try {
       const token = localStorage.getItem('token');
-      // 1. Pedimos la página 1 para saber cuántas páginas hay en total
       let res = await fetch(`${API_URL}/api/usuarios?page=1`, { headers: { 'Authorization': `Bearer ${token}` } });
       let data = await res.json();
-      
       if (data.success) {
         let totalPages = data.pagination.totalPages;
         let todos = [...data.data];
-        
-        // 2. Si hay más páginas, las descargamos todas de golpe en segundo plano
         if (totalPages > 1) {
           let promesas = [];
           for (let i = 2; i <= totalPages; i++) {
@@ -259,87 +222,49 @@ const API_URL = "https://extra-earth-production.up.railway.app";
           let extras = await Promise.all(promesas);
           extras.forEach(p => { if (p.success) todos.push(...p.data); });
         }
-        
-        // Guardamos todo en memoria
-        usuariosLocales = todos;
-        aplicarFiltroInstantaneo(); // Aplica la búsqueda si hay algo escrito y dibuja la tabla
+        usuariosLocales = todos; aplicarFiltroInstantaneo();
       }
-    } catch (error) {
-      console.error(error);
-      mostrarMensaje('Error de conexión al cargar la tabla', 'error');
-    }
+    } catch (error) { mostrarMensaje('Error de conexión al cargar la tabla', 'error'); }
   }
 
-  // Se activa cada vez que el usuario presiona una tecla
   function aplicarFiltroInstantaneo() {
     const termino = document.getElementById('searchInput').value.toLowerCase();
-    
     usuariosFiltrados = usuariosLocales.filter(u => 
-      u.nombre.toLowerCase().includes(termino) ||
-      u.username.toLowerCase().includes(termino) ||
-      u.email.toLowerCase().includes(termino) ||
-      (u.strnombreperfil && u.strnombreperfil.toLowerCase().includes(termino))
+      u.nombre.toLowerCase().includes(termino) || u.username.toLowerCase().includes(termino) ||
+      u.email.toLowerCase().includes(termino) || (u.strnombreperfil && u.strnombreperfil.toLowerCase().includes(termino))
     );
-
-    // Regresamos a la página 1 después de buscar
-    paginaActual = 1;
-    dibujarVistaEstatica();
+    paginaActual = 1; dibujarVistaEstatica();
   }
 
-  // Dibuja solo los 5 usuarios que corresponden a la página actual en memoria
   function dibujarVistaEstatica() {
     const inicio = (paginaActual - 1) * limitePorPagina;
     const fin = inicio + limitePorPagina;
     const usuariosPagina = usuariosFiltrados.slice(inicio, fin);
-    
     renderizarTablaHTML(usuariosPagina);
-    
     const totalPaginas = Math.ceil(usuariosFiltrados.length / limitePorPagina);
     renderizarPaginacionHTML(totalPaginas);
   }
 
-  window.cambiarPagina = (numPagina) => {
-    paginaActual = numPagina;
-    dibujarVistaEstatica();
-  };
+  window.cambiarPagina = (numPagina) => { paginaActual = numPagina; dibujarVistaEstatica(); };
 
-  // ============================================
-  // RENDERIZADO DE INTERFAZ
-  // ============================================
   function renderizarTablaHTML(usuarios) {
     const tbody = document.getElementById('tablaBody');
-    
-    if (usuarios.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="8" class="no-data"><i class="fas fa-search-minus"></i> No se encontraron usuarios.</td></tr>`;
-      return;
-    }
-
+    if (usuarios.length === 0) { tbody.innerHTML = `<tr><td colspan="8" class="no-data"><i class="fas fa-search-minus"></i> No se encontraron usuarios.</td></tr>`; return; }
     tbody.innerHTML = usuarios.map(u => `
       <tr>
-        <td style="display: none; vertical-align: middle; padding: 1rem 0.5rem; color: #64748b; font-weight: 500;">#${u.id}</td>
+        <td style="display: none; vertical-align: middle; padding: 1rem 0.5rem;">#${u.id}</td>
         <td style="vertical-align: middle; padding: 1rem 0.5rem;">
-          <div class="avatar-container">
-            <img src="${u.strimagen || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(u.nombre) + '&size=45&background=f1f5f9&color=64748b'}" 
-                 class="avatar-img" 
-                 alt="Avatar"
-                 onerror="this.src='https://ui-avatars.com/api/?name=U&size=45'">
-          </div>
+          <div class="avatar-container"><img src="${u.strimagen || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(u.nombre) + '&size=45'}" class="avatar-img" onerror="this.src='https://ui-avatars.com/api/?name=U'"></div>
         </td>
-        <td style="vertical-align: middle; padding: 1rem 0.5rem; font-weight: 600; color: #1e293b;">@${u.username}</td>
+        <td style="vertical-align: middle; padding: 1rem 0.5rem; font-weight: 600;">@${u.username}</td>
         <td style="vertical-align: middle; padding: 1rem 0.5rem;">${u.nombre}</td>
-        <td style="vertical-align: middle; padding: 1rem 0.5rem; color: #64748b;">${u.email}</td>
-        <td style="vertical-align: middle; padding: 1rem 0.5rem;">
-          <span class="role-badge"><i class="fas fa-shield-alt"></i> ${u.strnombreperfil || 'Sin perfil'}</span>
-        </td>
-        <td style="vertical-align: middle; padding: 1rem 0.5rem;">
-          <span class="status-badge ${u.idestadousuario === 1 ? 'status-active' : 'status-inactive'}">
-            ${u.idestadousuario === 1 ? 'Activo' : 'Inactivo'}
-          </span>
-        </td>
+        <td style="vertical-align: middle; padding: 1rem 0.5rem;">${u.email}</td>
+        <td style="vertical-align: middle; padding: 1rem 0.5rem;"><span class="role-badge">${u.strnombreperfil || 'Sin perfil'}</span></td>
+        <td style="vertical-align: middle; padding: 1rem 0.5rem;"><span class="status-badge ${u.idestadousuario === 1 ? 'status-active' : 'status-inactive'}">${u.idestadousuario === 1 ? 'Activo' : 'Inactivo'}</span></td>
         <td class="actions-cell" style="vertical-align: middle; padding: 1rem 0.5rem;">
-          ${permisos.detalle ? `<button class="action-btn view" onclick="verDetalle(${u.id})" title="Ver Detalles"><i class="fas fa-eye"></i></button>` : ''}
-          ${permisos.editar ? `<button class="action-btn edit" onclick="editarUsuario(${u.id})" title="Editar"><i class="fas fa-edit"></i></button>` : ''}
-          ${permisos.eliminar ? `<button class="action-btn delete" onclick="eliminarUsuario(${u.id})" title="Eliminar"><i class="fas fa-trash"></i></button>` : ''}
+          ${permisos.detalle ? `<button class="action-btn view" onclick="verDetalle(${u.id})"><i class="fas fa-eye"></i></button>` : ''}
+          ${permisos.editar ? `<button class="action-btn edit" onclick="editarUsuario(${u.id})"><i class="fas fa-edit"></i></button>` : ''}
+          ${permisos.eliminar ? `<button class="action-btn delete" onclick="eliminarUsuario(${u.id})"><i class="fas fa-trash"></i></button>` : ''}
         </td>
       </tr>
     `).join('');
@@ -348,18 +273,12 @@ const API_URL = "https://extra-earth-production.up.railway.app";
   function renderizarPaginacionHTML(totalPages) {
     const div = document.getElementById('pagination');
     if (totalPages <= 1) { div.innerHTML = ''; return; }
-    
     let html = '';
-    for (let i = 1; i <= totalPages; i++) {
-      html += `<button class="page-btn ${i === paginaActual ? 'active' : ''}" onclick="window.cambiarPagina(${i})">${i}</button>`;
-    }
+    for (let i = 1; i <= totalPages; i++) { html += `<button class="page-btn ${i === paginaActual ? 'active' : ''}" onclick="window.cambiarPagina(${i})">${i}</button>`; }
     div.innerHTML = html;
   }
 
-  // ============================================
-  // FUNCIONES DE MODAL Y CRUD
-  // ============================================
-  window.abrirModalNuevo = () => {
+  window.abrirModalNuevo = () => { 
     document.getElementById('modalTitulo').textContent = 'Nuevo Usuario';
     document.getElementById('usuarioForm').reset();
     document.getElementById('usuarioId').value = '';
@@ -376,7 +295,7 @@ const API_URL = "https://extra-earth-production.up.railway.app";
     const data = await response.json();
     if (data.success) {
       const u = data.data;
-      alert(`Información de Sistema:\n\nUsuario: ${u.username}\nNombre: ${u.nombre}\nEmail: ${u.email}\nTeléfono: ${u.strnumerocelular || 'N/A'}\nEstado: ${u.idestadousuario === 1 ? 'Activo' : 'Inactivo'}`);
+      alert(`Información:\n\nUsuario: ${u.username}\nNombre: ${u.nombre}\nEmail: ${u.email}\nTeléfono: ${u.strnumerocelular || 'N/A'}`);
     }
   };
 
@@ -396,25 +315,18 @@ const API_URL = "https://extra-earth-production.up.railway.app";
       document.getElementById('idEstadoUsuario').value = u.idestadousuario;
       document.getElementById('password').required = false;
       document.getElementById('password').value = '';
-      
       if (u.strimagen) {
         document.getElementById('strImagenBase64').value = u.strimagen;
-        const img = document.getElementById('previewImg');
-        img.src = u.strimagen;
-        img.style.display = 'block';
+        const img = document.getElementById('previewImg'); img.src = u.strimagen; img.style.display = 'block';
         document.getElementById('previewPlaceholder').style.display = 'none';
         document.getElementById('btnClearImagen').style.display = 'inline-block';
-      } else {
-        limpiarImagen();
-      }
+      } else { limpiarImagen(); }
       document.getElementById('modalUsuario').style.display = 'flex';
     }
   };
 
   window.guardarUsuario = async () => {
     const id = document.getElementById('usuarioId').value;
-    const password = document.getElementById('password').value;
-    
     const body = {
       username: document.getElementById('username').value,
       nombre: document.getElementById('nombre').value,
@@ -424,7 +336,7 @@ const API_URL = "https://extra-earth-production.up.railway.app";
       strNumeroCelular: document.getElementById('strNumeroCelular').value || null,
       strImagenBase64: document.getElementById('strImagenBase64').value || null
     };
-
+    const password = document.getElementById('password').value;
     if (password) body.password = password;
 
     const token = localStorage.getItem('token');
@@ -435,88 +347,55 @@ const API_URL = "https://extra-earth-production.up.railway.app";
     });
 
     const data = await response.json();
-    if (data.success) {
-      cerrarModal();
-      mostrarMensaje(id ? 'Usuario actualizado exitosamente' : 'Usuario creado exitosamente', 'success');
-      cargarTodosLosUsuarios(); // Recargamos para traer los datos frescos
-    } else {
-      mostrarMensaje(data.message || 'Error al guardar usuario', 'error');
-    }
+    if (data.success) { cerrarModal(); mostrarMensaje(id ? 'Actualizado' : 'Creado', 'success'); cargarTodosLosUsuarios(); }
+    else { mostrarMensaje(data.message || 'Error', 'error'); }
   };
 
   window.eliminarUsuario = async (id) => {
-    if (!confirm('¿Está seguro de eliminar permanentemente este usuario?')) return;
+    if (!confirm('¿Eliminar permanentemente?')) return;
     const token = localStorage.getItem('token');
-    const response = await fetch(`${API_URL}/api/usuarios/${id}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
+    const response = await fetch(`${API_URL}/api/usuarios/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
     const data = await response.json();
-    if (data.success) {
-      mostrarMensaje('Usuario eliminado', 'success');
-      cargarTodosLosUsuarios();
-    }
+    if (data.success) { mostrarMensaje('Eliminado', 'success'); cargarTodosLosUsuarios(); }
   };
 
   function mostrarMensaje(texto, tipo) {
     const msj = document.getElementById('message');
-    msj.textContent = texto;
-    msj.className = `status-message msg-${tipo}`;
-    msj.style.display = 'block';
-    setTimeout(() => { msj.style.display = 'none'; }, 3000);
+    msj.textContent = texto; msj.className = `status-message msg-${tipo}`;
+    msj.style.display = 'block'; setTimeout(() => { msj.style.display = 'none'; }, 3000);
   }
 
-  // ============================================
-  // EVENTOS INICIALES
-  // ============================================
   document.addEventListener('DOMContentLoaded', () => {
     if (permisos.agregar) document.getElementById('btnNuevoUsuario').style.display = 'flex';
-    
-    // Escuchador de la barra de búsqueda (El Fech instantáneo estático)
     document.getElementById('searchInput').addEventListener('input', aplicarFiltroInstantaneo);
-    
-    cargarPerfiles();
-    cargarTodosLosUsuarios();
+    cargarPerfiles(); cargarTodosLosUsuarios();
   });
 </script>
 
 <style is:global>
-  /* --- CABECERA --- */
   .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
   .header-title h1 { margin: 0; color: #0f172a; font-size: 1.8rem; display: flex; align-items: center; gap: 10px; }
   .header-title p { margin: 5px 0 0 0; color: #64748b; font-size: 0.95rem; }
-  
   .btn-add { background: #2563eb; color: white; border: none; padding: 0.8rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2); transition: all 0.2s; }
   .btn-add:hover { background: #1d4ed8; transform: translateY(-2px); }
-
-  /* --- TARJETA Y BUSCADOR --- */
   .card-container { background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 1.5rem; border: 1px solid #f1f5f9; }
-  
   .table-toolbar { margin-bottom: 1.5rem; display: flex; justify-content: flex-end; }
   .search-box { position: relative; width: 100%; max-width: 400px; }
   .search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 1.1rem; }
   .search-box input { width: 100%; padding: 0.9rem 1rem 0.9rem 2.8rem; border: 2px solid #e2e8f0; border-radius: 30px; font-size: 0.95rem; transition: border-color 0.2s; background: #f8fafc; color: #334155; }
   .search-box input:focus { outline: none; border-color: #3b82f6; background: white; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
-
-  /* --- TABLA --- */
   .table-responsive { overflow-x: auto; }
   .crud-table { width: 100%; border-collapse: collapse; min-width: 800px; }
   .crud-table th { text-align: left; padding: 1rem 0.5rem; color: #475569; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0; background: white; }
   .crud-table tbody tr { transition: background-color 0.2s; border-bottom: 1px solid #f1f5f9; }
   .crud-table tbody tr:hover { background-color: #f8fafc; }
   .no-data { text-align: center; color: #94a3b8; padding: 3rem !important; font-size: 1.1rem; }
-
-  /* --- ESTILOS VISUALES CELDAS --- */
   .avatar-container { width: 45px; height: 45px; border-radius: 50%; overflow: hidden; background: #f1f5f9; border: 2px solid #e2e8f0; display: flex; align-items: center; justify-content: center; }
   .avatar-img { width: 100%; height: 100%; object-fit: cover; }
-  
   .role-badge { display: inline-flex; align-items: center; gap: 5px; background: #f1f5f9; color: #475569; padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600; border: 1px solid #e2e8f0; }
-  
   .status-badge { padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.8rem; font-weight: 700; display: inline-block; }
   .status-active { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
   .status-inactive { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
-
-  /* --- BOTONES DE ACCIÓN --- */
   .actions-cell { display: flex; gap: 8px; }
   .action-btn { width: 35px; height: 35px; border-radius: 8px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; font-size: 1rem; }
   .action-btn.view { background: #eff6ff; color: #3b82f6; }
@@ -525,40 +404,31 @@ const API_URL = "https://extra-earth-production.up.railway.app";
   .action-btn.edit:hover { background: #f59e0b; color: white; }
   .action-btn.delete { background: #fef2f2; color: #ef4444; }
   .action-btn.delete:hover { background: #ef4444; color: white; }
-
-  /* --- PAGINACIÓN ESTÁTICA --- */
   .pagination { display: flex; justify-content: center; gap: 8px; margin-top: 2rem; }
   .page-btn { width: 35px; height: 35px; border-radius: 8px; border: 1px solid #e2e8f0; background: white; color: #475569; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
   .page-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
   .page-btn.active { background: #2563eb; color: white; border-color: #2563eb; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2); }
-
-  /* --- MODAL FORMULARIO --- */
   .modal { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
   .modal-content { background: white; padding: 2rem; border-radius: 16px; width: 100%; max-width: 650px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
   .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 1rem; }
   .modal-header h3 { margin: 0; color: #0f172a; font-size: 1.4rem; }
   .close-btn { background: #f1f5f9; border: none; width: 35px; height: 35px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; color: #64748b; transition: all 0.2s; }
   .close-btn:hover { background: #fee2e2; color: #ef4444; }
-  
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
   .form-group { display: flex; flex-direction: column; }
   .form-group label { font-weight: 600; margin-bottom: 0.5rem; color: #475569; font-size: 0.9rem; }
   .form-group input, .form-group select { padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.95rem; transition: border-color 0.2s; }
   .form-group input:focus, .form-group select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
-  
   .imagen-preview { width: 120px; height: 120px; border-radius: 50%; overflow: hidden; background: #f8fafc; margin: 1rem auto; border: 3px dashed #cbd5e1; display: flex; align-items: center; justify-content: center; }
   .preview-placeholder { font-size: 2.5rem; color: #94a3b8; }
   .btn-upload { padding: 8px 12px; font-size: 0.9rem; margin-top: 5px; }
-
   .form-actions { display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem; border-top: 2px solid #f1f5f9; padding-top: 1.5rem; }
   .btn-primary { background: #10b981; color: white; border: none; padding: 0.8rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: background 0.2s; }
   .btn-primary:hover { background: #059669; }
   .btn-secondary { background: #f1f5f9; color: #475569; border: none; padding: 0.8rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 600; }
   .btn-secondary:hover { background: #e2e8f0; }
-
   .status-message { position: fixed; bottom: 20px; right: 20px; padding: 12px 24px; border-radius: 8px; display: none; font-weight: 600; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); z-index: 9999; animation: slideUp 0.3s ease-out; }
   .msg-success { background: #10b981; color: white; border-left: 4px solid #047857; }
   .msg-error { background: #ef4444; color: white; border-left: 4px solid #b91c1c; }
-
   @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 </style>
